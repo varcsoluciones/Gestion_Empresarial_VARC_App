@@ -23,6 +23,7 @@ export const PurchasesPage: React.FC = () => {
     purchases,
     suppliers,
     products,
+    settings,
     createPurchase,
     receivePurchase,
     cancelPurchase,
@@ -55,6 +56,7 @@ export const PurchasesPage: React.FC = () => {
   // New Purchase Form State
   const [formProveedorId, setFormProveedorId] = useState('');
   const [formFecha, setFormFecha] = useState(new Date().toISOString().split('T')[0]);
+  const [formTasaImpuesto, setFormTasaImpuesto] = useState<number>(settings.tasaImpuestoDefecto ?? 16);
   const [formNotas, setFormNotas] = useState('');
   const [formItems, setFormItems] = useState<{
     productoId: string;
@@ -74,6 +76,7 @@ export const PurchasesPage: React.FC = () => {
   const handleOpenNewPurchase = () => {
     setFormProveedorId(suppliers[0]?.id || '');
     setFormFecha(new Date().toISOString().split('T')[0]);
+    setFormTasaImpuesto(settings.tasaImpuestoDefecto ?? 16);
     setFormNotas('');
     setFormItems([]);
     setSelectedProdForLine('');
@@ -143,7 +146,7 @@ export const PurchasesPage: React.FC = () => {
   };
 
   const formSubtotal = formItems.reduce((sum, item) => sum + item.subtotal, 0);
-  const formImpuestos = Number((formSubtotal * 0.16).toFixed(2));
+  const formImpuestos = Number((formSubtotal * ((formTasaImpuesto || 0) / 100)).toFixed(2));
   const formTotal = formSubtotal + formImpuestos;
 
   const handleSavePurchase = (directReceive = false) => {
@@ -624,8 +627,29 @@ export const PurchasesPage: React.FC = () => {
                 <span>Subtotal:</span>
                 <span>{formatCurrency(formSubtotal)}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.35rem' }}>
-                <span>IVA (16%):</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', marginBottom: '0.35rem' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  IVA (%):
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={formTasaImpuesto}
+                    onChange={(e) => setFormTasaImpuesto(e.target.value === '' ? 0 : Number(e.target.value))}
+                    style={{
+                      width: '55px',
+                      padding: '2px 4px',
+                      fontSize: '0.8rem',
+                      textAlign: 'right',
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid var(--border-default)',
+                      backgroundColor: 'var(--bg-surface)',
+                      color: 'var(--text-primary)'
+                    }}
+                  />
+                  %
+                </span>
                 <span>{formatCurrency(formImpuestos)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', fontWeight: 800, borderTop: '1px solid var(--border-default)', paddingTop: '0.5rem', color: 'var(--color-accent)' }}>

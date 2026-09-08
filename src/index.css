@@ -236,6 +236,42 @@
   --color-accent-text: #e2e8f0;
 }
 
+[data-accent="yellow"],
+[data-accent="amarillo"] {
+  --color-accent: #eab308;
+  --color-accent-hover: #ca8a04;
+  --color-accent-subtle: rgba(234, 179, 8, 0.12);
+  --color-accent-subtle-border: rgba(234, 179, 8, 0.35);
+  --color-accent-text: #854d0e;
+  --color-accent-glow: rgba(234, 179, 8, 0.35);
+}
+[data-theme="dark"][data-accent="yellow"],
+[data-theme="dark"][data-accent="amarillo"] {
+  --color-accent: #facc15;
+  --color-accent-hover: #eab308;
+  --color-accent-subtle: rgba(250, 204, 21, 0.16);
+  --color-accent-subtle-border: rgba(250, 204, 21, 0.35);
+  --color-accent-text: #fef08a;
+}
+
+[data-accent="wine"],
+[data-accent="vino"] {
+  --color-accent: #881337;
+  --color-accent-hover: #700f2b;
+  --color-accent-subtle: rgba(136, 19, 55, 0.08);
+  --color-accent-subtle-border: rgba(136, 19, 55, 0.25);
+  --color-accent-text: #881337;
+  --color-accent-glow: rgba(136, 19, 55, 0.35);
+}
+[data-theme="dark"][data-accent="wine"],
+[data-theme="dark"][data-accent="vino"] {
+  --color-accent: #fb7185;
+  --color-accent-hover: #f43f5e;
+  --color-accent-subtle: rgba(251, 113, 133, 0.16);
+  --color-accent-subtle-border: rgba(251, 113, 133, 0.35);
+  --color-accent-text: #ffe4e6;
+}
+
 /* Base resets & styles */
 *, *::before, *::after {
   box-sizing: border-box;

@@ -28,13 +28,15 @@ import { formatDate } from '../utils/formatters';
 import { validateAndParseBackupJSON, type FullERPData } from '../utils/backupExportUtils';
 
 const accents: { key: AccentColor; name: string; hex: string; description: string }[] = [
-  { key: 'blue', name: 'Azul Cupertino', hex: '#007aff', description: 'System Blue icónico de Apple' },
-  { key: 'purple', name: 'Púrpura Apple', hex: '#5856d6', description: 'System Purple elegante y moderno' },
+  { key: 'blue', name: 'Azul Cupertino', hex: '#007aff', description: 'System Blue icónico y elegante' },
+  { key: 'purple', name: 'Púrpura Apple', hex: '#5856d6', description: 'System Purple moderno y distintivo' },
   { key: 'green', name: 'Verde Apple', hex: '#34c759', description: 'System Green financiero y fresco' },
-  { key: 'orange', name: 'Naranja Apple', hex: '#ff9500', description: 'System Orange cálido y dinámico' },
+  { key: 'yellow', name: 'Amarillo Dorado', hex: '#eab308', description: 'System Yellow cálido, brillante y enérgico' },
+  { key: 'orange', name: 'Naranja Apple', hex: '#ff9500', description: 'System Orange dinámico y proactivo' },
   { key: 'pink', name: 'Rosa Apple', hex: '#ff2d55', description: 'System Pink vibrante y sofisticado' },
+  { key: 'wine', name: 'Color Vino / Borgoña', hex: '#881337', description: 'Vino tinto / Borgoña profundo y premium' },
   { key: 'teal', name: 'Turquesa Apple', hex: '#00c7be', description: 'System Teal balanceado y limpio' },
-  { key: 'graphite', name: 'Gris Espacial', hex: '#636366', description: 'Space Gray minimalista y ejecutivo' }
+  { key: 'graphite', name: 'Gris Espacial', hex: '#636366', description: 'Space Gray minimalista y corporativo' }
 ];
 
 export const SettingsPage: React.FC = () => {
@@ -237,8 +239,10 @@ export const SettingsPage: React.FC = () => {
                   (acc.key === 'blue' && settings.colorAcento === 'sapphire') ||
                   (acc.key === 'purple' && settings.colorAcento === 'indigo') ||
                   (acc.key === 'green' && settings.colorAcento === 'emerald') ||
+                  (acc.key === 'yellow' && settings.colorAcento === 'amarillo') ||
                   (acc.key === 'orange' && settings.colorAcento === 'amber') ||
                   (acc.key === 'pink' && settings.colorAcento === 'rose') ||
+                  (acc.key === 'wine' && settings.colorAcento === 'vino') ||
                   (acc.key === 'graphite' && settings.colorAcento === 'slate');
 
                 return (

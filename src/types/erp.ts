@@ -28,7 +28,11 @@ export type AccentColor =
   | 'sapphire' 
   | 'rose' 
   | 'amber' 
-  | 'slate';
+  | 'slate'
+  | 'yellow'
+  | 'amarillo'
+  | 'wine'
+  | 'vino';
 
 // 1. Datos Maestros
 export interface Client {
@@ -167,6 +171,7 @@ export interface Quote {
   items: QuoteItem[];
   subtotal: number;
   descuentoTotal: number;
+  tasaImpuesto?: number;
   impuestos: number;
   total: number;
   notas?: string;

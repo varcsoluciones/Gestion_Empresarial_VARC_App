@@ -46,6 +46,7 @@ interface ConfirmIssueData {
   totalPieces: number;
   totalItems: number;
   subtotal: number;
+  tasaImpuesto?: number;
   impuestos: number;
   total: number;
   deficitItems?: DeficitItem[];
@@ -100,6 +101,7 @@ export const SalesPage: React.FC = () => {
   const [formFechaEmision, setFormFechaEmision] = useState(new Date().toISOString().split('T')[0]);
   const [formFechaVencimiento, setFormFechaVencimiento] = useState('');
   const [formTipoPago, setFormTipoPago] = useState<PaymentTerm>('contado');
+  const [formTasaImpuesto, setFormTasaImpuesto] = useState<number>(settings.tasaImpuestoDefecto ?? 16);
   const [formNotas, setFormNotas] = useState('');
   const [formItems, setFormItems] = useState<{
     productoId: string;
@@ -146,6 +148,7 @@ export const SalesPage: React.FC = () => {
     setFormFechaEmision(new Date().toISOString().split('T')[0]);
     const due = new Date(Date.now() + (defaultClient?.diasCredito || 0) * 86400000).toISOString().split('T')[0];
     setFormFechaVencimiento(due);
+    setFormTasaImpuesto(settings.tasaImpuestoDefecto ?? 16);
     setFormNotas('');
     setFormItems([]);
     setSelectedProdForLine('');
@@ -162,6 +165,7 @@ export const SalesPage: React.FC = () => {
     setFormFechaEmision(new Date().toISOString().split('T')[0]);
     const validUntil = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
     setFormFechaVencimiento(validUntil);
+    setFormTasaImpuesto(settings.tasaImpuestoDefecto ?? 16);
     setFormNotas('Cotización con vigencia de 30 días naturales.');
     setFormItems([]);
     setSelectedProdForLine('');
@@ -244,7 +248,7 @@ export const SalesPage: React.FC = () => {
   };
 
   const formSubtotal = formItems.reduce((sum, item) => sum + item.subtotal, 0);
-  const formImpuestos = Number((formSubtotal * (settings.tasaImpuestoDefecto / 100)).toFixed(2));
+  const formImpuestos = Number((formSubtotal * ((formTasaImpuesto || 0) / 100)).toFixed(2));
   const formTotal = formSubtotal + formImpuestos;
 
   const handleSaveDraftInvoice = () => {
@@ -263,7 +267,7 @@ export const SalesPage: React.FC = () => {
       })),
       subtotal: formSubtotal,
       descuentoTotal: 0,
-      tasaImpuesto: settings.tasaImpuestoDefecto,
+      tasaImpuesto: formTasaImpuesto,
       impuestos: formImpuestos,
       total: formTotal,
       notas: formNotas
@@ -290,6 +294,7 @@ export const SalesPage: React.FC = () => {
       totalPieces,
       totalItems: formItems.length,
       subtotal: formSubtotal,
+      tasaImpuesto: formTasaImpuesto,
       impuestos: formImpuestos,
       total: formTotal,
       deficitItems: deficits,
@@ -307,7 +312,7 @@ export const SalesPage: React.FC = () => {
           })),
           subtotal: formSubtotal,
           descuentoTotal: 0,
-          tasaImpuesto: settings.tasaImpuestoDefecto,
+          tasaImpuesto: formTasaImpuesto,
           impuestos: formImpuestos,
           total: formTotal,
           notas: formNotas
@@ -391,6 +396,7 @@ export const SalesPage: React.FC = () => {
       })),
       subtotal: formSubtotal,
       descuentoTotal: 0,
+      tasaImpuesto: formTasaImpuesto,
       impuestos: formImpuestos,
       total: formTotal,
       notas: formNotas
@@ -1165,8 +1171,29 @@ export const SalesPage: React.FC = () => {
                 <span>Subtotal:</span>
                 <span>{formatCurrency(formSubtotal)}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.35rem' }}>
-                <span>IVA ({settings.tasaImpuestoDefecto}%):</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', marginBottom: '0.35rem' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  IVA (%):
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={formTasaImpuesto}
+                    onChange={(e) => setFormTasaImpuesto(e.target.value === '' ? 0 : Number(e.target.value))}
+                    style={{
+                      width: '55px',
+                      padding: '2px 4px',
+                      fontSize: '0.8rem',
+                      textAlign: 'right',
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid var(--border-default)',
+                      backgroundColor: 'var(--bg-surface)',
+                      color: 'var(--text-primary)'
+                    }}
+                  />
+                  %
+                </span>
                 <span>{formatCurrency(formImpuestos)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', fontWeight: 800, borderTop: '1px solid var(--border-default)', paddingTop: '0.5rem', color: 'var(--color-accent)' }}>
@@ -1413,8 +1440,29 @@ export const SalesPage: React.FC = () => {
                 <span>Subtotal:</span>
                 <span>{formatCurrency(formSubtotal)}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.35rem' }}>
-                <span>IVA ({settings.tasaImpuestoDefecto}%):</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', marginBottom: '0.35rem' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  IVA (%):
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={formTasaImpuesto}
+                    onChange={(e) => setFormTasaImpuesto(e.target.value === '' ? 0 : Number(e.target.value))}
+                    style={{
+                      width: '55px',
+                      padding: '2px 4px',
+                      fontSize: '0.8rem',
+                      textAlign: 'right',
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid var(--border-default)',
+                      backgroundColor: 'var(--bg-surface)',
+                      color: 'var(--text-primary)'
+                    }}
+                  />
+                  %
+                </span>
                 <span>{formatCurrency(formImpuestos)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', fontWeight: 800, borderTop: '1px solid var(--border-default)', paddingTop: '0.5rem', color: 'var(--color-accent)' }}>
@@ -1700,7 +1748,7 @@ export const SalesPage: React.FC = () => {
                     <span style={{ fontWeight: 600 }}>{formatCurrency(confirmIssueData.subtotal)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>IVA ({settings.tasaImpuestoDefecto}%):</span>
+                    <span style={{ color: 'var(--text-muted)' }}>IVA ({confirmIssueData.tasaImpuesto ?? settings.tasaImpuestoDefecto}%):</span>
                     <span style={{ fontWeight: 600 }}>{formatCurrency(confirmIssueData.impuestos)}</span>
                   </div>
                 </div>

@@ -357,7 +357,7 @@ export const ReportsPage: React.FC = () => {
 
       {/* Report 1: Estado de Resultados (P&L) */}
       {activeReport === 'pnl' && (
-        <div className="card" style={{ maxWidth: '850px', margin: '0 auto' }}>
+        <div className="card">
           <div style={{ textAlign: 'center', borderBottom: '2px solid var(--border-default)', paddingBottom: '1.25rem', marginBottom: '1.5rem' }}>
             <h2 style={{ fontSize: '1.35rem', fontWeight: 800 }}>{settings.nombreEmpresa}</h2>
             <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-accent)', marginTop: '0.2rem' }}>
@@ -446,7 +446,7 @@ export const ReportsPage: React.FC = () => {
 
       {/* Report 2: Balance General */}
       {activeReport === 'balance' && (
-        <div className="card" style={{ maxWidth: '900px', margin: '0 auto' }}>
+        <div className="card">
           <div style={{ textAlign: 'center', borderBottom: '2px solid var(--border-default)', paddingBottom: '1.25rem', marginBottom: '1.5rem' }}>
             <h2 style={{ fontSize: '1.35rem', fontWeight: 800 }}>{settings.nombreEmpresa}</h2>
             <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-accent)', marginTop: '0.2rem' }}>
