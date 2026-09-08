@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useERP } from '../context/ERPContext';
 import type { Purchase, PaymentMethod } from '../types/erp';
-import { formatCurrency, formatDate } from '../utils/formatters';
+import { formatCurrency, formatDate, formatMonthLabel } from '../utils/formatters';
 import {
   Plus,
   Search,
@@ -31,6 +31,7 @@ export const PurchasesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedSupplierFilter, setSelectedSupplierFilter] = useState<string>('all');
+  const [monthFilter, setMonthFilter] = useState<string>('all');
 
   // Modals state
   const [isNewPurchaseModalOpen, setIsNewPurchaseModalOpen] = useState(false);
@@ -208,6 +209,15 @@ export const PurchasesPage: React.FC = () => {
     setSelectedPurchase(null);
   };
 
+  // Extract unique months for filter
+  const availableMonths = Array.from(
+    new Set(
+      purchases
+        .map(p => p.fecha ? p.fecha.substring(0, 7) : '')
+        .filter(Boolean)
+    )
+  ).sort().reverse();
+
   // Filtered Purchases
   const filteredPurchases = purchases.filter(p => {
     const prov = suppliers.find(s => s.id === p.proveedorId);
@@ -215,8 +225,9 @@ export const PurchasesPage: React.FC = () => {
       (prov?.nombre.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = statusFilter === 'all' || p.estado === statusFilter;
     const matchesSupplier = selectedSupplierFilter === 'all' || p.proveedorId === selectedSupplierFilter;
+    const matchesMonth = monthFilter === 'all' || (p.fecha && p.fecha.startsWith(monthFilter));
 
-    return matchesSearch && matchesStatus && matchesSupplier;
+    return matchesSearch && matchesStatus && matchesSupplier && matchesMonth;
   });
 
   const selectedProdObj = products.find(p => p.id === selectedProdForLine);
@@ -252,6 +263,20 @@ export const PurchasesPage: React.FC = () => {
         </div>
 
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <select
+            className="form-select"
+            style={{ width: 'auto' }}
+            value={monthFilter}
+            onChange={(e) => setMonthFilter(e.target.value)}
+          >
+            <option value="all">📅 Todos los meses / movimientos</option>
+            {availableMonths.map(mKey => (
+              <option key={mKey} value={mKey}>
+                {formatMonthLabel(mKey)}
+              </option>
+            ))}
+          </select>
+
           <select
             className="form-select"
             style={{ width: 'auto' }}

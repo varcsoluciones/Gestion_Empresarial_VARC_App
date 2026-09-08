@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useERP } from '../context/ERPContext';
 import type { MovementType } from '../types/erp';
-import { formatCurrency, formatDateTime } from '../utils/formatters';
+import { formatCurrency, formatDateTime, formatMonthLabel } from '../utils/formatters';
 import {
   Boxes,
   Search,
@@ -25,6 +25,7 @@ export const InventoryPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProductFilter, setSelectedProductFilter] = useState<string>('all');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('all');
+  const [monthFilter, setMonthFilter] = useState<string>('all');
   const [activeView, setActiveView] = useState<'kardex' | 'stock'>('kardex');
 
   // Manual Adjustment Modal
@@ -95,6 +96,14 @@ export const InventoryPage: React.FC = () => {
   const totalStockValue = products.reduce((sum, p) => sum + (p.stockActual * p.costoPromedio), 0);
   const lowStockCount = products.filter(p => p.stockActual <= p.stockMinimo).length;
 
+  const availableMonths = Array.from(
+    new Set(
+      inventoryMovements
+        .map(m => m.fecha ? m.fecha.substring(0, 7) : '')
+        .filter(Boolean)
+    )
+  ).sort().reverse();
+
   // Filtered movements
   const filteredMovements = inventoryMovements.filter(m => {
     const prod = products.find(p => p.id === m.productoId);
@@ -105,8 +114,9 @@ export const InventoryPage: React.FC = () => {
 
     const matchesProduct = selectedProductFilter === 'all' || m.productoId === selectedProductFilter;
     const matchesType = selectedTypeFilter === 'all' || m.tipo === selectedTypeFilter;
+    const matchesMonth = monthFilter === 'all' || (m.fecha && m.fecha.startsWith(monthFilter));
 
-    return matchesSearch && matchesProduct && matchesType;
+    return matchesSearch && matchesProduct && matchesType && matchesMonth;
   });
 
   const selectedAdjProdObj = products.find(p => p.id === adjProdId);
@@ -236,19 +246,35 @@ export const InventoryPage: React.FC = () => {
           </select>
 
           {activeView === 'kardex' && (
-            <select
-              className="form-select"
-              style={{ width: 'auto' }}
-              value={selectedTypeFilter}
-              onChange={(e) => setSelectedTypeFilter(e.target.value)}
-            >
-              <option value="all">Todos los movimientos</option>
-              <option value="ENTRADA_COMPRA">Entrada por Compra</option>
-              <option value="SALIDA_VENTA">Salida por Venta</option>
-              <option value="AJUSTE_MANUAL">Ajuste Manual</option>
-              <option value="ANULACION_COMPRA">Anulación Compra</option>
-              <option value="ANULACION_VENTA">Anulación Venta</option>
-            </select>
+            <>
+              <select
+                className="form-select"
+                style={{ width: 'auto' }}
+                value={monthFilter}
+                onChange={(e) => setMonthFilter(e.target.value)}
+              >
+                <option value="all">📅 Todos los meses / movimientos</option>
+                {availableMonths.map(mKey => (
+                  <option key={mKey} value={mKey}>
+                    {formatMonthLabel(mKey)}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                className="form-select"
+                style={{ width: 'auto' }}
+                value={selectedTypeFilter}
+                onChange={(e) => setSelectedTypeFilter(e.target.value)}
+              >
+                <option value="all">Todos los tipos de movimiento</option>
+                <option value="ENTRADA_COMPRA">Entrada por Compra</option>
+                <option value="SALIDA_VENTA">Salida por Venta</option>
+                <option value="AJUSTE_MANUAL">Ajuste Manual</option>
+                <option value="ANULACION_COMPRA">Anulación Compra</option>
+                <option value="ANULACION_VENTA">Anulación Venta</option>
+              </select>
+            </>
           )}
         </div>
       </div>

@@ -65,3 +65,17 @@ export function getMonthKey(date = new Date()): string {
   const m = String(date.getMonth() + 1).padStart(2, '0');
   return `${y}-${m}`;
 }
+
+export function formatMonthLabel(monthKey: string): string {
+  if (!monthKey || monthKey.length < 7) return monthKey;
+  const [year, month] = monthKey.split('-');
+  const monthNames = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+  const mIndex = parseInt(month, 10) - 1;
+  if (mIndex >= 0 && mIndex < 12) {
+    return `${monthNames[mIndex]} ${year}`;
+  }
+  return monthKey;
+}

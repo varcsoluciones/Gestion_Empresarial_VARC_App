@@ -577,7 +577,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             if (product.tieneVariantes && item.varianteId && updatedVariants) {
               updatedVariants = updatedVariants.map(v => {
                 if (v.id === item.varianteId) {
-                  const varNewStock = Math.max(0, v.stockActual - item.cantidad);
+                  const varNewStock = v.stockActual - item.cantidad;
                   newMovements.push({
                     id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                     fecha: now,
@@ -596,7 +596,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 return v;
               });
             } else {
-              updatedStock = Math.max(0, updatedStock - item.cantidad);
+              updatedStock = updatedStock - item.cantidad;
               newMovements.push({
                 id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                 fecha: now,
@@ -665,7 +665,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             if (product.tieneVariantes && item.varianteId && updatedVariants) {
               updatedVariants = updatedVariants.map(v => {
                 if (v.id === item.varianteId) {
-                  const varNewStock = Math.max(0, v.stockActual - item.cantidad);
+                  const varNewStock = v.stockActual - item.cantidad;
                   newMovements.push({
                     id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                     fecha: now,
@@ -684,7 +684,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 return v;
               });
             } else {
-              updatedStock = Math.max(0, updatedStock - item.cantidad);
+              updatedStock = updatedStock - item.cantidad;
               newMovements.push({
                 id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                 fecha: now,
@@ -742,7 +742,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           if (product.tieneVariantes && item.varianteId && updatedVariants) {
             updatedVariants = updatedVariants.map(v => {
               if (v.id === item.varianteId) {
-                const varNewStock = Math.max(0, v.stockActual - item.cantidad);
+                const varNewStock = v.stockActual - item.cantidad;
                 newMovements.push({
                   id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                   fecha: now,
@@ -761,7 +761,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               return v;
             });
           } else {
-            updatedStock = Math.max(0, updatedStock - item.cantidad);
+            updatedStock = updatedStock - item.cantidad;
             newMovements.push({
               id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
               fecha: now,

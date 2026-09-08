@@ -174,16 +174,18 @@ export const ReportsPage: React.FC = () => {
               </tr>
               <tr>
                 <td style={{ padding: '0.5rem 1.5rem', color: 'var(--text-secondary)' }}>Ventas Brutas Facturadas</td>
-                <td style={{ padding: '0.5rem', textAlign: 'right' }}>{formatCurrency(totalGrossSales)}</td>
+                <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 600 }}>{formatCurrency(totalGrossSales)}</td>
               </tr>
-              {totalDiscounts > 0 && (
-                <tr>
-                  <td style={{ padding: '0.5rem 1.5rem', color: 'var(--color-danger-text)' }}>(-) Descuentos Concedidos</td>
-                  <td style={{ padding: '0.5rem', textAlign: 'right', color: 'var(--color-danger-text)' }}>-{formatCurrency(totalDiscounts)}</td>
-                </tr>
-              )}
+              <tr>
+                <td style={{ padding: '0.5rem 1.5rem', color: totalDiscounts > 0 ? 'var(--color-danger-text)' : 'var(--text-muted)' }}>
+                  (-) Descuentos y Rebajas sobre Ventas
+                </td>
+                <td style={{ padding: '0.5rem', textAlign: 'right', color: totalDiscounts > 0 ? 'var(--color-danger-text)' : 'var(--text-muted)', fontWeight: totalDiscounts > 0 ? 600 : 400 }}>
+                  {totalDiscounts > 0 ? `-${formatCurrency(totalDiscounts)}` : formatCurrency(0)}
+                </td>
+              </tr>
               <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
-                <td style={{ padding: '0.5rem 1.5rem', fontWeight: 600 }}>(=) Ventas Netas del Periodo</td>
+                <td style={{ padding: '0.5rem 1.5rem', fontWeight: 700 }}>(=) Ventas Netas del Periodo</td>
                 <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 700 }}>{formatCurrency(totalNetSales)}</td>
               </tr>
 

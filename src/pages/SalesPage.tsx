@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useERP } from '../context/ERPContext';
 import type { Invoice, Quote, PaymentMethod, PaymentTerm } from '../types/erp';
-import { formatCurrency, formatDate, generateDocNumber } from '../utils/formatters';
+import { formatCurrency, formatDate, generateDocNumber, formatMonthLabel } from '../utils/formatters';
 import {
   TrendingUp,
   Plus,
@@ -13,7 +13,11 @@ import {
   Trash2,
   Sparkles,
   FileText,
-  AlertCircle
+  AlertCircle,
+  AlertTriangle,
+  Calendar,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
@@ -21,6 +25,14 @@ import { ComboboxInline } from '../components/common/ComboboxInline';
 import { QuickCreateCustomerModal } from '../components/quick-create/QuickCreateCustomerModal';
 import { QuickCreateProductModal } from '../components/quick-create/QuickCreateProductModal';
 import { DocumentPrintView } from '../components/print/DocumentPrintView';
+
+interface DeficitItem {
+  code: string;
+  nombre: string;
+  solicitado: number;
+  disponible: number;
+  faltante: number;
+}
 
 interface ConfirmIssueData {
   title: string;
@@ -35,6 +47,7 @@ interface ConfirmIssueData {
   subtotal: number;
   impuestos: number;
   total: number;
+  deficitItems?: DeficitItem[];
   onConfirm: () => void;
 }
 
@@ -56,6 +69,8 @@ export const SalesPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'invoices' | 'quotes'>('invoices');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [monthFilter, setMonthFilter] = useState<string>('all');
+  const [expandedInvoicePayments, setExpandedInvoicePayments] = useState<Record<string, boolean>>({});
 
   // Modals state
   const [isNewInvoiceModalOpen, setIsNewInvoiceModalOpen] = useState(false);
@@ -101,6 +116,27 @@ export const SalesPage: React.FC = () => {
   const [lineCantidad, setLineCantidad] = useState<number | ''>(1);
   const [linePrecio, setLinePrecio] = useState<number | ''>('');
   const [lineDescuento, setLineDescuento] = useState<number | ''>(0);
+
+  const toggleExpandPayments = (invId: string) => {
+    setExpandedInvoicePayments(prev => ({ ...prev, [invId]: !prev[invId] }));
+  };
+
+  const checkStockDeficits = (items: { productoId: string; varianteId?: string; cantidad: number; descripcion: string }[]): DeficitItem[] => {
+    return items.map(item => {
+      const prod = products.find(p => p.id === item.productoId);
+      const variant = prod?.variantes?.find(v => v.id === item.varianteId);
+      const curStock = prod?.tieneVariantes ? (variant?.stockActual ?? 0) : (prod?.stockActual ?? 0);
+      const code = variant?.sku || prod?.codigo || 'SKU';
+      const missing = item.cantidad - curStock;
+      return {
+        code,
+        nombre: item.descripcion,
+        solicitado: item.cantidad,
+        disponible: curStock,
+        faltante: missing
+      };
+    }).filter(x => x.faltante > 0);
+  };
 
   const handleOpenNewInvoice = () => {
     const defaultClient = clients[0];
@@ -240,6 +276,7 @@ export const SalesPage: React.FC = () => {
     const client = clients.find(c => c.id === formClienteId);
     const nextFolio = generateDocNumber('FAC', invoices.length);
     const totalPieces = formItems.reduce((sum, item) => sum + item.cantidad, 0);
+    const deficits = checkStockDeficits(formItems);
 
     setConfirmIssueData({
       title: 'Confirmar Emisión de Factura',
@@ -254,6 +291,7 @@ export const SalesPage: React.FC = () => {
       subtotal: formSubtotal,
       impuestos: formImpuestos,
       total: formTotal,
+      deficitItems: deficits,
       onConfirm: () => {
         const newInv = createInvoice({
           clienteId: formClienteId,
@@ -283,6 +321,7 @@ export const SalesPage: React.FC = () => {
   const handleRequestIssueDraft = (inv: Invoice) => {
     const client = clients.find(c => c.id === inv.clienteId);
     const totalPieces = inv.items.reduce((sum, item) => sum + item.cantidad, 0);
+    const deficits = checkStockDeficits(inv.items);
 
     setConfirmIssueData({
       title: 'Confirmar Emisión de Factura Borrador',
@@ -297,6 +336,7 @@ export const SalesPage: React.FC = () => {
       subtotal: inv.subtotal,
       impuestos: inv.impuestos,
       total: inv.total,
+      deficitItems: deficits,
       onConfirm: () => {
         issueInvoice(inv.id);
         setConfirmIssueData(null);
@@ -311,6 +351,7 @@ export const SalesPage: React.FC = () => {
   const handleRequestConvertQuote = (quote: Quote) => {
     const client = clients.find(c => c.id === quote.clienteId);
     const totalPieces = quote.items.reduce((sum, item) => sum + item.cantidad, 0);
+    const deficits = checkStockDeficits(quote.items);
 
     setConfirmIssueData({
       title: 'Confirmar Conversión de Cotización a Factura',
@@ -325,6 +366,7 @@ export const SalesPage: React.FC = () => {
       subtotal: quote.subtotal,
       impuestos: quote.impuestos,
       total: quote.total,
+      deficitItems: deficits,
       onConfirm: () => {
         const inv = convertQuoteToInvoice(quote.id, true);
         setConfirmIssueData(null);
@@ -399,13 +441,23 @@ export const SalesPage: React.FC = () => {
     setSelectedInvoice(null);
   };
 
+  // Available months calculation
+  const availableInvoiceMonths = Array.from(
+    new Set(invoices.map(i => i.fechaEmision?.slice(0, 7)).filter(Boolean))
+  ).sort().reverse();
+
+  const availableQuoteMonths = Array.from(
+    new Set(quotes.map(q => q.fechaEmision?.slice(0, 7)).filter(Boolean))
+  ).sort().reverse();
+
   // Filtered queries
   const filteredInvoices = invoices.filter(inv => {
     const cli = clients.find(c => c.id === inv.clienteId);
     const matchesSearch = inv.numeroFactura.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (cli?.nombre.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = statusFilter === 'all' || inv.estado === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesMonth = monthFilter === 'all' || (inv.fechaEmision && inv.fechaEmision.startsWith(monthFilter));
+    return matchesSearch && matchesStatus && matchesMonth;
   });
 
   const filteredQuotes = quotes.filter(q => {
@@ -413,10 +465,15 @@ export const SalesPage: React.FC = () => {
     const matchesSearch = q.numeroCotizacion.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (cli?.nombre.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = statusFilter === 'all' || q.estado === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesMonth = monthFilter === 'all' || (q.fechaEmision && q.fechaEmision.startsWith(monthFilter));
+    return matchesSearch && matchesStatus && matchesMonth;
   });
 
   const selectedProdObj = products.find(p => p.id === selectedProdForLine);
+  const selectedVarObj = selectedProdObj?.variantes?.find(v => v.id === selectedVarForLine) || (selectedProdObj?.tieneVariantes ? selectedProdObj.variantes?.[0] : undefined);
+  const currentLineStock = selectedProdObj ? (selectedProdObj.tieneVariantes ? (selectedVarObj?.stockActual ?? 0) : selectedProdObj.stockActual) : 0;
+  const currentLineQty = typeof lineCantidad === 'number' ? lineCantidad : 0;
+  const projectedLineStock = currentLineStock - currentLineQty;
 
   return (
     <div className="page-content">
@@ -476,6 +533,24 @@ export const SalesPage: React.FC = () => {
           />
         </div>
 
+        {/* Month Selector Dropdown */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <Calendar size={16} style={{ color: 'var(--text-muted)' }} />
+          <select
+            className="form-select"
+            style={{ minWidth: '180px' }}
+            value={monthFilter}
+            onChange={(e) => setMonthFilter(e.target.value)}
+          >
+            <option value="all">📅 Todos los meses / periodos</option>
+            {(activeTab === 'invoices' ? availableInvoiceMonths : availableQuoteMonths).map(m => (
+              <option key={m} value={m}>
+                {formatMonthLabel(m)} ({m})
+              </option>
+            ))}
+          </select>
+        </div>
+
         <select
           className="form-select"
           style={{ width: 'auto' }}
@@ -528,86 +603,207 @@ export const SalesPage: React.FC = () => {
                 filteredInvoices.map(inv => {
                   const client = clients.find(c => c.id === inv.clienteId);
                   const hasPendingBalance = inv.saldoPendiente > 0 && inv.estado !== 'anulada';
+                  const isExpanded = !!expandedInvoicePayments[inv.id];
 
                   return (
-                    <tr key={inv.id}>
-                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
-                        {inv.numeroFactura}
-                      </td>
-                      <td>
-                        <div style={{ fontWeight: 600 }}>{client?.nombre || 'Cliente General'}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{client?.identificacionFiscal}</div>
-                      </td>
-                      <td>
-                        <div>{formatDate(inv.fechaEmision)}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Vence: {formatDate(inv.fechaVencimiento)}</div>
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <Badge variant={inv.tipoPago === 'credito' ? 'accent' : 'neutral'}>
-                          {inv.tipoPago.toUpperCase()}
-                        </Badge>
-                      </td>
-                      <td style={{ textAlign: 'right', fontWeight: 700 }}>
-                        {formatCurrency(inv.total)}
-                      </td>
-                      <td style={{ textAlign: 'right', fontWeight: 700, color: hasPendingBalance ? 'var(--color-danger-text)' : 'var(--color-success-text)' }}>
-                        {inv.estado === 'anulada' ? '-' : formatCurrency(inv.saldoPendiente)}
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        {inv.estado === 'pagada' && <Badge variant="success">Pagada</Badge>}
-                        {inv.estado === 'emitida' && <Badge variant="info">Emitida</Badge>}
-                        {inv.estado === 'borrador' && <Badge variant="neutral">Borrador</Badge>}
-                        {inv.estado === 'anulada' && <Badge variant="danger">Anulada</Badge>}
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'flex-end' }}>
-                          {inv.estado === 'borrador' && (
+                    <React.Fragment key={inv.id}>
+                      <tr>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
+                          {inv.numeroFactura}
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: 600 }}>{client?.nombre || 'Cliente General'}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{client?.identificacionFiscal}</div>
+                        </td>
+                        <td>
+                          <div>{formatDate(inv.fechaEmision)}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Vence: {formatDate(inv.fechaVencimiento)}</div>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <Badge variant={inv.tipoPago === 'credito' ? 'accent' : 'neutral'}>
+                            {inv.tipoPago.toUpperCase()}
+                          </Badge>
+                        </td>
+                        <td style={{ textAlign: 'right', fontWeight: 700 }}>
+                          {formatCurrency(inv.total)}
+                        </td>
+                        <td style={{ textAlign: 'right', fontWeight: 700, color: hasPendingBalance ? 'var(--color-danger-text)' : 'var(--color-success-text)' }}>
+                          {inv.estado === 'anulada' ? '-' : formatCurrency(inv.saldoPendiente)}
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          {inv.estado === 'pagada' && <Badge variant="success">Pagada</Badge>}
+                          {inv.estado === 'emitida' && <Badge variant="info">Emitida</Badge>}
+                          {inv.estado === 'borrador' && <Badge variant="neutral">Borrador</Badge>}
+                          {inv.estado === 'anulada' && <Badge variant="danger">Anulada</Badge>}
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                            {/* Abonos Toggle Button with Chevron */}
                             <button
                               type="button"
-                              className="btn btn-primary btn-sm"
-                              onClick={() => handleRequestIssueDraft(inv)}
-                              title="Emitir factura y descontar stock"
+                              className={`btn ${isExpanded ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+                              onClick={() => toggleExpandPayments(inv.id)}
+                              title={isExpanded ? 'Ocultar historial de abonos' : 'Ver historial de abonos / pagos recibidos'}
+                              style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
                             >
-                              <CheckCircle size={14} />
-                              Emitir
+                              {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                              <span>Abonos ({inv.pagos?.length || 0})</span>
                             </button>
-                          )}
 
-                          {inv.estado === 'emitida' && inv.saldoPendiente > 0 && (
-                            <button
-                              type="button"
-                              className="btn btn-success btn-sm"
-                              onClick={() => handleOpenPayment(inv)}
-                              title="Registrar cobro de cliente (CxC)"
-                            >
-                              <DollarSign size={14} />
-                              Cobrar
-                            </button>
-                          )}
+                            {inv.estado === 'borrador' && (
+                              <button
+                                type="button"
+                                className="btn btn-primary btn-sm"
+                                onClick={() => handleRequestIssueDraft(inv)}
+                                title="Emitir factura y descontar stock"
+                              >
+                                <CheckCircle size={14} />
+                                Emitir
+                              </button>
+                            )}
 
-                          <button
-                            type="button"
-                            className="btn-icon btn-sm"
-                            onClick={() => setPrintDoc({ doc: inv, type: 'invoice' })}
-                            title="Imprimir o ver documento"
-                          >
-                            <Printer size={14} />
-                          </button>
+                            {inv.estado === 'emitida' && inv.saldoPendiente > 0 && (
+                              <button
+                                type="button"
+                                className="btn btn-success btn-sm"
+                                onClick={() => handleOpenPayment(inv)}
+                                title="Registrar cobro de cliente (CxC)"
+                              >
+                                <DollarSign size={14} />
+                                Cobrar
+                              </button>
+                            )}
 
-                          {inv.estado !== 'anulada' && (
                             <button
                               type="button"
                               className="btn-icon btn-sm"
-                              style={{ color: 'var(--color-danger)' }}
-                              onClick={() => handleOpenCancel(inv)}
-                              title="Anular factura (Nunca eliminar)"
+                              onClick={() => setPrintDoc({ doc: inv, type: 'invoice' })}
+                              title="Imprimir o ver documento"
                             >
-                              <XCircle size={14} />
+                              <Printer size={14} />
                             </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
+
+                            {inv.estado !== 'anulada' && (
+                              <button
+                                type="button"
+                                className="btn-icon btn-sm"
+                                style={{ color: 'var(--color-danger)' }}
+                                onClick={() => handleOpenCancel(inv)}
+                                title="Anular factura (Nunca eliminar)"
+                              >
+                                <XCircle size={14} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* Expanded Sub-Row: Payment History */}
+                      {isExpanded && (
+                        <tr style={{ backgroundColor: 'var(--bg-subtle)' }}>
+                          <td colSpan={8} style={{ padding: '0.85rem 1.25rem', borderBottom: '2px solid var(--border-default)' }}>
+                            <div style={{
+                              padding: '1rem 1.25rem',
+                              borderRadius: 'var(--radius-lg)',
+                              backgroundColor: 'var(--bg-surface)',
+                              border: '1px solid var(--border-default)',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                            }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                  <DollarSign size={17} style={{ color: 'var(--color-success)' }} />
+                                  <strong style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                                    Historial de Abonos Recibidos (CxC) — Factura {inv.numeroFactura}
+                                  </strong>
+                                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>({client?.nombre})</span>
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                  <div style={{ fontSize: '0.8rem' }}>
+                                    <span style={{ color: 'var(--text-muted)' }}>Total Factura: </span>
+                                    <strong>{formatCurrency(inv.total)}</strong>
+                                  </div>
+                                  <div style={{ fontSize: '0.8rem' }}>
+                                    <span style={{ color: 'var(--text-muted)' }}>Total Abonado: </span>
+                                    <strong style={{ color: 'var(--color-success-text)' }}>
+                                      {formatCurrency(inv.pagos?.reduce((s, p) => s + p.monto, 0) || 0)}
+                                    </strong>
+                                  </div>
+                                  <div style={{ fontSize: '0.8rem' }}>
+                                    <span style={{ color: 'var(--text-muted)' }}>Saldo Pendiente: </span>
+                                    <strong style={{ color: inv.saldoPendiente > 0 ? 'var(--color-danger-text)' : 'var(--color-success-text)' }}>
+                                      {formatCurrency(inv.saldoPendiente)}
+                                    </strong>
+                                  </div>
+
+                                  {inv.estado === 'emitida' && inv.saldoPendiente > 0 && (
+                                    <button
+                                      type="button"
+                                      className="btn btn-success btn-sm"
+                                      onClick={() => handleOpenPayment(inv)}
+                                      style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}
+                                    >
+                                      <Plus size={13} />
+                                      + Registrar Abono
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+
+                              {inv.pagos && inv.pagos.length > 0 ? (
+                                <div style={{ overflowX: 'auto' }}>
+                                  <table style={{ width: '100%', fontSize: '0.8rem', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                      <tr style={{ backgroundColor: 'var(--bg-subtle)', textAlign: 'left', borderBottom: '1px solid var(--border-default)' }}>
+                                        <th style={{ padding: '0.4rem 0.6rem' }}>#</th>
+                                        <th style={{ padding: '0.4rem 0.6rem' }}>Fecha de Abono</th>
+                                        <th style={{ padding: '0.4rem 0.6rem' }}>Método de Pago</th>
+                                        <th style={{ padding: '0.4rem 0.6rem' }}>Referencia Bancaria / Folio</th>
+                                        <th style={{ padding: '0.4rem 0.6rem' }}>Notas / Concepto</th>
+                                        <th style={{ padding: '0.4rem 0.6rem', textAlign: 'right' }}>Monto Abonado</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {inv.pagos.map((pago, pIdx) => (
+                                        <tr key={pago.id || pIdx} style={{ borderBottom: '1px solid var(--border-default)' }}>
+                                          <td style={{ padding: '0.4rem 0.6rem', fontWeight: 600, color: 'var(--text-muted)' }}>{pIdx + 1}</td>
+                                          <td style={{ padding: '0.4rem 0.6rem' }}>{formatDate(pago.fecha)}</td>
+                                          <td style={{ padding: '0.4rem 0.6rem' }}>
+                                            <Badge variant="neutral">
+                                              {pago.metodoPago.toUpperCase()}
+                                            </Badge>
+                                          </td>
+                                          <td style={{ padding: '0.4rem 0.6rem', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                                            {pago.referencia || '-'}
+                                          </td>
+                                          <td style={{ padding: '0.4rem 0.6rem', color: 'var(--text-secondary)' }}>
+                                            {pago.notas || 'Abono a cuenta de cliente'}
+                                          </td>
+                                          <td style={{ padding: '0.4rem 0.6rem', textAlign: 'right', fontWeight: 700, color: 'var(--color-success-text)' }}>
+                                            +{formatCurrency(pago.monto)}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              ) : (
+                                <div style={{
+                                  padding: '0.75rem',
+                                  textAlign: 'center',
+                                  color: 'var(--text-muted)',
+                                  fontSize: '0.8rem',
+                                  backgroundColor: 'var(--bg-subtle)',
+                                  borderRadius: 'var(--radius-md)'
+                                }}>
+                                  No se han registrado abonos aún para esta factura. Saldo pendiente total: <strong>{formatCurrency(inv.saldoPendiente)}</strong>.
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })
               )}
@@ -859,6 +1055,38 @@ export const SalesPage: React.FC = () => {
                 Agregar
               </button>
             </div>
+
+            {/* Real-time stock status & commentary */}
+            {selectedProdObj && (
+              <div style={{
+                marginTop: '0.75rem',
+                padding: '0.5rem 0.75rem',
+                borderRadius: 'var(--radius-sm)',
+                fontSize: '0.8rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                backgroundColor: currentLineStock < currentLineQty ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                border: `1px solid ${currentLineStock < currentLineQty ? 'var(--color-danger, #ef4444)' : 'var(--color-success, #10b981)'}`,
+                color: currentLineStock < currentLineQty ? 'var(--color-danger, #ef4444)' : 'var(--color-success, #10b981)'
+              }}>
+                {currentLineStock < currentLineQty ? (
+                  <>
+                    <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+                    <span>
+                      <strong>Inventario insuficiente:</strong> Stock actual en almacén: <strong>{currentLineStock} pzas</strong>. Al facturar <strong>{currentLineQty} pzas</strong>, el inventario resultante será de <strong style={{ textDecoration: 'underline' }}>{projectedLineStock} pzas (Déficit / Negativo: {currentLineQty - currentLineStock} pzas)</strong>.
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle size={15} style={{ flexShrink: 0 }} />
+                    <span>
+                      <strong>Stock disponible:</strong> <strong>{currentLineStock} pzas</strong> en almacén (Quedarán <strong>{projectedLineStock} pzas</strong> tras esta venta).
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Items Table */}
@@ -1086,6 +1314,38 @@ export const SalesPage: React.FC = () => {
                 Agregar
               </button>
             </div>
+
+            {/* Real-time stock status in Quote */}
+            {selectedProdObj && (
+              <div style={{
+                marginTop: '0.75rem',
+                padding: '0.5rem 0.75rem',
+                borderRadius: 'var(--radius-sm)',
+                fontSize: '0.8rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                backgroundColor: currentLineStock < currentLineQty ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                border: `1px solid ${currentLineStock < currentLineQty ? 'var(--color-warning, #f59e0b)' : 'var(--color-success, #10b981)'}`,
+                color: currentLineStock < currentLineQty ? 'var(--color-warning, #d97706)' : 'var(--color-success, #10b981)'
+              }}>
+                {currentLineStock < currentLineQty ? (
+                  <>
+                    <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+                    <span>
+                      <strong>Aviso de existencias:</strong> Stock actual: <strong>{currentLineStock} pzas</strong>. Cantidad a cotizar: <strong>{currentLineQty} pzas</strong> (Faltante para entrega inmediata: {currentLineQty - currentLineStock} pzas).
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle size={15} style={{ flexShrink: 0 }} />
+                    <span>
+                      <strong>Stock suficiente:</strong> <strong>{currentLineStock} pzas</strong> disponibles para entrega inmediata.
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Items Table */}
@@ -1297,6 +1557,56 @@ export const SalesPage: React.FC = () => {
           }
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {/* Deficit warning banner if negative stock will occur */}
+            {confirmIssueData.deficitItems && confirmIssueData.deficitItems.length > 0 && (
+              <div style={{
+                padding: '1rem',
+                backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                border: '1.5px solid var(--color-danger, #ef4444)',
+                borderRadius: 'var(--radius-md)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.65rem'
+              }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', color: 'var(--color-danger, #ef4444)', fontWeight: 700, fontSize: '0.95rem' }}>
+                  <AlertTriangle size={20} />
+                  <span>¡Advertencia: Existencias Insuficientes en Inventario!</span>
+                </div>
+                <p style={{ fontSize: '0.85rem', margin: 0, color: 'var(--text-primary)', lineHeight: 1.4 }}>
+                  Los siguientes productos a facturar superan las existencias físicas en almacén. Si confirmas la emisión, el sistema registrará los saldos negativos en el Kardex e inventarios:
+                </p>
+                <div style={{ maxHeight: '160px', overflowY: 'auto', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)', backgroundColor: 'var(--bg-card)' }}>
+                  <table className="table" style={{ fontSize: '0.8rem', margin: 0 }}>
+                    <thead>
+                      <tr>
+                        <th>Código / SKU</th>
+                        <th>Producto</th>
+                        <th style={{ textAlign: 'center' }}>Stock Disp.</th>
+                        <th style={{ textAlign: 'center' }}>A Facturar</th>
+                        <th style={{ textAlign: 'center', color: 'var(--color-danger)' }}>Déficit / Saldo Negativo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {confirmIssueData.deficitItems.map((def, idx) => (
+                        <tr key={idx}>
+                          <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{def.code}</td>
+                          <td>{def.nombre}</td>
+                          <td style={{ textAlign: 'center' }}>{def.disponible}</td>
+                          <td style={{ textAlign: 'center', fontWeight: 600 }}>{def.solicitado}</td>
+                          <td style={{ textAlign: 'center', fontWeight: 700, color: 'var(--color-danger)' }}>
+                            -{def.faltante} ({def.disponible - def.solicitado} final)
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div style={{ fontSize: '0.825rem', fontWeight: 700, color: 'var(--color-danger)' }}>
+                  ¿Deseas confirmar la emisión de la factura de todos modos permitiendo saldo negativo?
+                </div>
+              </div>
+            )}
+
             {/* Impact notification alert */}
             <div style={{
               padding: '1rem',
