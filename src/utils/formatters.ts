@@ -190,3 +190,30 @@ export function getNextProductSKU(products: { codigo?: string; variantes?: { sku
   return `SKU${nextNumber.toString().padStart(4, '0')}`;
 }
 
+/**
+ * Calculates the next sequential entity ID for a given prefix (e.g. CL0001, PR0001, AC0001, DE0001, GA0001).
+ * Scans all existing IDs with that prefix to find the highest number and increments by 1.
+ */
+export function getNextEntityId(prefix: string, items: { id?: string; codigoContable?: string }[] = []): string {
+  let maxNumber = 0;
+  const regex = new RegExp(`^${prefix}-?(\\d+)$`, 'i');
+
+  if (Array.isArray(items)) {
+    items.forEach(item => {
+      const idToCheck = item?.codigoContable || item?.id;
+      if (idToCheck) {
+        const match = idToCheck.trim().match(regex);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (!isNaN(num) && num > maxNumber) {
+            maxNumber = num;
+          }
+        }
+      }
+    });
+  }
+
+  const nextNumber = maxNumber + 1;
+  return `${prefix.toUpperCase()}${nextNumber.toString().padStart(4, '0')}`;
+}
+

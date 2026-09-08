@@ -667,6 +667,15 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
             <thead>
               <tr>
                 <SortableTh
+                  sortKey="id"
+                  currentSortKey={clientSortKey}
+                  currentSortDirection={clientSortDirection}
+                  onSort={requestClientSort}
+                  isNumeric={false}
+                >
+                  ID
+                </SortableTh>
+                <SortableTh
                   sortKey="nombre"
                   currentSortKey={clientSortKey}
                   currentSortDirection={clientSortDirection}
@@ -736,38 +745,49 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
               </tr>
             </thead>
             <tbody>
-              {sortedClients.map(c => (
-                <tr key={c.id}>
-                  <td style={{ fontWeight: 600 }}>{c.nombre}</td>
-                  <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.825rem' }}>{c.identificacionFiscal}</td>
-                  <td>
-                    <div>{c.telefono || '-'}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{c.email || '-'}</div>
-                  </td>
-                  <td style={{ fontSize: '0.825rem', color: 'var(--text-secondary)' }}>{c.direccion || '-'}</td>
-                  <td style={{ textAlign: 'center' }}>
-                    <Badge variant={c.tipoPago === 'credito' ? 'accent' : 'neutral'}>
-                      {c.tipoPago.toUpperCase()}
-                    </Badge>
-                  </td>
-                  <td style={{ textAlign: 'right', fontWeight: 600 }}>
-                    {c.tipoPago === 'credito' ? formatCurrency(c.limiteCredito) : '-'}
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    {c.tipoPago === 'credito' ? `${c.diasCredito} días` : '-'}
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <button
-                      type="button"
-                      className="btn-icon btn-sm"
-                      onClick={() => handleEditClient(c)}
-                      title="Editar cliente"
-                    >
-                      <Edit2 size={14} />
-                    </button>
+              {sortedClients.length === 0 ? (
+                <tr>
+                  <td colSpan={9} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                    No hay clientes registrados en el catálogo.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                sortedClients.map(c => (
+                  <tr key={c.id}>
+                    <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-accent)' }}>
+                      {c.id}
+                    </td>
+                    <td style={{ fontWeight: 600 }}>{c.nombre}</td>
+                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.825rem' }}>{c.identificacionFiscal}</td>
+                    <td>
+                      <div>{c.telefono || '-'}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{c.email || '-'}</div>
+                    </td>
+                    <td style={{ fontSize: '0.825rem', color: 'var(--text-secondary)' }}>{c.direccion || '-'}</td>
+                    <td style={{ textAlign: 'center' }}>
+                      <Badge variant={c.tipoPago === 'credito' ? 'accent' : 'neutral'}>
+                        {c.tipoPago.toUpperCase()}
+                      </Badge>
+                    </td>
+                    <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                      {c.tipoPago === 'credito' ? formatCurrency(c.limiteCredito) : '-'}
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      {c.tipoPago === 'credito' ? `${c.diasCredito} días` : '-'}
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button
+                        type="button"
+                        className="btn-icon btn-sm"
+                        onClick={() => handleEditClient(c)}
+                        title="Editar cliente"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -779,6 +799,15 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
           <table className="table">
             <thead>
               <tr>
+                <SortableTh
+                  sortKey="id"
+                  currentSortKey={supplierSortKey}
+                  currentSortDirection={supplierSortDirection}
+                  onSort={requestSupplierSort}
+                  isNumeric={false}
+                >
+                  ID
+                </SortableTh>
                 <SortableTh
                   sortKey="nombre"
                   currentSortKey={supplierSortKey}
@@ -828,28 +857,39 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
               </tr>
             </thead>
             <tbody>
-              {sortedSuppliers.map(s => (
-                <tr key={s.id}>
-                  <td style={{ fontWeight: 600 }}>{s.nombre}</td>
-                  <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.825rem' }}>{s.identificacionFiscal}</td>
-                  <td>{s.contactoNombre || '-'}</td>
-                  <td>
-                    <div>{s.telefono}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{s.email}</div>
-                  </td>
-                  <td style={{ fontSize: '0.825rem', color: 'var(--text-secondary)' }}>{s.direccion || '-'}</td>
-                  <td style={{ textAlign: 'right' }}>
-                    <button
-                      type="button"
-                      className="btn-icon btn-sm"
-                      onClick={() => handleEditSupplier(s)}
-                      title="Editar proveedor"
-                    >
-                      <Edit2 size={14} />
-                    </button>
+              {sortedSuppliers.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                    No hay proveedores registrados en el catálogo.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                sortedSuppliers.map(s => (
+                  <tr key={s.id}>
+                    <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-accent)' }}>
+                      {s.id}
+                    </td>
+                    <td style={{ fontWeight: 600 }}>{s.nombre}</td>
+                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.825rem' }}>{s.identificacionFiscal}</td>
+                    <td>{s.contactoNombre || '-'}</td>
+                    <td>
+                      <div>{s.telefono}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{s.email}</div>
+                    </td>
+                    <td style={{ fontSize: '0.825rem', color: 'var(--text-secondary)' }}>{s.direccion || '-'}</td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button
+                        type="button"
+                        className="btn-icon btn-sm"
+                        onClick={() => handleEditSupplier(s)}
+                        title="Editar proveedor"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

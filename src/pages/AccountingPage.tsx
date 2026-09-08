@@ -65,6 +65,7 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
   const [expCategoria, setExpCategoria] = useState('Renta & Local');
   const [expMonto, setExpMonto] = useState<number | ''>('');
   const [expDesc, setExpDesc] = useState('');
+  const [expReferenciaFactura, setExpReferenciaFactura] = useState('');
 
   // Expense Cancellation / Reversal Warning Modal State
   const [expenseToCancel, setExpenseToCancel] = useState<OperatingExpense | null>(null);
@@ -96,12 +97,14 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
       tipo: expTipo,
       categoria: expCategoria,
       monto: Number(expMonto),
-      descripcion: expDesc.trim()
+      descripcion: expDesc.trim(),
+      referenciaFactura: expReferenciaFactura.trim() || undefined
     });
 
     setIsExpenseModalOpen(false);
     setExpMonto('');
     setExpDesc('');
+    setExpReferenciaFactura('');
   };
 
   const handleConfirmCancelExpense = () => {
@@ -661,6 +664,15 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
                     ID Contable
                   </SortableTh>
                   <SortableTh
+                    sortKey="referenciaFactura"
+                    currentSortKey={expSortKey}
+                    currentSortDirection={expSortDirection}
+                    onSort={requestExpSort}
+                    isNumeric={false}
+                  >
+                    Ref. Factura
+                  </SortableTh>
+                  <SortableTh
                     sortKey="categoria"
                     currentSortKey={expSortKey}
                     currentSortDirection={expSortDirection}
@@ -704,7 +716,7 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
               <tbody>
                 {sortedExpenses.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                    <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                       No hay gastos registrados en el periodo {selectedMonth}.
                     </td>
                   </tr>
@@ -712,18 +724,35 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
                   sortedExpenses.map(exp => {
                     const isReversal = !!exp.esAnulacionDe || exp.monto < 0;
                     const isCancelled = exp.anulado;
+                    const isAutoDepreciation = !!exp.esDepreciacionDeActivoId || exp.codigoContable?.startsWith('DE');
 
                     return (
                       <tr key={exp.id} style={{ opacity: isCancelled && !isReversal ? 0.75 : 1 }}>
                         <td>{formatDateTime(exp.fecha)}</td>
                         <td>
-                          <span style={{
-                            fontFamily: 'var(--font-mono)',
-                            fontWeight: 700,
-                            color: isReversal ? 'var(--color-danger)' : (isCancelled ? 'var(--text-muted)' : 'var(--color-accent)')
-                          }}>
-                            {exp.codigoContable || exp.id}
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                            <span style={{
+                              fontFamily: 'var(--font-mono)',
+                              fontWeight: 700,
+                              color: isReversal ? 'var(--color-danger)' : (isCancelled ? 'var(--text-muted)' : (isAutoDepreciation ? 'var(--color-accent)' : 'var(--color-accent)'))
+                            }}>
+                              {exp.codigoContable || exp.id}
+                            </span>
+                            {isAutoDepreciation && (
+                              <span className="badge badge-accent" style={{ fontSize: '0.65rem', padding: '0.1rem 0.35rem' }}>
+                                AUTO
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          {exp.referenciaFactura ? (
+                            <span className="badge badge-neutral" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
+                              {exp.referenciaFactura}
+                            </span>
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>—</span>
+                          )}
                         </td>
                         <td style={{ fontWeight: 600 }}>{exp.categoria}</td>
                         <td style={{ textAlign: 'center' }}>
@@ -751,6 +780,10 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
                           {isCancelled || isReversal ? (
                             <Badge variant="danger">
                               {isReversal ? 'ANULACIÓN' : 'ANULADO'}
+                            </Badge>
+                          ) : isAutoDepreciation ? (
+                            <Badge variant="neutral">
+                              ACTIVO FIJO
                             </Badge>
                           ) : (
                             <button
@@ -1150,6 +1183,17 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
               required
             />
           </div>
+
+          <div className="form-group">
+            <label className="form-label">N° Factura / Referencia Proveedor (Opcional)</label>
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Ej. FAC-00123 / Folio fiscal externo o ref. bancaria"
+              value={expReferenciaFactura}
+              onChange={(e) => setExpReferenciaFactura(e.target.value)}
+            />
+          </div>
         </form>
       </Modal>
 
@@ -1193,10 +1237,13 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
                 value={astCategoria}
                 onChange={(e) => setAstCategoria(e.target.value)}
               >
-                <option value="Equipo de Cómputo">Equipo de Cómputo (3 años)</option>
-                <option value="Maquinaria y Equipo">Maquinaria y Equipo (5-10 años)</option>
-                <option value="Mobiliario y Enseres">Mobiliario y Enseres (10 años)</option>
-                <option value="Equipo de Transporte">Equipo de Transporte (4 años)</option>
+                <option value="Equipo de Cómputo">Equipo de Cómputo</option>
+                <option value="Maquinaria y Equipo">Maquinaria y Equipo</option>
+                <option value="Mobiliario y Enseres">Mobiliario y Enseres</option>
+                <option value="Equipo de Transporte">Equipo de Transporte</option>
+                <option value="Herramientas y Utillaje">Herramientas y Utillaje</option>
+                <option value="Edificaciones e Instalaciones">Edificaciones e Instalaciones</option>
+                <option value="Otros Activos Fijos">Otros Activos Fijos</option>
               </select>
             </div>
 

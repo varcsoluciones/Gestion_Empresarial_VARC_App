@@ -242,18 +242,22 @@ export const downloadExcelWorkbook = (data: FullERPData): void => {
 
   // 6. Gastos Operativos
   const gastosFlat = data.expenses.map(e => ({
+    'ID Contable': e.codigoContable || e.id,
     'Fecha': e.fecha,
     'Periodo Mes': e.periodoMes,
     'Tipo Gasto': e.tipo.toUpperCase(),
     'Categoría': e.categoria,
+    'Ref. Factura': e.referenciaFactura || '',
     'Monto': e.monto,
-    'Descripción': e.descripcion
+    'Descripción': e.descripcion,
+    'Estado': e.anulado ? 'ANULADO' : 'DEVENGADO'
   }));
   const wsGastos = XLSX.utils.json_to_sheet(gastosFlat);
   XLSX.utils.book_append_sheet(wb, wsGastos, 'Gastos Operativos');
 
   // 7. Activos Fijos & Depreciación
   const activosFlat = data.fixedAssets.map(a => ({
+    'ID Activo': a.id,
     'Nombre Activo': a.nombre,
     'Categoría': a.categoriaActivo,
     'Fecha Adquisición': a.fechaAdquisicion,
@@ -270,6 +274,7 @@ export const downloadExcelWorkbook = (data: FullERPData): void => {
 
   // 8. Clientes
   const clientesFlat = data.clients.map(c => ({
+    'ID Cliente': c.id,
     'Nombre': c.nombre,
     'RFC / Identificación': c.identificacionFiscal,
     'Teléfono': c.telefono,
@@ -285,6 +290,7 @@ export const downloadExcelWorkbook = (data: FullERPData): void => {
 
   // 9. Proveedores
   const proveedoresFlat = data.suppliers.map(s => ({
+    'ID Proveedor': s.id,
     'Nombre': s.nombre,
     'RFC / Identificación': s.identificacionFiscal,
     'Teléfono': s.telefono,

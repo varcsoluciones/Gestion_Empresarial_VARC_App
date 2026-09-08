@@ -205,7 +205,7 @@ export const PurchasesPage: React.FC = () => {
 
     addSupplierPayment({
       compraId: selectedPurchase.id,
-      fecha: getTodayLocalDateString(),
+      fecha: new Date().toISOString(),
       monto: Number(paymentAmount),
       metodoPago: paymentMethod,
       referencia: paymentRef || `PAGO-${Date.now().toString().slice(-4)}`,

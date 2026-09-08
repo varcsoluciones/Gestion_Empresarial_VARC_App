@@ -33,7 +33,7 @@ import {
   initialOperatingExpenses,
   initialFixedAssets
 } from '../data/seedData';
-import { calculateWeightedAverageCost, generateDocNumber, getMonthKey, getNextProductSKU, formatCurrency, setActiveCurrencySymbol, getTodayLocalDateString, getFutureLocalDateString, parseDateSafe } from '../utils/formatters';
+import { calculateWeightedAverageCost, generateDocNumber, getMonthKey, getNextProductSKU, getNextEntityId, formatCurrency, setActiveCurrencySymbol, getTodayLocalDateString, getFutureLocalDateString, parseDateSafe } from '../utils/formatters';
 import {
   downloadJSONBackup,
   downloadExcelWorkbook,
@@ -215,7 +215,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Actions: Clients & Suppliers
   const addClient = (data: Omit<Client, 'id' | 'creadoEn'>): Client => {
-    const nextId = generateDocNumber('CL', clients.length);
+    const nextId = getNextEntityId('CL', clients);
     const newClient: Client = {
       ...data,
       id: nextId,
@@ -230,7 +230,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const addSupplier = (data: Omit<Supplier, 'id' | 'creadoEn'>): Supplier => {
-    const nextId = generateDocNumber('PV', suppliers.length);
+    const nextId = getNextEntityId('PR', suppliers);
     const newSupplier: Supplier = {
       ...data,
       id: nextId,
@@ -691,6 +691,15 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (hasChanges || movementsToAdd.length > 0) {
       setProducts(reconciledProducts);
       setInventoryMovements(reconciledMovements);
+    }
+
+    // 3. Verify and sync Fixed Assets Monthly Depreciation
+    if (fixedAssets.length > 0) {
+      const { updatedExpenses, updatedAssets, hasChanges: depChanges } = syncAssetDepreciation(fixedAssets, expenses);
+      if (depChanges) {
+        setExpenses(updatedExpenses);
+        setFixedAssets(updatedAssets);
+      }
     }
   }, []);
 
@@ -1308,9 +1317,111 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   // Actions: Contabilidad (Gastos y Activos Fijos)
+  const syncAssetDepreciation = (
+    assets: FixedAsset[],
+    currentExpenses: OperatingExpense[]
+  ): { updatedExpenses: OperatingExpense[]; updatedAssets: FixedAsset[]; hasChanges: boolean } => {
+    let hasChanges = false;
+    let newExpensesList = [...currentExpenses];
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+
+    const updatedAssets = assets.map(asset => {
+      // Normalize asset ID from legacy DE to AC if present
+      const normalizedAssetId = asset.id.startsWith('DE') ? asset.id.replace('DE', 'AC') : asset.id;
+      if (normalizedAssetId !== asset.id) {
+        hasChanges = true;
+      }
+
+      const acqDate = parseDateSafe(asset.fechaAdquisicion) || new Date();
+      const startYear = acqDate.getFullYear();
+      const startMonth = acqDate.getMonth();
+      const startDay = acqDate.getDate();
+
+      const mensual = asset.vidaUtilMeses > 0
+        ? Number((asset.valorAdquisicion / asset.vidaUtilMeses).toFixed(2))
+        : 0;
+
+      // Calculate month difference
+      const monthDiff = (currentYear - startYear) * 12 + (currentMonth - startMonth);
+      const totalEligibleMonths = monthDiff < 0
+        ? 0
+        : Math.min(asset.vidaUtilMeses, monthDiff + 1);
+
+      for (let m = 0; m < totalEligibleMonths; m++) {
+        const targetYear = startYear + Math.floor((startMonth + m) / 12);
+        const targetMonth = (startMonth + m) % 12;
+
+        // Ensure not in future month
+        if (targetYear > currentYear || (targetYear === currentYear && targetMonth > currentMonth)) {
+          break;
+        }
+
+        const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+        const targetDay = Math.min(startDay, daysInMonth);
+        const targetDate = new Date(targetYear, targetMonth, targetDay, 12, 0, 0);
+        const monthKey = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}`;
+
+        // Check if already registered
+        const exists = newExpensesList.some(e =>
+          !e.anulado &&
+          (e.esDepreciacionDeActivoId === normalizedAssetId ||
+           e.esDepreciacionDeActivoId === asset.id ||
+           e.descripcion?.includes(`(${normalizedAssetId})`) ||
+           e.descripcion?.includes(`(${asset.id})`)) &&
+          e.periodoMes === monthKey
+        );
+
+        if (!exists) {
+          const nextCode = getNextEntityId('DE', newExpensesList);
+          const depExpense: OperatingExpense = {
+            id: nextCode,
+            codigoContable: nextCode,
+            fecha: targetDate.toISOString(),
+            periodoMes: monthKey,
+            tipo: 'fijo',
+            categoria: 'Depreciación de Activos',
+            monto: mensual,
+            descripcion: `Depreciación mensual (${m + 1}/${asset.vidaUtilMeses}) - ${asset.nombre} (${normalizedAssetId})`,
+            referenciaFactura: normalizedAssetId,
+            esDepreciacionDeActivoId: normalizedAssetId
+          };
+          newExpensesList = [depExpense, ...newExpensesList];
+          hasChanges = true;
+        }
+      }
+
+      const totalDepreciated = Math.min(asset.valorAdquisicion, totalEligibleMonths * mensual);
+      const bookValue = Math.max(0, Number((asset.valorAdquisicion - totalDepreciated).toFixed(2)));
+      const status: 'activo' | 'depreciado' | 'baja' = bookValue <= 0 ? 'depreciado' : 'activo';
+
+      if (
+        asset.id !== normalizedAssetId ||
+        asset.depreciacionMensual !== mensual ||
+        asset.depreciacionAcumulada !== totalDepreciated ||
+        asset.valorEnLibros !== bookValue ||
+        asset.activoEstado !== status
+      ) {
+        hasChanges = true;
+        return {
+          ...asset,
+          id: normalizedAssetId,
+          depreciacionMensual: mensual,
+          depreciacionAcumulada: totalDepreciated,
+          valorEnLibros: bookValue,
+          activoEstado: status
+        };
+      }
+
+      return asset;
+    });
+
+    return { updatedExpenses: newExpensesList, updatedAssets, hasChanges };
+  };
+
   const addExpense = (expenseData: Omit<OperatingExpense, 'id'>) => {
-    const baseCount = expenses.filter(e => !e.esAnulacionDe).length;
-    const nextCode = generateDocNumber('GA', baseCount);
+    const nextCode = getNextEntityId('GA', expenses);
     const newExpense: OperatingExpense = {
       ...expenseData,
       id: nextCode,
@@ -1332,6 +1443,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       categoria: exp.categoria,
       monto: -Math.abs(exp.monto),
       descripcion: `Anulación de gasto ${exp.codigoContable || exp.id} - ${exp.descripcion}`,
+      referenciaFactura: exp.referenciaFactura,
       anulado: true,
       esAnulacionDe: exp.codigoContable || exp.id
     };
@@ -1339,18 +1451,22 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const addFixedAsset = (assetData: Omit<FixedAsset, 'id' | 'depreciacionMensual' | 'depreciacionAcumulada' | 'valorEnLibros' | 'activoEstado'>) => {
-    const nextId = generateDocNumber('DE', fixedAssets.length);
+    const nextId = getNextEntityId('AC', fixedAssets);
     const mensual = assetData.vidaUtilMeses > 0 ? Number((assetData.valorAdquisicion / assetData.vidaUtilMeses).toFixed(2)) : 0;
     const newAsset: FixedAsset = {
       ...assetData,
       id: nextId,
       metodoDepreciacion: 'lineal',
       depreciacionMensual: mensual,
-      depreciacionAcumulada: mensual,
-      valorEnLibros: Math.max(0, assetData.valorAdquisicion - mensual),
+      depreciacionAcumulada: 0,
+      valorEnLibros: assetData.valorAdquisicion,
       activoEstado: 'activo'
     };
-    setFixedAssets(prev => [newAsset, ...prev]);
+
+    const assetsWithNew = [newAsset, ...fixedAssets];
+    const { updatedExpenses, updatedAssets } = syncAssetDepreciation(assetsWithNew, expenses);
+    setFixedAssets(updatedAssets);
+    setExpenses(updatedExpenses);
   };
 
   const updateFixedAsset = (id: string, data: Partial<FixedAsset>) => {
@@ -1361,13 +1477,28 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const getProrrateoMensual = (mesKey = getMonthKey(), overrideCriterio?: ProrrateoCriterion): MonthlyProrrateo => {
     const criterio: ProrrateoCriterion = overrideCriterio || settings.criterioProrrateoDefecto || 'costo_material';
 
-    const monthExpenses = expenses.filter(e => e.periodoMes === mesKey || e.fecha.startsWith(mesKey));
-    const gastosFijos = monthExpenses.filter(e => e.tipo === 'fijo').reduce((sum, e) => sum + e.monto, 0);
-    const gastosVariables = monthExpenses.filter(e => e.tipo === 'variable').reduce((sum, e) => sum + e.monto, 0);
+    const monthExpenses = expenses.filter(e => (e.periodoMes === mesKey || e.fecha.startsWith(mesKey)) && !e.anulado);
+    
+    // Gastos fijos (excluye depreciaciones para evitar duplicación con depreciacionActivos)
+    const gastosFijos = monthExpenses
+      .filter(e => e.tipo === 'fijo' && e.categoria !== 'Depreciación de Activos' && !e.codigoContable?.startsWith('DE'))
+      .reduce((sum, e) => sum + e.monto, 0);
 
-    const depreciacionActivos = fixedAssets
-      .filter(a => a.activoEstado === 'activo')
-      .reduce((sum, a) => sum + a.depreciacionMensual, 0);
+    // Gastos variables
+    const gastosVariables = monthExpenses
+      .filter(e => e.tipo === 'variable')
+      .reduce((sum, e) => sum + e.monto, 0);
+
+    // Depreciación del periodo (toma los registros contables DE... del mes o calcula sobre activos si no hay registros)
+    const deprFromExpenses = monthExpenses
+      .filter(e => e.categoria === 'Depreciación de Activos' || e.codigoContable?.startsWith('DE'))
+      .reduce((sum, e) => sum + e.monto, 0);
+
+    const depreciacionActivos = deprFromExpenses > 0
+      ? deprFromExpenses
+      : fixedAssets
+          .filter(a => a.activoEstado === 'activo')
+          .reduce((sum, a) => sum + a.depreciacionMensual, 0);
 
     const gastoOperativoTotal = gastosFijos + gastosVariables + depreciacionActivos;
 

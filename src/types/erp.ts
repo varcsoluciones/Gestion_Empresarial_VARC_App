@@ -268,15 +268,17 @@ export interface ProductRealCostResult {
 
 export interface OperatingExpense {
   id: string;
-  codigoContable?: string; // e.g. GA0001, GA0001A
+  codigoContable?: string; // e.g. GA0001, DE0001
   fecha: string;
   periodoMes: string; // YYYY-MM
   tipo: ExpenseType;
-  categoria: string; // Renta, Nómina, Publicidad, Servicios, Empaque, etc.
+  categoria: string; // Renta, Nómina, Publicidad, Depreciación de Activos, etc.
   monto: number;
   descripcion: string;
+  referenciaFactura?: string; // N° Factura / Referencia Proveedor (Opcional)
   anulado?: boolean;
   esAnulacionDe?: string; // ID o código del gasto original anulado
+  esDepreciacionDeActivoId?: string; // ID del activo relacionado si es depreciación automática
 }
 
 export interface FixedAsset {
