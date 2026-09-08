@@ -73,6 +73,7 @@ export const SettingsPage: React.FC = () => {
   });
 
   const [isSaved, setIsSaved] = useState(false);
+  const [activeTab, setActiveTab] = useState<'company' | 'appearance' | 'data'>('company');
 
   // Backup & Restore State
   const [importError, setImportError] = useState<string | null>(null);
@@ -155,8 +156,39 @@ export const SettingsPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Tabs Navigation */}
+      <div className="tabs-nav">
+        <button
+          type="button"
+          className={`tab-btn ${activeTab === 'company' ? 'active' : ''}`}
+          onClick={() => setActiveTab('company')}
+        >
+          <Building size={16} />
+          {t.settings.companyProfile}
+        </button>
+
+        <button
+          type="button"
+          className={`tab-btn ${activeTab === 'appearance' ? 'active' : ''}`}
+          onClick={() => setActiveTab('appearance')}
+        >
+          <Palette size={16} />
+          {t.settings.themeAndAccent}
+        </button>
+
+        <button
+          type="button"
+          className={`tab-btn ${activeTab === 'data' ? 'active' : ''}`}
+          onClick={() => setActiveTab('data')}
+        >
+          <Database size={16} />
+          {t.settings.dataManagement}
+        </button>
+      </div>
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
         {/* 1. Appearance & Themes */}
+        {activeTab === 'appearance' && (
         <div className="card">
           <div className="card-header">
             <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -280,8 +312,10 @@ export const SettingsPage: React.FC = () => {
             </div>
           </div>
         </div>
+        )}
 
         {/* 2. Company Profile & Tax Settings */}
+        {activeTab === 'company' && (
         <form onSubmit={handleSave} className="card">
           <div className="card-header">
             <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -488,8 +522,10 @@ export const SettingsPage: React.FC = () => {
             </button>
           </div>
         </form>
+        )}
 
         {/* 3. Data Management, Backups & Exports */}
+        {activeTab === 'data' && (
         <div className="card">
           <div className="card-header">
             <div>
@@ -772,6 +808,7 @@ export const SettingsPage: React.FC = () => {
             </div>
           </div>
         </div>
+        )}
 
         {/* System Version & Information Footer */}
         <div style={{

@@ -1280,20 +1280,21 @@ body {
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-xl);
   width: 100%;
-  max-width: 600px;
+  max-width: min(600px, calc(100vw - 2rem));
   max-height: 90vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-sizing: border-box;
   animation: modalScale 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .modal-card.modal-lg {
-  max-width: 850px;
+  max-width: min(880px, calc(100vw - 2rem));
 }
 
 .modal-card.modal-xl {
-  max-width: 1100px;
+  max-width: min(1120px, calc(100vw - 2rem));
 }
 
 .modal-header {
@@ -1325,6 +1326,8 @@ body {
   align-items: center;
   justify-content: flex-end;
   gap: 0.75rem;
+  flex-wrap: wrap;
+  box-sizing: border-box;
 }
 
 /* Tabs */
@@ -1572,6 +1575,46 @@ body {
    Responsive Grid & Mobile Component Utilities
    ========================================================================== */
 
+/* Item Builder Components (Spacious & Responsive) */
+.item-builder-card {
+  padding: 1.15rem;
+  background-color: var(--bg-subtle);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-default);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.item-builder-header {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.item-builder-row-products {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 0.85rem;
+}
+
+.item-builder-row-inputs-purchase {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr 1.25fr auto;
+  gap: 0.85rem;
+  align-items: flex-end;
+}
+
+.item-builder-row-inputs-sales {
+  display: grid;
+  grid-template-columns: 0.9fr 1.2fr 0.9fr 1.2fr auto;
+  gap: 0.85rem;
+  align-items: flex-end;
+}
+
 .line-item-builder {
   display: grid;
   grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr auto;
@@ -1617,6 +1660,18 @@ body {
 
 /* Responsive Media Queries */
 @media (max-width: 992px) {
+  .item-builder-row-products {
+    grid-template-columns: 1fr;
+  }
+  .item-builder-row-inputs-purchase,
+  .item-builder-row-inputs-sales {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .item-builder-row-inputs-purchase .btn-add-item,
+  .item-builder-row-inputs-sales .btn-add-item {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
   .line-item-builder,
   .purchase-line-builder {
     grid-template-columns: repeat(2, 1fr);

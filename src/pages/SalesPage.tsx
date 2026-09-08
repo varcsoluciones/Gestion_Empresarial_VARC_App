@@ -994,14 +994,16 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
           </div>
 
           {/* Line item builder */}
-          <div style={{ padding: '1rem', backgroundColor: 'var(--bg-subtle)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-default)' }}>
-            <div style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.75rem', color: 'var(--text-primary)' }}>
-              Agregar Producto a la Factura
+          <div className="item-builder-card">
+            <div className="item-builder-header">
+              <Plus size={15} style={{ color: 'var(--color-accent)' }} />
+              <span>Agregar Producto a la Factura</span>
             </div>
 
-            <div className="line-item-builder">
+            {/* Row 1: Product & Variant */}
+            <div className="item-builder-row-products">
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Producto</label>
+                <label className="form-label">Producto *</label>
                 <ComboboxInline
                   options={products.map(p => ({
                     id: p.id,
@@ -1010,7 +1012,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
                   }))}
                   value={selectedProdForLine}
                   onChange={handleSelectProductForLine}
-                  placeholder="Seleccionar producto..."
+                  placeholder="Buscar o seleccionar producto..."
                   onOpenQuickCreateModal={() => setIsQuickProductOpen(true)}
                   quickCreateLabel="+ Crear Nuevo Producto"
                 />
@@ -1018,7 +1020,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
 
               {selectedProdObj && selectedProdObj.tieneVariantes && selectedProdObj.variantes ? (
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Variante</label>
+                  <label className="form-label">Variante (Color / Talla) *</label>
                   <ComboboxInline
                     options={selectedProdObj.variantes.map(v => ({
                       id: v.id,
@@ -1028,15 +1030,19 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
                     value={selectedVarForLine}
                     onChange={setSelectedVarForLine}
                     hideSearch={true}
+                    placeholder="Seleccionar variante..."
                   />
                 </div>
               ) : (
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Tipo</label>
-                  <input type="text" className="form-control" value="Producto Simple" disabled />
+                  <label className="form-label">Tipo de Producto</label>
+                  <input type="text" className="form-control" value="Producto Simple (Sin variantes)" disabled />
                 </div>
               )}
+            </div>
 
+            {/* Row 2: Quantity, Price, Discount, Line Subtotal, and Add Button */}
+            <div className="item-builder-row-inputs-sales">
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Cantidad</label>
                 <input
@@ -1045,6 +1051,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
                   value={lineCantidad}
                   onChange={(e) => setLineCantidad(e.target.value === '' ? '' : Number(e.target.value))}
                   min={1}
+                  placeholder="1"
                 />
               </div>
 
@@ -1057,6 +1064,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
                   onChange={(e) => setLinePrecio(e.target.value === '' ? '' : Number(e.target.value))}
                   min={0.01}
                   step="any"
+                  placeholder="0.00"
                 />
               </div>
 
@@ -1069,19 +1077,29 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
                   onChange={(e) => setLineDescuento(e.target.value === '' ? '' : Number(e.target.value))}
                   min={0}
                   max={100}
+                  placeholder="0"
                 />
               </div>
 
-              <button
-                type="button"
-                className="btn btn-primary"
-                style={{ height: '38px' }}
-                onClick={handleAddLineItem}
-                disabled={!selectedProdForLine}
-              >
-                <Plus size={16} />
-                Agregar
-              </button>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Subtotal Línea</label>
+                <div className="form-control" style={{ backgroundColor: 'var(--bg-surface)', fontWeight: 700, color: 'var(--color-accent)', display: 'flex', alignItems: 'center' }}>
+                  {formatCurrency((Number(lineCantidad) || 0) * (Number(linePrecio) || 0) * (1 - (Number(lineDescuento) || 0) / 100))}
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-add-item"
+                  style={{ height: '38px', minWidth: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+                  onClick={handleAddLineItem}
+                  disabled={!selectedProdForLine}
+                >
+                  <Plus size={16} />
+                  + Agregar
+                </button>
+              </div>
             </div>
 
             {/* Real-time stock status & commentary */}
@@ -1273,14 +1291,16 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
           </div>
 
           {/* Line item builder */}
-          <div style={{ padding: '1rem', backgroundColor: 'var(--bg-subtle)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-default)' }}>
-            <div style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.75rem' }}>
-              Agregar Producto a la Cotización
+          <div className="item-builder-card">
+            <div className="item-builder-header">
+              <Plus size={15} style={{ color: 'var(--color-accent)' }} />
+              <span>Agregar Producto a la Cotización</span>
             </div>
 
-            <div className="line-item-builder">
+            {/* Row 1: Product & Variant */}
+            <div className="item-builder-row-products">
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Producto</label>
+                <label className="form-label">Producto *</label>
                 <ComboboxInline
                   options={products.map(p => ({
                     id: p.id,
@@ -1289,7 +1309,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
                   }))}
                   value={selectedProdForLine}
                   onChange={handleSelectProductForLine}
-                  placeholder="Seleccionar producto..."
+                  placeholder="Buscar o seleccionar producto..."
                   onOpenQuickCreateModal={() => setIsQuickProductOpen(true)}
                   quickCreateLabel="+ Crear Nuevo Producto"
                 />
@@ -1297,7 +1317,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
 
               {selectedProdObj && selectedProdObj.tieneVariantes && selectedProdObj.variantes ? (
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Variante</label>
+                  <label className="form-label">Variante (Color / Talla) *</label>
                   <ComboboxInline
                     options={selectedProdObj.variantes.map(v => ({
                       id: v.id,
@@ -1307,15 +1327,19 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
                     value={selectedVarForLine}
                     onChange={setSelectedVarForLine}
                     hideSearch={true}
+                    placeholder="Seleccionar variante..."
                   />
                 </div>
               ) : (
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Tipo</label>
-                  <input type="text" className="form-control" value="Producto Simple" disabled />
+                  <label className="form-label">Tipo de Producto</label>
+                  <input type="text" className="form-control" value="Producto Simple (Sin variantes)" disabled />
                 </div>
               )}
+            </div>
 
+            {/* Row 2: Quantity, Price, Discount, Line Subtotal, and Add Button */}
+            <div className="item-builder-row-inputs-sales">
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Cantidad</label>
                 <input
@@ -1324,6 +1348,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
                   value={lineCantidad}
                   onChange={(e) => setLineCantidad(e.target.value === '' ? '' : Number(e.target.value))}
                   min={1}
+                  placeholder="1"
                 />
               </div>
 
@@ -1336,6 +1361,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
                   onChange={(e) => setLinePrecio(e.target.value === '' ? '' : Number(e.target.value))}
                   min={0.01}
                   step="any"
+                  placeholder="0.00"
                 />
               </div>
 
@@ -1348,19 +1374,29 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
                   onChange={(e) => setLineDescuento(e.target.value === '' ? '' : Number(e.target.value))}
                   min={0}
                   max={100}
+                  placeholder="0"
                 />
               </div>
 
-              <button
-                type="button"
-                className="btn btn-primary"
-                style={{ height: '38px' }}
-                onClick={handleAddLineItem}
-                disabled={!selectedProdForLine}
-              >
-                <Plus size={16} />
-                Agregar
-              </button>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Subtotal Línea</label>
+                <div className="form-control" style={{ backgroundColor: 'var(--bg-surface)', fontWeight: 700, color: 'var(--color-accent)', display: 'flex', alignItems: 'center' }}>
+                  {formatCurrency((Number(lineCantidad) || 0) * (Number(linePrecio) || 0) * (1 - (Number(lineDescuento) || 0) / 100))}
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-add-item"
+                  style={{ height: '38px', minWidth: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+                  onClick={handleAddLineItem}
+                  disabled={!selectedProdForLine}
+                >
+                  <Plus size={16} />
+                  + Agregar
+                </button>
+              </div>
             </div>
 
             {/* Real-time stock status in Quote */}

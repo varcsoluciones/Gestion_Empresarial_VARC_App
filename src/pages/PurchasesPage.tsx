@@ -485,14 +485,16 @@ export const PurchasesPage: React.FC = () => {
           </div>
 
           {/* Line Item Builder */}
-          <div style={{ padding: '1rem', backgroundColor: 'var(--bg-subtle)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-default)' }}>
-            <div style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.75rem', color: 'var(--text-primary)' }}>
-              Agregar Producto a la Compra
+          <div className="item-builder-card">
+            <div className="item-builder-header">
+              <Plus size={15} style={{ color: 'var(--color-accent)' }} />
+              <span>Agregar Producto a la Compra</span>
             </div>
 
-            <div className="purchase-line-builder">
+            {/* Row 1: Product & Variant Selection */}
+            <div className="item-builder-row-products">
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Producto</label>
+                <label className="form-label">Producto *</label>
                 <ComboboxInline
                   options={products.map(p => ({
                     id: p.id,
@@ -501,7 +503,7 @@ export const PurchasesPage: React.FC = () => {
                   }))}
                   value={selectedProdForLine}
                   onChange={handleSelectProductForLine}
-                  placeholder="Seleccionar producto..."
+                  placeholder="Buscar o seleccionar producto..."
                   onOpenQuickCreateModal={() => setIsQuickProductOpen(true)}
                   quickCreateLabel="+ Crear Nuevo Producto"
                 />
@@ -509,7 +511,7 @@ export const PurchasesPage: React.FC = () => {
 
               {selectedProdObj && selectedProdObj.tieneVariantes && selectedProdObj.variantes ? (
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Variante</label>
+                  <label className="form-label">Variante (Color / Talla) *</label>
                   <ComboboxInline
                     options={selectedProdObj.variantes.map(v => ({
                       id: v.id,
@@ -519,15 +521,19 @@ export const PurchasesPage: React.FC = () => {
                     value={selectedVarForLine}
                     onChange={setSelectedVarForLine}
                     hideSearch={true}
+                    placeholder="Seleccionar variante..."
                   />
                 </div>
               ) : (
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Tipo</label>
-                  <input type="text" className="form-control" value="Producto Simple" disabled />
+                  <label className="form-label">Tipo de Producto</label>
+                  <input type="text" className="form-control" value="Producto Simple (Sin variantes)" disabled />
                 </div>
               )}
+            </div>
 
+            {/* Row 2: Quantity, Cost, Line Subtotal, and Add Button */}
+            <div className="item-builder-row-inputs-purchase">
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Cantidad</label>
                 <input
@@ -536,6 +542,7 @@ export const PurchasesPage: React.FC = () => {
                   value={lineCantidad}
                   onChange={(e) => setLineCantidad(e.target.value === '' ? '' : Number(e.target.value))}
                   min={1}
+                  placeholder="1"
                 />
               </div>
 
@@ -552,16 +559,25 @@ export const PurchasesPage: React.FC = () => {
                 />
               </div>
 
-              <button
-                type="button"
-                className="btn btn-primary"
-                style={{ height: '38px' }}
-                onClick={handleAddLineItem}
-                disabled={!selectedProdForLine}
-              >
-                <Plus size={16} />
-                Agregar
-              </button>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Subtotal Línea</label>
+                <div className="form-control" style={{ backgroundColor: 'var(--bg-surface)', fontWeight: 700, color: 'var(--color-accent)', display: 'flex', alignItems: 'center' }}>
+                  {formatCurrency((Number(lineCantidad) || 0) * (Number(lineCosto) || 0))}
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-add-item"
+                  style={{ height: '38px', minWidth: '130px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+                  onClick={handleAddLineItem}
+                  disabled={!selectedProdForLine}
+                >
+                  <Plus size={16} />
+                  + Agregar
+                </button>
+              </div>
             </div>
           </div>
 
