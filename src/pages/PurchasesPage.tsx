@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useERP } from '../context/ERPContext';
 import type { Purchase, PaymentMethod } from '../types/erp';
-import { formatCurrency, formatDate, formatDateTime, formatMonthLabel, getTodayLocalDateString } from '../utils/formatters';
+import { formatCurrency, formatDateTime, formatMonthLabel, getTodayLocalDateString } from '../utils/formatters';
 import {
   Plus,
   Search,
@@ -158,9 +158,13 @@ export const PurchasesPage: React.FC = () => {
   const handleSavePurchase = (directReceive = false) => {
     if (!formProveedorId || formItems.length === 0) return;
 
+    const nowIso = new Date().toISOString();
+    const todayStr = getTodayLocalDateString();
+    const purchaseDate = formFecha === todayStr ? nowIso : (formFecha.includes('T') ? formFecha : `${formFecha}T${nowIso.split('T')[1] || '12:00:00.000Z'}`);
+
     createPurchase({
       proveedorId: formProveedorId,
-      fecha: formFecha,
+      fecha: purchaseDate,
       estado: directReceive ? 'recibida' : 'borrador',
       items: formItems.map((item, idx) => ({
         ...item,
@@ -430,7 +434,7 @@ export const PurchasesPage: React.FC = () => {
                       <div style={{ fontWeight: 600 }}>{prov?.nombre || 'Proveedor'}</div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{prov?.identificacionFiscal}</div>
                     </td>
-                    <td>{formatDate(p.fecha)}</td>
+                    <td style={{ fontSize: '0.825rem', color: 'var(--text-secondary)' }}>{formatDateTime(p.fecha)}</td>
                     <td style={{ textAlign: 'center' }}>
                       <span className="badge badge-neutral">{p.items.reduce((s, i) => s + i.cantidad, 0)} pzs</span>
                     </td>
@@ -667,39 +671,47 @@ export const PurchasesPage: React.FC = () => {
             <table className="table">
               <thead>
                 <tr>
+                  <th style={{ width: '20%' }}>SKU / Código</th>
                   <th>Descripción del Producto / Variante</th>
-                  <th style={{ textAlign: 'center' }}>Cantidad</th>
-                  <th style={{ textAlign: 'right' }}>Costo Unit. (IVA incl.)</th>
-                  <th style={{ textAlign: 'right' }}>Total Línea</th>
-                  <th style={{ textAlign: 'center', width: '50px' }}></th>
+                  <th style={{ textAlign: 'center', width: '15%' }}>Cantidad</th>
+                  <th style={{ textAlign: 'right', width: '20%' }}>Costo Unit. (IVA incl.)</th>
+                  <th style={{ textAlign: 'right', width: '20%' }}>Total Línea</th>
+                  <th style={{ textAlign: 'center', width: '40px' }}></th>
                 </tr>
               </thead>
               <tbody>
                 {formItems.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>
                       No has agregado ningún producto a la orden de compra todavía.
                     </td>
                   </tr>
                 ) : (
-                  formItems.map((item, idx) => (
-                    <tr key={idx}>
-                      <td style={{ fontWeight: 600 }}>{item.descripcion}</td>
-                      <td style={{ textAlign: 'center' }}>{item.cantidad}</td>
-                      <td style={{ textAlign: 'right' }}>{formatCurrency(item.costoUnitario)}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(item.subtotal)}</td>
-                      <td style={{ textAlign: 'center' }}>
-                        <button
-                          type="button"
-                          className="btn-icon btn-sm"
-                          style={{ color: 'var(--color-danger)', border: 'none', background: 'none' }}
-                          onClick={() => handleRemoveLineItem(idx)}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                  formItems.map((item, idx) => {
+                    const p = products.find(prod => prod.id === item.productoId);
+                    const v = p?.variantes?.find(varItem => varItem.id === item.varianteId);
+                    const sku = v?.sku || p?.codigo || '—';
+
+                    return (
+                      <tr key={idx}>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, fontSize: '0.825rem' }}>{sku}</td>
+                        <td style={{ fontWeight: 600 }}>{item.descripcion}</td>
+                        <td style={{ textAlign: 'center' }}>{item.cantidad}</td>
+                        <td style={{ textAlign: 'right' }}>{formatCurrency(item.costoUnitario)}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(item.subtotal)}</td>
+                        <td style={{ textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            className="btn-icon btn-sm"
+                            style={{ color: 'var(--color-danger)', border: 'none', background: 'none' }}
+                            onClick={() => handleRemoveLineItem(idx)}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -712,48 +724,24 @@ export const PurchasesPage: React.FC = () => {
               <textarea
                 className="form-textarea"
                 rows={2}
-                placeholder="Condiciones de entrega, número de guía, lote de proveedor..."
+                placeholder="Condiciones de entrega, folio de factura externa del proveedor, etc."
                 value={formNotas}
                 onChange={(e) => setFormNotas(e.target.value)}
               />
             </div>
 
-            <div style={{ backgroundColor: 'var(--bg-subtle)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.35rem' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Subtotal (Base sin IVA):</span>
-                <span style={{ fontWeight: 600 }}>{formatCurrency(formSubtotal)}</span>
+            <div className="totals-summary-box">
+              <div className="totals-row">
+                <span>Subtotal (Base imponible):</span>
+                <span>{formatCurrency(formSubtotal)}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', marginBottom: '0.35rem' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)' }}>
-                  IVA al Proveedor (%):
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={formTasaImpuesto}
-                    onChange={(e) => setFormTasaImpuesto(e.target.value === '' ? 0 : Number(e.target.value))}
-                    style={{
-                      width: '55px',
-                      padding: '2px 4px',
-                      fontSize: '0.8rem',
-                      textAlign: 'right',
-                      borderRadius: 'var(--radius-sm)',
-                      border: '1px solid var(--border-default)',
-                      backgroundColor: 'var(--bg-surface)',
-                      color: 'var(--text-primary)'
-                    }}
-                  />
-                  %
-                </span>
-                <span style={{ fontWeight: 600 }}>{formatCurrency(formImpuestos)}</span>
+              <div className="totals-row">
+                <span>IVA al proveedor:</span>
+                <span>{formatCurrency(formImpuestos)}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', fontWeight: 800, borderTop: '1px solid var(--border-default)', paddingTop: '0.5rem', color: 'var(--color-accent)' }}>
-                <span>Total Factura de Compra:</span>
+              <div className="totals-row grand-total">
+                <span>Total a Pagar:</span>
                 <span>{formatCurrency(formTotal)}</span>
-              </div>
-              <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', marginTop: '0.25rem', textAlign: 'right' }}>
-                (Costo unitario ingresado con IVA incluido)
               </div>
             </div>
           </div>
@@ -761,44 +749,44 @@ export const PurchasesPage: React.FC = () => {
       </Modal>
 
       {/* Detail Modal */}
-      {selectedPurchase && (
-        <Modal
-          isOpen={isDetailModalOpen}
-          onClose={() => setIsDetailModalOpen(false)}
-          title={`Detalle de Compra: ${selectedPurchase.numeroCompra}`}
-          subtitle={`Proveedor: ${suppliers.find(s => s.id === selectedPurchase.proveedorId)?.nombre || '-'}`}
-          size="lg"
-          footer={
-            <button type="button" className="btn btn-secondary" onClick={() => setIsDetailModalOpen(false)}>
-              Cerrar
-            </button>
-          }
-        >
+      <Modal
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        title={`Detalle de Compra: ${selectedPurchase?.numeroCompra}`}
+        subtitle="Consulta de artículos, impuestos, estados y abonos realizados"
+        size="lg"
+        footer={
+          <button type="button" className="btn btn-secondary" onClick={() => setIsDetailModalOpen(false)}>
+            Cerrar
+          </button>
+        }
+      >
+        {selectedPurchase && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <div className="purchase-stats-grid">
+            {/* Header info */}
+            <div className="grid-3" style={{ backgroundColor: 'var(--bg-subtle)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)' }}>
               <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Fecha:</div>
-                <div style={{ fontWeight: 600 }}>{formatDate(selectedPurchase.fecha)}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Proveedor:</div>
+                <div style={{ fontWeight: 700 }}>{suppliers.find(s => s.id === selectedPurchase.proveedorId)?.nombre || 'Proveedor'}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{suppliers.find(s => s.id === selectedPurchase.proveedorId)?.identificacionFiscal}</div>
               </div>
               <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Total:</div>
-                <div style={{ fontWeight: 700, color: 'var(--color-accent)' }}>{formatCurrency(selectedPurchase.total)}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Fecha de Registro:</div>
+                <div style={{ fontWeight: 600 }}>{formatDateTime(selectedPurchase.fecha)}</div>
               </div>
               <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Saldo Pendiente:</div>
-                <div style={{ fontWeight: 700, color: selectedPurchase.saldoPendiente > 0 ? 'var(--color-danger)' : 'var(--color-success)' }}>
-                  {formatCurrency(selectedPurchase.saldoPendiente)}
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Estado Actual:</div>
+                <div style={{ marginTop: '0.2rem' }}>
+                  {selectedPurchase.estado === 'borrador' && <Badge variant="neutral">Borrador</Badge>}
+                  {selectedPurchase.estado === 'recibida' && <Badge variant="warning">Recibida (Saldo Pendiente)</Badge>}
+                  {selectedPurchase.estado === 'pagada' && <Badge variant="success">Pagada / Recibida</Badge>}
+                  {selectedPurchase.estado === 'anulada' && <Badge variant="danger">Anulada</Badge>}
                 </div>
-              </div>
-              <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Estado:</div>
-                <div><Badge variant={selectedPurchase.estado === 'pagada' ? 'success' : selectedPurchase.estado === 'anulada' ? 'danger' : 'warning'}>{selectedPurchase.estado.toUpperCase()}</Badge></div>
               </div>
             </div>
 
             {selectedPurchase.recibidaFecha && (
-              <div style={{ padding: '0.65rem 0.85rem', backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', fontSize: '0.825rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <CheckCircle size={15} style={{ color: 'var(--color-success)' }} />
+              <div style={{ padding: '0.65rem 0.85rem', backgroundColor: 'var(--color-success-bg)', border: '1px solid var(--color-success-border)', borderRadius: 'var(--radius-md)', color: 'var(--color-success-text)', fontSize: '0.825rem' }}>
                 <span><strong>Ingreso a Almacén / Kardex:</strong> {formatDateTime(selectedPurchase.recibidaFecha)}</span>
               </div>
             )}
@@ -813,6 +801,7 @@ export const PurchasesPage: React.FC = () => {
               <table className="table">
                 <thead>
                   <tr>
+                    <th style={{ width: '22%' }}>SKU / Código</th>
                     <th>Ítem / Variante</th>
                     <th style={{ textAlign: 'center' }}>Cantidad</th>
                     <th style={{ textAlign: 'right' }}>Costo Unit. (IVA incl.)</th>
@@ -820,14 +809,21 @@ export const PurchasesPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {selectedPurchase.items.map(item => (
-                    <tr key={item.id}>
-                      <td style={{ fontWeight: 600 }}>{item.descripcion}</td>
-                      <td style={{ textAlign: 'center' }}>{item.cantidad}</td>
-                      <td style={{ textAlign: 'right' }}>{formatCurrency(item.costoUnitario)}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(item.subtotal)}</td>
-                    </tr>
-                  ))}
+                  {selectedPurchase.items.map(item => {
+                    const p = products.find(prod => prod.id === item.productoId);
+                    const v = p?.variantes?.find(varItem => varItem.id === item.varianteId);
+                    const sku = v?.sku || p?.codigo || '—';
+
+                    return (
+                      <tr key={item.id}>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, fontSize: '0.825rem' }}>{sku}</td>
+                        <td style={{ fontWeight: 600 }}>{item.descripcion}</td>
+                        <td style={{ textAlign: 'center' }}>{item.cantidad}</td>
+                        <td style={{ textAlign: 'right' }}>{formatCurrency(item.costoUnitario)}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(item.subtotal)}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -861,7 +857,7 @@ export const PurchasesPage: React.FC = () => {
                 <table className="table" style={{ fontSize: '0.825rem' }}>
                   <thead>
                     <tr>
-                      <th>Fecha</th>
+                      <th>Fecha / Hora</th>
                       <th>Método</th>
                       <th>Referencia</th>
                       <th style={{ textAlign: 'right' }}>Monto Pagado</th>
@@ -870,7 +866,7 @@ export const PurchasesPage: React.FC = () => {
                   <tbody>
                     {selectedPurchase.pagos.map(p => (
                       <tr key={p.id}>
-                        <td>{formatDate(p.fecha)}</td>
+                        <td>{formatDateTime(p.fecha)}</td>
                         <td style={{ textTransform: 'capitalize' }}>{p.metodoPago}</td>
                         <td>{p.referencia}</td>
                         <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--color-success-text)' }}>
@@ -883,8 +879,8 @@ export const PurchasesPage: React.FC = () => {
               )}
             </div>
           </div>
-        </Modal>
-      )}
+        )}
+      </Modal>
 
       {/* Register Payment Modal (CxP) */}
       <Modal

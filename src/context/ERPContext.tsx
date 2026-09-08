@@ -12,6 +12,7 @@ import type {
   Invoice,
   ClientPayment,
   InventoryMovement,
+  MovementType,
   OperatingExpense,
   FixedAsset,
   CompanySettings,
@@ -85,7 +86,14 @@ export interface ERPContextType {
   addClientPayment: (payment: Omit<ClientPayment, 'id'>) => void;
 
   // Acciones Inventario
-  createInventoryAdjustment: (productoId: string, varianteId: string | undefined, cantidad: number, motivo: string) => void;
+  createInventoryAdjustment: (
+    productoId: string,
+    varianteId: string | undefined,
+    cantidad: number,
+    motivo: string,
+    isInitialLoad?: boolean,
+    costoInicialUnitario?: number
+  ) => void;
   recalculateInventoryFromKardex: () => void;
 
   // Acciones Contabilidad
@@ -492,9 +500,13 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const cost = Number(m.costoUnitario) || 0;
         const targetVarId = m.varianteId || (product.tieneVariantes && product.variantes && product.variantes.length > 0 ? product.variantes[0].id : undefined);
 
-        if (m.tipo === 'ENTRADA_COMPRA') {
+        if (m.tipo === 'ENTRADA_COMPRA' || m.tipo === 'INVENTARIO_INICIAL') {
           const posQty = Math.abs(qty);
-          runningCost = calculateWeightedAverageCost(runningStock, runningCost, posQty, cost);
+          if (runningStock === 0 && cost > 0) {
+            runningCost = cost;
+          } else {
+            runningCost = calculateWeightedAverageCost(runningStock, runningCost, posQty, cost);
+          }
           runningStock += posQty;
           if (targetVarId) {
             variantStocks[targetVarId] = (variantStocks[targetVarId] || 0) + posQty;
@@ -1203,28 +1215,55 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }));
   };
 
-  // Actions: Ajustes de Inventario
-  const createInventoryAdjustment = (productoId: string, varianteId: string | undefined, cantidad: number, motivo: string) => {
+  // Actions: Ajustes de Inventario y Carga Inicial
+  const createInventoryAdjustment = (
+    productoId: string,
+    varianteId: string | undefined,
+    cantidad: number,
+    motivo: string,
+    isInitialLoad = false,
+    costoInicialUnitario?: number
+  ) => {
     const now = new Date().toISOString();
     let resultingStock = 0;
+    const targetProduct = products.find(p => p.id === productoId);
+    const unitCost = isInitialLoad && costoInicialUnitario !== undefined && costoInicialUnitario >= 0
+      ? costoInicialUnitario
+      : (targetProduct?.costoPromedio || 0);
 
     setProducts(prevProducts => {
       return prevProducts.map(product => {
         if (product.id !== productoId) return product;
 
         let updatedStock = product.stockActual;
-        let updatedVariants = product.variantes ? [...product.variantes] : undefined;
+        let updatedCost = product.costoPromedio;
+        let updatedVariants = product.variantes ? product.variantes.map(v => ({ ...v })) : undefined;
 
-        if (product.tieneVariantes && varianteId && updatedVariants) {
+        if (isInitialLoad && costoInicialUnitario !== undefined && costoInicialUnitario >= 0) {
+          if (product.stockActual <= 0) {
+            updatedCost = costoInicialUnitario;
+          } else {
+            updatedCost = calculateWeightedAverageCost(
+              product.stockActual,
+              product.costoPromedio,
+              cantidad,
+              costoInicialUnitario
+            );
+          }
+        }
+
+        const targetVarId = varianteId || (product.tieneVariantes && updatedVariants && updatedVariants.length > 0 ? updatedVariants[0].id : undefined);
+
+        if (product.tieneVariantes && targetVarId && updatedVariants) {
           updatedVariants = updatedVariants.map(v => {
-            if (v.id === varianteId) {
-              const newVarStock = Math.max(0, v.stockActual + cantidad);
+            if (v.id === targetVarId) {
+              const newVarStock = Math.max(0, (v.stockActual || 0) + cantidad);
               resultingStock = newVarStock;
               return { ...v, stockActual: newVarStock };
             }
             return v;
           });
-          updatedStock = updatedVariants.reduce((sum, v) => sum + v.stockActual, 0);
+          updatedStock = updatedVariants.reduce((sum, v) => sum + (v.stockActual || 0), 0);
         } else {
           updatedStock = Math.max(0, updatedStock + cantidad);
           resultingStock = updatedStock;
@@ -1232,22 +1271,27 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         return {
           ...product,
+          costoPromedio: updatedCost,
           stockActual: updatedStock,
           variantes: updatedVariants
         };
       });
     });
 
-    const product = products.find(p => p.id === productoId);
+    const docType: MovementType = isInitialLoad ? 'INVENTARIO_INICIAL' : 'AJUSTE_MANUAL';
+    const nextRef = isInitialLoad
+      ? generateDocNumber('II', inventoryMovements.filter(m => m.referenciaDoc?.startsWith('II') || m.tipo === 'INVENTARIO_INICIAL').length)
+      : generateDocNumber('AJ', inventoryMovements.filter(m => m.tipo === 'AJUSTE_MANUAL').length);
+
     const newMovement: InventoryMovement = {
       id: `mov-${Date.now()}`,
       fecha: now,
-      tipo: 'AJUSTE_MANUAL',
-      referenciaDoc: generateDocNumber('AJ', inventoryMovements.filter(m => m.tipo === 'AJUSTE_MANUAL').length),
+      tipo: docType,
+      referenciaDoc: nextRef,
       productoId,
       varianteId,
       cantidad,
-      costoUnitario: product?.costoPromedio || 0,
+      costoUnitario: unitCost,
       stockResultante: resultingStock,
       motivo,
       usuario: 'Administrador'

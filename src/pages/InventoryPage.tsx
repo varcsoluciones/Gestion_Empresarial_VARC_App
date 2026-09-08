@@ -60,16 +60,18 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
     }
   }, [initialView]);
 
-  // Manual Adjustment Modal
+  // Manual Adjustment & Initial Inventory Load Modal
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
+  const [adjIsInitialLoad, setAdjIsInitialLoad] = useState(false);
   const [adjProdId, setAdjProdId] = useState('');
   const [adjVarId, setAdjVarId] = useState('');
   const [adjTipo, setAdjTipo] = useState<'incremento' | 'decremento'>('incremento');
   const [adjCantidad, setAdjCantidad] = useState<number | ''>(1);
+  const [adjCostoInicial, setAdjCostoInicial] = useState<number | ''>('');
   const [adjMotivo, setAdjMotivo] = useState('');
   const [adjError, setAdjError] = useState('');
 
-  const handleOpenAdjustment = (prodId?: string, varId?: string) => {
+  const handleOpenAdjustment = (prodId?: string, varId?: string, isInitial = false) => {
     const targetProdId = prodId || products[0]?.id || '';
     setAdjProdId(targetProdId);
     const prod = products.find(p => p.id === targetProdId);
@@ -82,9 +84,11 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
     } else {
       setAdjVarId('');
     }
+    setAdjIsInitialLoad(isInitial);
     setAdjTipo('incremento');
     setAdjCantidad(1);
-    setAdjMotivo('');
+    setAdjCostoInicial(prod?.costoPromedio ? prod.costoPromedio : '');
+    setAdjMotivo(isInitial ? 'Carga de inventario inicial' : '');
     setAdjError('');
     setIsAdjustModalOpen(true);
   };
@@ -96,6 +100,9 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
       setAdjVarId(prod.variantes[0].id);
     } else {
       setAdjVarId('');
+    }
+    if (adjIsInitialLoad && prod?.costoPromedio) {
+      setAdjCostoInicial(prod.costoPromedio);
     }
   };
 
@@ -109,19 +116,26 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
       setAdjError('La cantidad debe ser mayor a 0');
       return;
     }
+    if (adjIsInitialLoad && (adjCostoInicial === '' || Number(adjCostoInicial) < 0)) {
+      setAdjError('El costo unitario inicial es obligatorio y debe ser mayor o igual a 0');
+      return;
+    }
     if (!adjMotivo.trim()) {
-      setAdjError('El motivo del ajuste es obligatorio');
+      setAdjError('El motivo es obligatorio');
       return;
     }
 
     const qtyNumber = Number(adjCantidad);
-    const finalQty = adjTipo === 'decremento' ? -qtyNumber : qtyNumber;
+    const finalQty = (!adjIsInitialLoad && adjTipo === 'decremento') ? -qtyNumber : qtyNumber;
+    const initialCostNum = adjIsInitialLoad ? (Number(adjCostoInicial) || 0) : undefined;
 
     createInventoryAdjustment(
       adjProdId,
       adjVarId || undefined,
       finalQty,
-      adjMotivo.trim()
+      adjMotivo.trim(),
+      adjIsInitialLoad,
+      initialCostNum
     );
 
     setIsAdjustModalOpen(false);
@@ -201,6 +215,8 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
 
   const getMovementTypeBadge = (tipo: MovementType) => {
     switch (tipo) {
+      case 'INVENTARIO_INICIAL':
+        return <Badge variant="accent">Inventario Inicial</Badge>;
       case 'ENTRADA_COMPRA':
         return <Badge variant="success">Entrada (Compra)</Badge>;
       case 'SALIDA_VENTA':
@@ -239,9 +255,21 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
             <RotateCcw size={15} />
             Reconciliar Kardex
           </button>
-          <button type="button" className="btn btn-primary btn-sm" onClick={() => handleOpenAdjustment()}>
+          <button
+            type="button"
+            className="btn btn-outline-primary btn-sm"
+            onClick={() => handleOpenAdjustment(undefined, undefined, true)}
+          >
+            <Boxes size={15} />
+            + Carga Inicial
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={() => handleOpenAdjustment(undefined, undefined, false)}
+          >
             <SlidersHorizontal size={15} />
-            + Ajuste Manual (Auditoría)
+            + Ajuste de Stock
           </button>
         </div>
       </div>
@@ -381,6 +409,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                 onChange={(e) => setSelectedTypeFilter(e.target.value)}
               >
                 <option value="all">Todos los tipos de movimiento</option>
+                <option value="INVENTARIO_INICIAL">Carga Inventario Inicial</option>
                 <option value="ENTRADA_COMPRA">Entrada por Compra</option>
                 <option value="SALIDA_VENTA">Salida por Venta</option>
                 <option value="AJUSTE_MANUAL">Ajuste Manual</option>
@@ -693,17 +722,33 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                             {isLow ? 'Stock Bajo' : 'Normal'}
                           </Badge>
                         </td>
-                        <td style={{ textAlign: 'right' }}>
-                          <button
-                            type="button"
-                            className="btn btn-secondary btn-sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenAdjustment(p.id);
-                            }}
-                          >
-                            Ajustar
-                          </button>
+                        <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'flex-end' }}>
+                            <button
+                              type="button"
+                              className="btn btn-outline-primary btn-sm"
+                              style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenAdjustment(p.id, undefined, true);
+                              }}
+                              title="Carga de inventario inicial con costo asignado"
+                            >
+                              Carga Inicial
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-secondary btn-sm"
+                              style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenAdjustment(p.id, undefined, false);
+                              }}
+                              title="Ajuste manual a costo promedio"
+                            >
+                              Ajustar
+                            </button>
+                          </div>
                         </td>
                       </tr>
 
@@ -749,7 +794,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                                       <th style={{ padding: '0.5rem 0.85rem', textAlign: 'center', width: '14%' }}>Existencias (Stock)</th>
                                       <th style={{ padding: '0.5rem 0.85rem', textAlign: 'right', width: '14%' }}>Costo Promedio</th>
                                       <th style={{ padding: '0.5rem 0.85rem', textAlign: 'right', width: '14%' }}>Valor Inventario</th>
-                                      <th style={{ padding: '0.5rem 0.85rem', textAlign: 'right', width: '6%' }}>Acción</th>
+                                      <th style={{ padding: '0.5rem 0.85rem', textAlign: 'right', width: '10%' }}>Acción</th>
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -790,19 +835,33 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                                           <td style={{ padding: '0.55rem 0.85rem', textAlign: 'right', fontWeight: 600, color: 'var(--text-primary)' }}>
                                             {formatCurrency(varValue)}
                                           </td>
-                                          <td style={{ padding: '0.55rem 0.85rem', textAlign: 'right' }}>
-                                            <button
-                                              type="button"
-                                              className="btn btn-secondary btn-sm"
-                                              style={{ fontSize: '0.725rem', padding: '0.2rem 0.5rem' }}
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleOpenAdjustment(p.id, v.id);
-                                              }}
-                                              title={`Realizar ajuste manual para ${v.color} - ${v.talla}`}
-                                            >
-                                              Ajustar
-                                            </button>
+                                          <td style={{ padding: '0.55rem 0.85rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                            <div style={{ display: 'flex', gap: '0.25rem', justifyContent: 'flex-end' }}>
+                                              <button
+                                                type="button"
+                                                className="btn btn-outline-primary btn-sm"
+                                                style={{ fontSize: '0.7rem', padding: '0.15rem 0.4rem' }}
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleOpenAdjustment(p.id, v.id, true);
+                                                }}
+                                                title={`Carga inicial para ${v.color} - ${v.talla}`}
+                                              >
+                                                Carga Inicial
+                                              </button>
+                                              <button
+                                                type="button"
+                                                className="btn btn-secondary btn-sm"
+                                                style={{ fontSize: '0.7rem', padding: '0.15rem 0.4rem' }}
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleOpenAdjustment(p.id, v.id, false);
+                                                }}
+                                                title={`Ajuste manual para ${v.color} - ${v.talla}`}
+                                              >
+                                                Ajustar
+                                              </button>
+                                            </div>
                                           </td>
                                         </tr>
                                       );
@@ -823,12 +882,12 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
         </div>
       )}
 
-      {/* Manual Stock Adjustment Modal */}
+      {/* Manual Stock Adjustment & Initial Inventory Load Modal */}
       <Modal
         isOpen={isAdjustModalOpen}
         onClose={() => setIsAdjustModalOpen(false)}
-        title="Ajuste Manual de Inventario"
-        subtitle="Auditoría obligatoria: registra aumentos o disminuciones físicas"
+        title={adjIsInitialLoad ? 'Carga de Inventario Inicial' : 'Ajuste Manual de Inventario'}
+        subtitle={adjIsInitialLoad ? 'Asigna existencias iniciales con costo unitario de partida (Ref: II0001)' : 'Auditoría obligatoria a costo promedio móvil (Ref: AJ0001)'}
         size="md"
         footer={
           <>
@@ -836,7 +895,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
               Cancelar
             </button>
             <button type="submit" form="adjust-inventory-form" className="btn btn-primary">
-              Guardar Ajuste
+              {adjIsInitialLoad ? 'Guardar Carga Inicial' : 'Guardar Ajuste'}
             </button>
           </>
         }
@@ -848,13 +907,60 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
             </div>
           )}
 
+          {/* Mode Switcher */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', backgroundColor: 'var(--bg-subtle)', padding: '0.35rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)' }}>
+            <button
+              type="button"
+              style={{
+                flex: 1,
+                padding: '0.5rem',
+                border: 'none',
+                borderRadius: 'var(--radius-sm)',
+                fontWeight: 600,
+                fontSize: '0.825rem',
+                cursor: 'pointer',
+                backgroundColor: !adjIsInitialLoad ? 'var(--bg-surface)' : 'transparent',
+                color: !adjIsInitialLoad ? 'var(--color-accent)' : 'var(--text-secondary)',
+                boxShadow: !adjIsInitialLoad ? 'var(--shadow-sm)' : 'none'
+              }}
+              onClick={() => {
+                setAdjIsInitialLoad(false);
+                if (adjMotivo === 'Carga de inventario inicial') setAdjMotivo('');
+              }}
+            >
+              Ajuste Físico (Entrada / Salida)
+            </button>
+            <button
+              type="button"
+              style={{
+                flex: 1,
+                padding: '0.5rem',
+                border: 'none',
+                borderRadius: 'var(--radius-sm)',
+                fontWeight: 600,
+                fontSize: '0.825rem',
+                cursor: 'pointer',
+                backgroundColor: adjIsInitialLoad ? 'var(--bg-surface)' : 'transparent',
+                color: adjIsInitialLoad ? 'var(--color-accent)' : 'var(--text-secondary)',
+                boxShadow: adjIsInitialLoad ? 'var(--shadow-sm)' : 'none'
+              }}
+              onClick={() => {
+                setAdjIsInitialLoad(true);
+                setAdjTipo('incremento');
+                if (!adjMotivo) setAdjMotivo('Carga de inventario inicial');
+              }}
+            >
+              Carga de Inventario Inicial (Con Costo)
+            </button>
+          </div>
+
           <div className="form-group">
-            <label className="form-label">Producto a Ajustar *</label>
+            <label className="form-label">Producto *</label>
             <ComboboxInline
               options={products.map(p => ({
                 id: p.id,
                 label: p.nombre,
-                sublabel: `Stock actual: ${p.stockActual} ${p.unidadMedida}`
+                sublabel: `Stock actual: ${p.stockActual} ${p.unidadMedida} | Costo prom: ${formatCurrency(p.costoPromedio)}`
               }))}
               value={adjProdId}
               onChange={handleSelectAdjProduct}
@@ -864,7 +970,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
 
           {selectedAdjProdObj && selectedAdjProdObj.tieneVariantes && selectedAdjProdObj.variantes && (
             <div className="form-group">
-              <label className="form-label">Variante</label>
+              <label className="form-label">Variante Específica</label>
               <ComboboxInline
                 options={selectedAdjProdObj.variantes.map(v => ({
                   id: v.id,
@@ -878,40 +984,101 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
             </div>
           )}
 
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Tipo de Ajuste</label>
-              <select
-                className="form-select"
-                value={adjTipo}
-                onChange={(e) => setAdjTipo(e.target.value as any)}
-              >
-                <option value="incremento">+ Entrada / Aumento (Sobrante, Conteo)</option>
-                <option value="decremento">- Salida / Disminución (Merma, Daño, Pérdida)</option>
-              </select>
-            </div>
+          {adjIsInitialLoad ? (
+            /* Mode 1: Initial Inventory Load */
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Cantidad Inicial a Cargar *</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  value={adjCantidad}
+                  onChange={(e) => setAdjCantidad(e.target.value === '' ? '' : Number(e.target.value))}
+                  min={1}
+                  required
+                  placeholder="0"
+                />
+              </div>
 
-            <div className="form-group">
-              <label className="form-label">Cantidad *</label>
-              <input
-                type="number"
-                className="form-control"
-                value={adjCantidad}
-                onChange={(e) => setAdjCantidad(e.target.value === '' ? '' : Number(e.target.value))}
-                min={1}
-                required
-              />
+              <div className="form-group">
+                <label className="form-label">Costo Unitario Inicial ($) *</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  value={adjCostoInicial}
+                  onChange={(e) => setAdjCostoInicial(e.target.value === '' ? '' : Number(e.target.value))}
+                  min={0}
+                  step="any"
+                  required
+                  placeholder="0.00"
+                />
+              </div>
             </div>
-          </div>
+          ) : (
+            /* Mode 2: Physical Adjustment */
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Tipo de Ajuste</label>
+                <select
+                  className="form-select"
+                  value={adjTipo}
+                  onChange={(e) => setAdjTipo(e.target.value as any)}
+                >
+                  <option value="incremento">+ Entrada / Aumento (Sobrante, Conteo)</option>
+                  <option value="decremento">- Salida / Disminución (Merma, Daño, Pérdida)</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Cantidad *</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  value={adjCantidad}
+                  onChange={(e) => setAdjCantidad(e.target.value === '' ? '' : Number(e.target.value))}
+                  min={1}
+                  required
+                />
+              </div>
+            </div>
+          )}
+
+          {!adjIsInitialLoad && selectedAdjProdObj && (
+            <div style={{
+              padding: '0.65rem 0.85rem',
+              backgroundColor: 'var(--bg-subtle)',
+              borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--border-default)',
+              fontSize: '0.775rem',
+              color: 'var(--text-secondary)',
+              marginBottom: '1rem'
+            }}>
+              ℹ️ <strong>Costo automático aplicado:</strong> {formatCurrency(selectedAdjProdObj.costoPromedio)} (Costo promedio móvil actual). Los ajustes físicos no requieren ingresar costo manual.
+            </div>
+          )}
+
+          {adjIsInitialLoad && (
+            <div style={{
+              padding: '0.65rem 0.85rem',
+              backgroundColor: 'var(--color-accent-subtle)',
+              borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--border-default)',
+              fontSize: '0.775rem',
+              color: 'var(--color-accent)',
+              marginBottom: '1rem'
+            }}>
+              💡 <strong>Referencia Kardex:</strong> Se registrará automáticamente bajo el folio consecutivo <strong>II000X</strong> y fijará el costo promedio de partida.
+            </div>
+          )}
 
           <div className="form-group">
             <label className="form-label">
-              Motivo Obligatorio del Ajuste <span className="form-label-required">*</span>
+              {adjIsInitialLoad ? 'Concepto / Nota de Carga Inicial' : 'Motivo Obligatorio del Ajuste'} <span className="form-label-required">*</span>
             </label>
             <textarea
               className="form-textarea"
-              rows={3}
-              placeholder="Explica la causa del ajuste (ej. Conteo físico anual, merma por humedad, muestra entregada a cliente...)"
+              rows={2}
+              placeholder={adjIsInitialLoad ? 'Ej. Carga de inventario inicial apertura de tienda' : 'Explica la causa del ajuste (ej. Conteo físico anual, merma por humedad...)'}
               value={adjMotivo}
               onChange={(e) => setAdjMotivo(e.target.value)}
               required

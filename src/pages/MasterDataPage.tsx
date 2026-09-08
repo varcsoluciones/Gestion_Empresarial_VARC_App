@@ -93,9 +93,7 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
   const [prodCatId, setProdCatId] = useState('');
   const [prodUnidad, setProdUnidad] = useState('pza');
   const [prodPrecio, setProdPrecio] = useState<number | ''>('');
-  const [prodCosto, setProdCosto] = useState<number | ''>('');
   const [prodStockMin, setProdStockMin] = useState<number | ''>(5);
-  const [prodStockInit, setProdStockInit] = useState<number | ''>(0);
   const [prodTieneVariantes, setProdTieneVariantes] = useState(false);
   const [prodVariantes, setProdVariantes] = useState<{ talla: string; color: string; sku: string; stockActual: number | '' }[]>([]);
   const [prodDesc, setProdDesc] = useState('');
@@ -134,13 +132,11 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
     setProdCatId(categories[0]?.id || '');
     setProdUnidad('pza');
     setProdPrecio('');
-    setProdCosto('');
     setProdStockMin(5);
-    setProdStockInit(0);
     setProdTieneVariantes(false);
     setProdVariantes([
-      { talla: 'M', color: 'Negro', sku: `${nextSKU}-1`, stockActual: 10 },
-      { talla: 'L', color: 'Negro', sku: `${nextSKU}-2`, stockActual: 10 }
+      { talla: 'M', color: 'Negro', sku: `${nextSKU}-1`, stockActual: 0 },
+      { talla: 'L', color: 'Negro', sku: `${nextSKU}-2`, stockActual: 0 }
     ]);
     setProdDesc('');
     setIsProductModalOpen(true);
@@ -153,9 +149,7 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
     setProdCatId(product.categoriaId);
     setProdUnidad(product.unidadMedida);
     setProdPrecio(product.precioVenta);
-    setProdCosto(product.costoPromedio);
     setProdStockMin(product.stockMinimo);
-    setProdStockInit(product.stockActual);
     setProdTieneVariantes(product.tieneVariantes);
     setProdVariantes(product.variantes ? product.variantes.map(v => ({
       talla: v.talla,
@@ -184,12 +178,12 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
         tieneVariantes: prodTieneVariantes,
         descripcion: prodDesc,
         variantes: prodTieneVariantes ? prodVariantes.map((v, i) => ({
-          id: editingProduct ? (editingProduct.variantes?.[i]?.id || `var-${editingProduct.id}-${i + 1}`) : '',
-          productoId: editingProduct ? editingProduct.id : '',
+          id: editingProduct.variantes?.[i]?.id || `var-${editingProduct.id}-${i + 1}`,
+          productoId: editingProduct.id,
           sku: `${finalCode}-${i + 1}`,
           talla: v.talla.trim() || `Talla ${i + 1}`,
           color: v.color.trim() || 'Estándar',
-          stockActual: Number(v.stockActual) || 0
+          stockActual: editingProduct.variantes?.[i]?.stockActual || 0
         })) : undefined
       });
     } else {
@@ -199,8 +193,8 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
         categoriaId: prodCatId,
         unidadMedida: prodUnidad,
         precioVenta: Number(prodPrecio),
-        costoInicial: Number(prodCosto) || 0,
-        stockInicial: prodTieneVariantes ? 0 : (Number(prodStockInit) || 0),
+        costoInicial: 0,
+        stockInicial: 0,
         stockMinimo: Number(prodStockMin) || 5,
         tieneVariantes: prodTieneVariantes,
         descripcion: prodDesc,
@@ -208,7 +202,7 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
           sku: `${finalCode}-${i + 1}`,
           talla: v.talla.trim() || `Talla ${i + 1}`,
           color: v.color.trim() || 'Estándar',
-          stockActual: Number(v.stockActual) || 0,
+          stockActual: 0,
           id: '',
           productoId: ''
         })) : undefined
@@ -1233,35 +1227,6 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Costo Promedio / Inicial ({currencySymbol})</label>
-              <input
-                type="number"
-                className="form-control"
-                value={prodCosto}
-                onChange={(e) => setProdCosto(e.target.value === '' ? '' : Number(e.target.value))}
-                min={0}
-                step="any"
-                placeholder="0.00"
-                disabled={!!editingProduct}
-              />
-            </div>
-
-            {!prodTieneVariantes && (
-              <div className="form-group">
-                <label className="form-label">Stock Inicial (Piezas) *</label>
-                <input
-                  type="number"
-                  className="form-control"
-                  value={prodStockInit}
-                  onChange={(e) => setProdStockInit(e.target.value === '' ? '' : Number(e.target.value))}
-                  min={0}
-                  placeholder="0"
-                  disabled={!!editingProduct}
-                />
-              </div>
-            )}
-
-            <div className="form-group">
               <label className="form-label">Alerta Stock Mínimo</label>
               <input
                 type="number"
@@ -1295,10 +1260,10 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                   <div>
                     <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                      Matriz de Variantes & Stock Inicial
+                      Matriz de Atributos de Variantes
                     </div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      Define los atributos y el inventario inicial para cada presentación del producto.
+                      Define los atributos para cada presentación. El inventario se carga en la pestaña de Existencias o mediante Órdenes de Compra.
                     </div>
                   </div>
                   <button type="button" className="btn btn-secondary btn-sm" onClick={handleAddVariantRow}>
@@ -1311,7 +1276,7 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: '1.4fr 1.2fr 1.2fr 1fr 40px',
+                    gridTemplateColumns: '1.4fr 1.5fr 1.5fr 40px',
                     gap: '0.5rem',
                     padding: '0.45rem 0.6rem',
                     backgroundColor: 'var(--bg-surface)',
@@ -1327,9 +1292,8 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
                   }}
                 >
                   <div>ID / SKU Variante</div>
-                  <div>Variable 1</div>
-                  <div>Variable 2</div>
-                  <div style={{ textAlign: 'center' }}>Stock Inicial</div>
+                  <div>Variable 1 (Talla / Medida)</div>
+                  <div>Variable 2 (Color / Tipo)</div>
                   <div style={{ textAlign: 'center' }}>Acción</div>
                 </div>
 
@@ -1337,7 +1301,7 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
                   {prodVariantes.map((v, idx) => {
                     const variantSKU = `${prodCodigo || 'SKU0001'}-${idx + 1}`;
                     return (
-                      <div key={idx} className="variant-line-builder">
+                      <div key={idx} className="variant-line-builder" style={{ gridTemplateColumns: '1.4fr 1.5fr 1.5fr 40px' }}>
                         <input
                           type="text"
                           className="form-control"
@@ -1371,23 +1335,6 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
                             const val = e.target.value;
                             setProdVariantes(prev => prev.map((item, i) => i === idx ? { ...item, color: val } : item));
                           }}
-                        />
-                        <input
-                          type="number"
-                          className="form-control"
-                          placeholder="0"
-                          min={0}
-                          value={v.stockActual === 0 && (v as any)._isCleared ? '' : v.stockActual}
-                          onChange={(e) => {
-                            const raw = e.target.value;
-                            const val = raw === '' ? '' : Number(raw);
-                            setProdVariantes(prev => prev.map((item, i) => i === idx ? { 
-                              ...item, 
-                              stockActual: val as any,
-                              _isCleared: raw === ''
-                            } : item));
-                          }}
-                          style={{ textAlign: 'center' }}
                         />
                         <button
                           type="button"

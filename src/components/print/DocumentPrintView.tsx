@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Invoice, Quote } from '../../types/erp';
 import { useERP } from '../../context/ERPContext';
-import { formatCurrency, formatDate } from '../../utils/formatters';
+import { formatCurrency, formatDate, formatDateTime } from '../../utils/formatters';
 import { Printer, X } from 'lucide-react';
 import { Badge } from '../common/Badge';
 
@@ -140,7 +140,7 @@ export const DocumentPrintView: React.FC<DocumentPrintViewProps> = ({
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '0.2rem 0' }}>
                 <span style={{ color: '#64748b' }}>Fecha de Emisión:</span>
-                <strong style={{ color: '#0f172a' }}>{formatDate(doc.fechaEmision || (doc as any).fecha)}</strong>
+                <strong style={{ color: '#0f172a' }}>{formatDateTime(doc.fechaEmision || (doc as any).fecha)}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '0.2rem 0' }}>
                 <span style={{ color: '#64748b' }}>Fecha de Vencimiento:</span>
@@ -210,7 +210,7 @@ export const DocumentPrintView: React.FC<DocumentPrintViewProps> = ({
               {isInvoice && invoice?.anuladoMotivo && (
                 <div style={{ padding: '0.75rem', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', color: '#991b1b', fontSize: '0.8rem' }}>
                   <strong>Motivo de Anulación:</strong> {invoice.anuladoMotivo}
-                  <div style={{ fontSize: '0.75rem', marginTop: '0.2rem', color: '#b91c1c' }}>Fecha de Anulación: {formatDate(invoice.anuladoFecha)}</div>
+                  <div style={{ fontSize: '0.75rem', marginTop: '0.2rem', color: '#b91c1c' }}>Fecha de Anulación: {formatDateTime(invoice.anuladoFecha)}</div>
                 </div>
               )}
 
@@ -223,7 +223,7 @@ export const DocumentPrintView: React.FC<DocumentPrintViewProps> = ({
                   <div style={{ fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                     {invoice.pagos.map((p, pIdx) => (
                       <div key={pIdx} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0', borderBottom: '1px dashed #e2e8f0' }}>
-                        <span>{formatDate(p.fecha)} — <span style={{ textTransform: 'capitalize', color: '#64748b' }}>{p.metodoPago}</span> {p.referencia ? `(${p.referencia})` : ''}</span>
+                        <span>{formatDateTime(p.fecha)} — <span style={{ textTransform: 'capitalize', color: '#64748b' }}>{p.metodoPago}</span> {p.referencia ? `(${p.referencia})` : ''}</span>
                         <strong style={{ color: '#059669' }}>{formatCurrency(p.monto)}</strong>
                       </div>
                     ))}

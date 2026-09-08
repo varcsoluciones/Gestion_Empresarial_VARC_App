@@ -8,6 +8,7 @@ export type MovementType =
   | 'ENTRADA_COMPRA' 
   | 'SALIDA_VENTA' 
   | 'AJUSTE_MANUAL' 
+  | 'INVENTARIO_INICIAL'
   | 'ANULACION_COMPRA' 
   | 'ANULACION_VENTA';
 

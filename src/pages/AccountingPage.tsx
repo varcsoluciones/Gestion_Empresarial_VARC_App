@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useERP } from '../context/ERPContext';
 import type { ExpenseType, OperatingExpense } from '../types/erp';
-import { formatCurrency, formatDate, getMonthKey, getTodayLocalDateString } from '../utils/formatters';
+import { formatCurrency, formatDate, formatDateTime, getMonthKey, getTodayLocalDateString } from '../utils/formatters';
 import { useTranslation } from '../i18n/useTranslation';
 import {
   Calculator,
@@ -86,8 +86,12 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
     e.preventDefault();
     if (!expMonto || Number(expMonto) <= 0 || !expDesc.trim()) return;
 
+    const todayStr = getTodayLocalDateString();
+    const nowIso = new Date().toISOString();
+    const expenseDate = expFecha === todayStr ? nowIso : (expFecha.includes('T') ? expFecha : `${expFecha}T${nowIso.split('T')[1] || '12:00:00.000Z'}`);
+
     addExpense({
-      fecha: expFecha,
+      fecha: expenseDate,
       periodoMes: expFecha.slice(0, 7),
       tipo: expTipo,
       categoria: expCategoria,
@@ -711,7 +715,7 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
 
                     return (
                       <tr key={exp.id} style={{ opacity: isCancelled && !isReversal ? 0.75 : 1 }}>
-                        <td>{formatDate(exp.fecha)}</td>
+                        <td>{formatDateTime(exp.fecha)}</td>
                         <td>
                           <span style={{
                             fontFamily: 'var(--font-mono)',

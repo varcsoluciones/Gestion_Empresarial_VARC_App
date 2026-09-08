@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useERP } from '../context/ERPContext';
 import type { Invoice, Quote, PaymentMethod, PaymentTerm } from '../types/erp';
-import { formatCurrency, formatDate, generateDocNumber, formatMonthLabel, getTodayLocalDateString, getFutureLocalDateString } from '../utils/formatters';
+import { formatCurrency, formatDate, formatDateTime, generateDocNumber, formatMonthLabel, getTodayLocalDateString, getFutureLocalDateString } from '../utils/formatters';
 import {
   TrendingUp,
   Plus,
@@ -265,10 +265,13 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
 
   const handleSaveDraftInvoice = () => {
     if (!formClienteId || formItems.length === 0) return;
+    const todayStr = getTodayLocalDateString();
+    const nowIso = new Date().toISOString();
+    const emissionDate = formFechaEmision === todayStr ? nowIso : (formFechaEmision.includes('T') ? formFechaEmision : `${formFechaEmision}T${nowIso.split('T')[1] || '12:00:00.000Z'}`);
 
     createInvoice({
       clienteId: formClienteId,
-      fechaEmision: formFechaEmision,
+      fechaEmision: emissionDate,
       fechaVencimiento: formFechaVencimiento,
       tipoPago: formTipoPago,
       estado: 'borrador',
@@ -294,6 +297,9 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
     const nextFolio = generateDocNumber('FA', invoices.length);
     const totalPieces = formItems.reduce((sum, item) => sum + item.cantidad, 0);
     const deficits = checkStockDeficits(formItems);
+    const todayStr = getTodayLocalDateString();
+    const nowIso = new Date().toISOString();
+    const emissionDate = formFechaEmision === todayStr ? nowIso : (formFechaEmision.includes('T') ? formFechaEmision : `${formFechaEmision}T${nowIso.split('T')[1] || '12:00:00.000Z'}`);
 
     setConfirmIssueData({
       title: 'Confirmar Emisión de Factura',
@@ -302,7 +308,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
       clientName: client?.nombre || 'Cliente General',
       clientRFC: client?.identificacionFiscal || 'XAXX010101000',
       tipoPago: formTipoPago.toUpperCase(),
-      fechaEmision: formFechaEmision,
+      fechaEmision: emissionDate,
       totalPieces,
       totalItems: formItems.length,
       subtotal: formSubtotal,
@@ -313,7 +319,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
       onConfirm: () => {
         const newInv = createInvoice({
           clienteId: formClienteId,
-          fechaEmision: formFechaEmision,
+          fechaEmision: emissionDate,
           fechaVencimiento: formFechaVencimiento,
           tipoPago: formTipoPago,
           estado: 'emitida',
@@ -343,25 +349,23 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
 
     setConfirmIssueData({
       title: 'Confirmar Emisión de Factura Borrador',
-      subtitle: `Se emitirá la factura ${inv.numeroFactura} y se descontará el inventario correspondiente.`,
+      subtitle: `¿Deseas emitir formalmente la factura borrador ${inv.numeroFactura} y descontar el inventario?`,
       docFolio: inv.numeroFactura,
       clientName: client?.nombre || 'Cliente General',
-      clientRFC: client?.identificacionFiscal || 'N/A',
+      clientRFC: client?.identificacionFiscal || 'XAXX010101000',
       tipoPago: inv.tipoPago.toUpperCase(),
       fechaEmision: inv.fechaEmision,
       totalPieces,
       totalItems: inv.items.length,
       subtotal: inv.subtotal,
+      tasaImpuesto: inv.tasaImpuesto,
       impuestos: inv.impuestos,
       total: inv.total,
       deficitItems: deficits,
       onConfirm: () => {
         issueInvoice(inv.id);
         setConfirmIssueData(null);
-        setPrintDoc({
-          doc: { ...inv, estado: inv.saldoPendiente <= 0 ? 'pagada' : 'emitida', emitidaFecha: new Date().toISOString() },
-          type: 'invoice'
-        });
+        setPrintDoc({ doc: inv, type: 'invoice' });
       }
     });
   };
@@ -370,6 +374,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
     const client = clients.find(c => c.id === quote.clienteId);
     const totalPieces = quote.items.reduce((sum, item) => sum + item.cantidad, 0);
     const deficits = checkStockDeficits(quote.items);
+    const nowIso = new Date().toISOString();
 
     setConfirmIssueData({
       title: 'Confirmar Conversión de Cotización a Factura',
@@ -378,7 +383,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
       clientName: client?.nombre || 'Cliente',
       clientRFC: client?.identificacionFiscal || 'N/A',
       tipoPago: (client?.tipoPago || 'contado').toUpperCase(),
-      fechaEmision: getTodayLocalDateString(),
+      fechaEmision: nowIso,
       totalPieces,
       totalItems: quote.items.length,
       subtotal: quote.subtotal,
@@ -396,10 +401,13 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
 
   const handleSaveQuote = () => {
     if (!formClienteId || formItems.length === 0) return;
+    const todayStr = getTodayLocalDateString();
+    const nowIso = new Date().toISOString();
+    const emissionDate = formFechaEmision === todayStr ? nowIso : (formFechaEmision.includes('T') ? formFechaEmision : `${formFechaEmision}T${nowIso.split('T')[1] || '12:00:00.000Z'}`);
 
     createQuote({
       clienteId: formClienteId,
-      fechaEmision: formFechaEmision,
+      fechaEmision: emissionDate,
       fechaVencimiento: formFechaVencimiento,
       estado: 'pendiente',
       items: formItems.map((item, idx) => ({
@@ -433,7 +441,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
 
     addClientPayment({
       facturaId: selectedInvoice.id,
-      fecha: getTodayLocalDateString(),
+      fecha: new Date().toISOString(),
       monto: Number(paymentAmount),
       metodoPago: paymentMethod,
       referencia: paymentRef || `COBRO-${Date.now().toString().slice(-4)}`,
@@ -727,7 +735,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{client?.identificacionFiscal}</div>
                         </td>
                         <td>
-                          <div>{formatDate(inv.fechaEmision)}</div>
+                          <div style={{ fontWeight: 600 }}>{formatDateTime(inv.fechaEmision)}</div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Vence: {formatDate(inv.fechaVencimiento)}</div>
                         </td>
                         <td style={{ textAlign: 'center' }}>
@@ -878,7 +886,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
                                       {inv.pagos.map((pago, pIdx) => (
                                         <tr key={pago.id || pIdx} style={{ borderBottom: '1px solid var(--border-default)' }}>
                                           <td style={{ padding: '0.4rem 0.6rem', fontWeight: 600, color: 'var(--text-muted)' }}>{pIdx + 1}</td>
-                                          <td style={{ padding: '0.4rem 0.6rem' }}>{formatDate(pago.fecha)}</td>
+                                          <td style={{ padding: '0.4rem 0.6rem' }}>{formatDateTime(pago.fecha)}</td>
                                           <td style={{ padding: '0.4rem 0.6rem' }}>
                                             <Badge variant="neutral">
                                               {pago.metodoPago.toUpperCase()}
@@ -1018,7 +1026,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
                         <div style={{ fontWeight: 600 }}>{client?.nombre || 'Cliente'}</div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{client?.identificacionFiscal}</div>
                       </td>
-                      <td>{formatDate(q.fechaEmision)}</td>
+                      <td>{formatDateTime(q.fechaEmision)}</td>
                       <td>{formatDate(q.fechaVencimiento)}</td>
                       <td style={{ textAlign: 'center' }}>
                         <span className="badge badge-neutral">{q.items.reduce((s, i) => s + i.cantidad, 0)} pzs</span>
@@ -1915,7 +1923,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
                   </div>
                   <div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Emisión:</div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{formatDate(confirmIssueData.fechaEmision)}</div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{formatDateTime(confirmIssueData.fechaEmision)}</div>
                   </div>
                 </div>
               </div>

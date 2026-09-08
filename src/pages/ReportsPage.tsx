@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useERP } from '../context/ERPContext';
-import { formatCurrency, formatDate, getMonthKey } from '../utils/formatters';
+import { formatCurrency, formatDateTime, getMonthKey } from '../utils/formatters';
 import {
   BarChart3,
   Calendar,
@@ -727,7 +727,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
                                           <td style={{ padding: '0.5rem', fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--color-accent)' }}>
                                             {sale.numeroFactura}
                                           </td>
-                                          <td style={{ padding: '0.5rem' }}>{formatDate(sale.fecha)}</td>
+                                          <td style={{ padding: '0.5rem' }}>{formatDateTime(sale.fecha)}</td>
                                           <td style={{ padding: '0.5rem', fontWeight: 600 }}>{sale.clienteNombre}</td>
                                           <td style={{ padding: '0.5rem', textAlign: 'center', fontWeight: 700 }}>{sale.cantidad}</td>
                                           <td style={{ padding: '0.5rem', textAlign: 'right' }}>{formatCurrency(sale.precioUnitario)}</td>
@@ -914,7 +914,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
                                           <td style={{ padding: '0.5rem', fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--color-accent)' }}>
                                             {inv.numeroFactura}
                                           </td>
-                                          <td style={{ padding: '0.5rem' }}>{formatDate(inv.fecha)}</td>
+                                          <td style={{ padding: '0.5rem' }}>{formatDateTime(inv.fecha)}</td>
                                           <td style={{ padding: '0.5rem', textAlign: 'center' }}>{inv.tipoPago.toUpperCase()}</td>
                                           <td style={{ padding: '0.5rem', textAlign: 'center', fontWeight: 600 }}>{inv.totalPiezas}</td>
                                           <td style={{ padding: '0.5rem', textAlign: 'right' }}>{formatCurrency(inv.subtotal)}</td>
