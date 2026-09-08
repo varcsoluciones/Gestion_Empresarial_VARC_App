@@ -10,7 +10,9 @@ import {
   Layers,
   FileSpreadsheet,
   RotateCcw,
-  CheckCircle2
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
@@ -38,6 +40,19 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
   const [monthFilter, setMonthFilter] = useState<string>('all');
   const [activeView, setActiveView] = useState<'kardex' | 'stock'>(initialView || 'kardex');
   const [syncToastMessage, setSyncToastMessage] = useState<string | null>(null);
+  const [expandedProductIds, setExpandedProductIds] = useState<Set<string>>(new Set());
+
+  const toggleExpandProduct = (productId: string) => {
+    setExpandedProductIds(prev => {
+      const next = new Set(prev);
+      if (next.has(productId)) {
+        next.delete(productId);
+      } else {
+        next.add(productId);
+      }
+      return next;
+    });
+  };
 
   React.useEffect(() => {
     if (initialView) {
@@ -54,12 +69,16 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
   const [adjMotivo, setAdjMotivo] = useState('');
   const [adjError, setAdjError] = useState('');
 
-  const handleOpenAdjustment = (prodId?: string) => {
+  const handleOpenAdjustment = (prodId?: string, varId?: string) => {
     const targetProdId = prodId || products[0]?.id || '';
     setAdjProdId(targetProdId);
     const prod = products.find(p => p.id === targetProdId);
     if (prod && prod.tieneVariantes && prod.variantes && prod.variantes.length > 0) {
-      setAdjVarId(prod.variantes[0].id);
+      if (varId && prod.variantes.some(v => v.id === varId)) {
+        setAdjVarId(varId);
+      } else {
+        setAdjVarId(prod.variantes[0].id);
+      }
     } else {
       setAdjVarId('');
     }
@@ -514,6 +533,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
           <table className="table">
             <thead>
               <tr>
+                <th style={{ width: '38px', textAlign: 'center' }}></th>
                 <SortableTh
                   sortKey="codigo"
                   currentSortKey={stockSortKey}
@@ -597,7 +617,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
             <tbody>
               {sortedStockProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={9} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
+                  <td colSpan={10} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
                     No se encontraron productos con los criterios seleccionados.
                   </td>
                 </tr>
@@ -606,42 +626,202 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                   const cat = categories.find(c => c.id === p.categoriaId);
                   const isLow = p.stockActual <= p.stockMinimo;
                   const value = p.stockActual * p.costoPromedio;
+                  const hasVariants = Boolean(p.tieneVariantes && p.variantes && p.variantes.length > 0);
+                  const isExpanded = expandedProductIds.has(p.id);
 
                   return (
-                    <tr key={p.id}>
-                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{p.codigo}</td>
-                      <td>
-                        <div style={{ fontWeight: 600 }}>{p.nombre}</div>
-                        {p.tieneVariantes && p.variantes && (
-                          <div style={{ fontSize: '0.75rem', color: 'var(--color-accent)' }}>
-                            {p.variantes.map(v => `${v.color}-${v.talla}: ${v.stockActual}`).join(' | ')}
-                          </div>
-                        )}
-                      </td>
-                      <td>{cat?.nombre}</td>
-                      <td style={{ textAlign: 'center', fontWeight: 700 }}>
-                        {p.stockActual} {p.unidadMedida}
-                      </td>
-                      <td style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
-                        {p.stockMinimo} {p.unidadMedida}
-                      </td>
-                      <td style={{ textAlign: 'right' }}>{formatCurrency(p.costoPromedio)}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatCurrency(value)}</td>
-                      <td style={{ textAlign: 'center' }}>
-                        <Badge variant={isLow ? 'danger' : 'success'}>
-                          {isLow ? 'Stock Bajo' : 'Normal'}
-                        </Badge>
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <button
-                          type="button"
-                          className="btn btn-secondary btn-sm"
-                          onClick={() => handleOpenAdjustment(p.id)}
-                        >
-                          Ajustar
-                        </button>
-                      </td>
-                    </tr>
+                    <React.Fragment key={p.id}>
+                      <tr
+                        onClick={() => {
+                          if (hasVariants) toggleExpandProduct(p.id);
+                        }}
+                        style={{
+                          cursor: hasVariants ? 'pointer' : 'default',
+                          backgroundColor: isExpanded ? 'var(--bg-subtle)' : undefined,
+                          transition: 'background-color var(--transition-fast)'
+                        }}
+                      >
+                        <td style={{ textAlign: 'center', width: '38px', padding: '0.5rem 0.25rem' }}>
+                          {hasVariants ? (
+                            <button
+                              type="button"
+                              className="btn-icon btn-sm"
+                              style={{
+                                border: 'none',
+                                background: 'none',
+                                cursor: 'pointer',
+                                padding: '4px',
+                                color: isExpanded ? 'var(--color-accent)' : 'var(--text-muted)'
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleExpandProduct(p.id);
+                              }}
+                              title={isExpanded ? 'Ocultar desglose de variantes' : 'Ver desglose de variantes en tabla'}
+                            >
+                              {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                            </button>
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>•</span>
+                          )}
+                        </td>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{p.codigo}</td>
+                        <td>
+                          <div style={{ fontWeight: 600 }}>{p.nombre}</div>
+                          {hasVariants ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.25rem' }}>
+                              <span
+                                className="badge badge-accent"
+                                style={{ cursor: 'pointer', fontSize: '0.7rem' }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleExpandProduct(p.id);
+                                }}
+                                title="Clic para ver u ocultar tabla de variantes"
+                              >
+                                {p.variantes!.length} variantes {isExpanded ? '▲ Ocultar' : '▼ Ver desglose'}
+                              </span>
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Artículo individual</span>
+                          )}
+                        </td>
+                        <td>{cat?.nombre || 'General'}</td>
+                        <td style={{ textAlign: 'center', fontWeight: 700 }}>
+                          {p.stockActual} {p.unidadMedida}
+                        </td>
+                        <td style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
+                          {p.stockMinimo} {p.unidadMedida}
+                        </td>
+                        <td style={{ textAlign: 'right' }}>{formatCurrency(p.costoPromedio)}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatCurrency(value)}</td>
+                        <td style={{ textAlign: 'center' }}>
+                          <Badge variant={isLow ? 'danger' : 'success'}>
+                            {isLow ? 'Stock Bajo' : 'Normal'}
+                          </Badge>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenAdjustment(p.id);
+                            }}
+                          >
+                            Ajustar
+                          </button>
+                        </td>
+                      </tr>
+
+                      {/* Expandable Variants Breakdown Subtable */}
+                      {isExpanded && hasVariants && p.variantes && (
+                        <tr style={{ backgroundColor: 'var(--bg-subtle)' }}>
+                          <td colSpan={10} style={{ padding: '0.75rem 1.25rem 1.25rem 2.5rem', borderBottom: '1px solid var(--border-default)' }}>
+                            <div style={{
+                              backgroundColor: 'var(--bg-surface)',
+                              border: '1px solid var(--border-default)',
+                              borderRadius: 'var(--radius-lg)',
+                              overflow: 'hidden',
+                              boxShadow: 'var(--shadow-sm)'
+                            }}>
+                              {/* Subtable Header Banner */}
+                              <div style={{
+                                padding: '0.65rem 1rem',
+                                backgroundColor: 'var(--color-accent-subtle)',
+                                borderBottom: '1px solid var(--border-default)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                flexWrap: 'wrap',
+                                gap: '0.5rem'
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, fontSize: '0.825rem', color: 'var(--color-accent)' }}>
+                                  <Layers size={15} />
+                                  <span>Desglose de Existencias por Variante — {p.nombre} ({p.codigo})</span>
+                                </div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                  Total: <strong style={{ color: 'var(--text-primary)' }}>{p.variantes.length} variantes</strong> | Costo Promedio Unitario: <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(p.costoPromedio)}</strong>
+                                </div>
+                              </div>
+
+                              {/* Subtable of Variants */}
+                              <div style={{ overflowX: 'auto' }}>
+                                <table className="table" style={{ margin: 0, fontSize: '0.825rem' }}>
+                                  <thead>
+                                    <tr style={{ backgroundColor: 'var(--bg-subtle)', borderBottom: '1px solid var(--border-default)' }}>
+                                      <th style={{ padding: '0.5rem 0.85rem', width: '22%' }}>SKU / Código Variante</th>
+                                      <th style={{ padding: '0.5rem 0.85rem', width: '16%' }}>Color</th>
+                                      <th style={{ padding: '0.5rem 0.85rem', width: '14%' }}>Talla</th>
+                                      <th style={{ padding: '0.5rem 0.85rem', textAlign: 'center', width: '14%' }}>Existencias (Stock)</th>
+                                      <th style={{ padding: '0.5rem 0.85rem', textAlign: 'right', width: '14%' }}>Costo Promedio</th>
+                                      <th style={{ padding: '0.5rem 0.85rem', textAlign: 'right', width: '14%' }}>Valor Inventario</th>
+                                      <th style={{ padding: '0.5rem 0.85rem', textAlign: 'right', width: '6%' }}>Acción</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {p.variantes.map(v => {
+                                      const varValue = v.stockActual * p.costoPromedio;
+                                      const isVarLow = v.stockActual <= 3;
+
+                                      return (
+                                        <tr key={v.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                                          <td style={{ padding: '0.55rem 0.85rem', fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                            {v.sku || `${p.codigo}-${v.color}-${v.talla}`}
+                                          </td>
+                                          <td style={{ padding: '0.55rem 0.85rem' }}>
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 500 }}>
+                                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-accent)', display: 'inline-block' }} />
+                                              {v.color || 'Único'}
+                                            </span>
+                                          </td>
+                                          <td style={{ padding: '0.55rem 0.85rem', fontWeight: 600 }}>
+                                            {v.talla || 'Única'}
+                                          </td>
+                                          <td style={{ padding: '0.55rem 0.85rem', textAlign: 'center' }}>
+                                            <span style={{
+                                              display: 'inline-block',
+                                              padding: '0.2rem 0.55rem',
+                                              borderRadius: 'var(--radius-sm)',
+                                              fontWeight: 700,
+                                              backgroundColor: isVarLow ? 'var(--color-danger-bg)' : 'var(--bg-subtle)',
+                                              color: isVarLow ? 'var(--color-danger)' : 'var(--text-primary)',
+                                              border: isVarLow ? '1px solid var(--color-danger-border)' : '1px solid var(--border-default)'
+                                            }}>
+                                              {v.stockActual} {p.unidadMedida}
+                                            </span>
+                                          </td>
+                                          <td style={{ padding: '0.55rem 0.85rem', textAlign: 'right', color: 'var(--text-secondary)' }}>
+                                            {formatCurrency(p.costoPromedio)}
+                                          </td>
+                                          <td style={{ padding: '0.55rem 0.85rem', textAlign: 'right', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                            {formatCurrency(varValue)}
+                                          </td>
+                                          <td style={{ padding: '0.55rem 0.85rem', textAlign: 'right' }}>
+                                            <button
+                                              type="button"
+                                              className="btn btn-secondary btn-sm"
+                                              style={{ fontSize: '0.725rem', padding: '0.2rem 0.5rem' }}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleOpenAdjustment(p.id, v.id);
+                                              }}
+                                              title={`Realizar ajuste manual para ${v.color} - ${v.talla}`}
+                                            >
+                                              Ajustar
+                                            </button>
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })
               )}
