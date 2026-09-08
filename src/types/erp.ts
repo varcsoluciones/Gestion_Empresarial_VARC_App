@@ -271,7 +271,7 @@ export interface FixedAsset {
   notas?: string;
 }
 
-// 6. Configuración General
+// 6. Configuración General & Respaldos
 export interface CompanySettings {
   nombreEmpresa: string;
   identificacionFiscal: string;
@@ -286,5 +286,27 @@ export interface CompanySettings {
   pieFactura?: string;
   tema: ThemeMode;
   colorAcento: AccentColor;
+  respaldoAutomaticoActivo: boolean;
+  ultimoRespaldoAutomatico?: string;
+  ultimoRespaldoPeriodo?: string; // YYYY-MM
+}
+
+export interface ERPBackupPayload {
+  version: string;
+  fechaExportacion: string;
+  empresa: string;
+  data: {
+    settings: CompanySettings;
+    categories: Category[];
+    clients: Client[];
+    suppliers: Supplier[];
+    products: Product[];
+    purchases: Purchase[];
+    quotes: Quote[];
+    invoices: Invoice[];
+    inventoryMovements: InventoryMovement[];
+    expenses: OperatingExpense[];
+    fixedAssets: FixedAsset[];
+  };
 }
 

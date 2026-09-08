@@ -33,6 +33,11 @@ import {
   initialFixedAssets
 } from '../data/seedData';
 import { calculateWeightedAverageCost, generateDocNumber, getMonthKey } from '../utils/formatters';
+import {
+  downloadJSONBackup,
+  downloadExcelWorkbook,
+  type FullERPData
+} from '../utils/backupExportUtils';
 
 export interface ERPContextType {
   // Entidades
@@ -88,6 +93,14 @@ export interface ERPContextType {
   // Cálculos de Prorrateo & KPIs
   getProrrateoMensual: (mesKey?: string, overrideCriterio?: ProrrateoCriterion) => MonthlyProrrateo;
   getProductRealCost: (productoId: string, mesKey?: string, overrideCriterio?: ProrrateoCriterion) => ProductRealCostResult;
+
+  // Gestión de Datos & Respaldos
+  getFullERPData: () => FullERPData;
+  restoreERPData: (data: FullERPData) => void;
+  exportBackupJSON: (isAuto?: boolean) => void;
+  exportExcel: () => void;
+  autoBackupToast: string | null;
+  clearAutoBackupToast: () => void;
 
   // Ajustes y Configuración
   updateSettings: (newSettings: Partial<CompanySettings>) => void;
@@ -938,6 +951,86 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
   };
 
+  // Gestión de Datos & Respaldos (Exportación JSON & Excel)
+  const [autoBackupToast, setAutoBackupToast] = useState<string | null>(null);
+
+  const getFullERPData = (): FullERPData => ({
+    settings,
+    categories,
+    clients,
+    suppliers,
+    products,
+    purchases,
+    quotes,
+    invoices,
+    inventoryMovements,
+    expenses,
+    fixedAssets
+  });
+
+  const restoreERPData = (data: FullERPData) => {
+    if (data.settings) setSettings(data.settings);
+    if (data.categories) setCategories(data.categories);
+    if (data.clients) setClients(data.clients);
+    if (data.suppliers) setSuppliers(data.suppliers);
+    if (data.products) setProducts(data.products);
+    if (data.purchases) setPurchases(data.purchases);
+    if (data.quotes) setQuotes(data.quotes);
+    if (data.invoices) setInvoices(data.invoices);
+    if (data.inventoryMovements) setInventoryMovements(data.inventoryMovements);
+    if (data.expenses) setExpenses(data.expenses);
+    if (data.fixedAssets) setFixedAssets(data.fixedAssets);
+  };
+
+  const exportBackupJSON = (isAuto = false) => {
+    const fullData = getFullERPData();
+    const timestamp = downloadJSONBackup(fullData, isAuto);
+    const monthKey = timestamp.slice(0, 7);
+    if (isAuto) {
+      setSettings(prev => ({
+        ...prev,
+        ultimoRespaldoAutomatico: timestamp,
+        ultimoRespaldoPeriodo: monthKey
+      }));
+    }
+  };
+
+  const exportExcel = () => {
+    const fullData = getFullERPData();
+    downloadExcelWorkbook(fullData);
+  };
+
+  const clearAutoBackupToast = () => {
+    setAutoBackupToast(null);
+  };
+
+  // Respaldo Automático Mensual (se activa una vez cada mes automáticamente)
+  useEffect(() => {
+    if (!settings.respaldoAutomaticoActivo) return;
+
+    const currentMonthKey = new Date().toISOString().slice(0, 7);
+    const lastPeriod = settings.ultimoRespaldoPeriodo;
+
+    if (!lastPeriod || lastPeriod !== currentMonthKey) {
+      const timer = setTimeout(() => {
+        try {
+          const fullData = getFullERPData();
+          const timestamp = downloadJSONBackup(fullData, true);
+          setSettings(prev => ({
+            ...prev,
+            ultimoRespaldoAutomatico: timestamp,
+            ultimoRespaldoPeriodo: currentMonthKey
+          }));
+          setAutoBackupToast(`Respaldo automático mensual completado (${currentMonthKey})`);
+        } catch (e) {
+          console.error('Error en respaldo automático:', e);
+        }
+      }, 1500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [settings.respaldoAutomaticoActivo, settings.ultimoRespaldoPeriodo]);
+
   const updateSettings = (newSettings: Partial<CompanySettings>) => {
     setSettings(prev => ({ ...prev, ...newSettings }));
   };
@@ -995,6 +1088,12 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         updateFixedAsset,
         getProrrateoMensual,
         getProductRealCost,
+        getFullERPData,
+        restoreERPData,
+        exportBackupJSON,
+        exportExcel,
+        autoBackupToast,
+        clearAutoBackupToast,
         updateSettings,
         resetToDemoData
       }}
