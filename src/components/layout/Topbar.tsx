@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sun, Moon, TrendingUp, ShoppingBag, Settings, Menu } from 'lucide-react';
+import { Sun, Moon, TrendingUp, ShoppingBag, Settings, Menu, BookOpen } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { NavigationTab } from './Sidebar';
@@ -8,6 +8,7 @@ interface TopbarProps {
   currentTab: NavigationTab;
   onNavigate: (tab: NavigationTab) => void;
   onToggleMobileMenu?: () => void;
+  onOpenGuide?: () => void;
   onOpenQuickSale?: () => void;
   onOpenQuickPurchase?: () => void;
 }
@@ -15,7 +16,8 @@ interface TopbarProps {
 export const Topbar: React.FC<TopbarProps> = ({
   currentTab,
   onNavigate,
-  onToggleMobileMenu
+  onToggleMobileMenu,
+  onOpenGuide
 }) => {
   const { settings, updateSettings } = useERP();
   const { t } = useTranslation();
@@ -69,6 +71,19 @@ export const Topbar: React.FC<TopbarProps> = ({
         >
           {settings.tema === 'light' ? <Moon size={18} /> : <Sun size={18} />}
         </button>
+
+        {/* User Guide / Manual Button */}
+        {onOpenGuide && (
+          <button
+            type="button"
+            className="btn-icon"
+            onClick={onOpenGuide}
+            title="Manual & Guía de Uso del Sistema"
+            aria-label="Abrir manual de uso del sistema"
+          >
+            <BookOpen size={18} />
+          </button>
+        )}
 
         {/* Settings Button */}
         <button

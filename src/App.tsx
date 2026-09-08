@@ -13,12 +13,14 @@ import { AccountingPage } from './pages/AccountingPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { useAutoTableResizer } from './hooks/useTableResizer';
+import { UserGuideModal } from './components/guide/UserGuideModal';
 
 const AppContent: React.FC = () => {
   useAutoTableResizer();
   const [currentTab, setCurrentTab] = useState<NavigationTab>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
 
   const renderActivePage = () => {
     switch (currentTab) {
@@ -59,11 +61,18 @@ const AppContent: React.FC = () => {
           currentTab={currentTab}
           onNavigate={setCurrentTab}
           onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          onOpenGuide={() => setIsGuideOpen(true)}
         />
         <div className="app-page-body">
           {renderActivePage()}
         </div>
       </div>
+
+      <UserGuideModal
+        isOpen={isGuideOpen}
+        onClose={() => setIsGuideOpen(false)}
+        initialTab={currentTab}
+      />
     </div>
   );
 };
