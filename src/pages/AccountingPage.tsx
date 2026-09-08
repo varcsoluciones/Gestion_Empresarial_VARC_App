@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useERP } from '../context/ERPContext';
 import type { ExpenseType, OperatingExpense } from '../types/erp';
-import { formatCurrency, formatDate, getMonthKey } from '../utils/formatters';
+import { formatCurrency, formatDate, getMonthKey, getTodayLocalDateString } from '../utils/formatters';
 import { useTranslation } from '../i18n/useTranslation';
 import {
   Calculator,
@@ -60,7 +60,7 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
 
   // New Expense Modal State
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
-  const [expFecha, setExpFecha] = useState(new Date().toISOString().split('T')[0]);
+  const [expFecha, setExpFecha] = useState(getTodayLocalDateString());
   const [expTipo, setExpTipo] = useState<ExpenseType>('fijo');
   const [expCategoria, setExpCategoria] = useState('Renta & Local');
   const [expMonto, setExpMonto] = useState<number | ''>('');
@@ -73,7 +73,7 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
   const [astNombre, setAstNombre] = useState('');
   const [astCategoria, setAstCategoria] = useState('Equipo de Cómputo');
-  const [astFecha, setAstFecha] = useState(new Date().toISOString().split('T')[0]);
+  const [astFecha, setAstFecha] = useState(getTodayLocalDateString());
   const [astValor, setAstValor] = useState<number | ''>('');
   const [astVidaMeses, setAstVidaMeses] = useState<number | ''>(36);
   const [astNotas, setAstNotas] = useState('');

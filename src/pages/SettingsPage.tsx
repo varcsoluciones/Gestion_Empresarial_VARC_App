@@ -25,7 +25,7 @@ import {
   SlidersHorizontal
 } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
-import { formatDate } from '../utils/formatters';
+import { formatDateTime } from '../utils/formatters';
 import { validateAndParseBackupJSON, type FullERPData } from '../utils/backupExportUtils';
 import { APP_NAME, APP_BRAND, APP_VERSION } from '../config/version';
 
@@ -848,7 +848,7 @@ export const SettingsPage: React.FC = () => {
                 <div>
                   <span style={{ color: 'var(--text-muted)', display: 'block' }}>Último Respaldo Registrado:</span>
                   <strong style={{ color: 'var(--text-primary)' }}>
-                    {settings.ultimoRespaldoAutomatico ? formatDate(settings.ultimoRespaldoAutomatico) + ' ' + settings.ultimoRespaldoAutomatico.slice(11, 16) + ' hrs' : 'Sin registros previos'}
+                    {settings.ultimoRespaldoAutomatico ? formatDateTime(settings.ultimoRespaldoAutomatico) : 'Sin registros previos'}
                   </strong>
                 </div>
                 <div>

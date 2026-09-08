@@ -32,7 +32,7 @@ import {
   initialOperatingExpenses,
   initialFixedAssets
 } from '../data/seedData';
-import { calculateWeightedAverageCost, generateDocNumber, getMonthKey, getNextProductSKU, formatCurrency, setActiveCurrencySymbol } from '../utils/formatters';
+import { calculateWeightedAverageCost, generateDocNumber, getMonthKey, getNextProductSKU, formatCurrency, setActiveCurrencySymbol, getTodayLocalDateString, getFutureLocalDateString } from '../utils/formatters';
 import {
   downloadJSONBackup,
   downloadExcelWorkbook,
@@ -336,8 +336,8 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   // Helper to synchronously receive stock and update weighted average cost
-  const applyPurchaseStockReception = (purchase: Purchase) => {
-    const now = new Date().toISOString();
+  const applyPurchaseStockReception = (purchase: Purchase, receptionDate?: string) => {
+    const movementTimestamp = receptionDate || purchase.recibidaFecha || new Date().toISOString();
     const newMovements: InventoryMovement[] = [];
 
     setProducts(prevProducts => {
@@ -363,7 +363,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 const varNewStock = (v.stockActual || 0) + item.cantidad;
                 newMovements.push({
                   id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-                  fecha: purchase.fecha || now,
+                  fecha: movementTimestamp,
                   tipo: 'ENTRADA_COMPRA',
                   referenciaDoc: purchase.numeroCompra,
                   productoId: product.id,
@@ -382,7 +382,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             updatedStock += item.cantidad;
             newMovements.push({
               id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-              fecha: purchase.fecha || now,
+              fecha: movementTimestamp,
               tipo: 'ENTRADA_COMPRA',
               referenciaDoc: purchase.numeroCompra,
               productoId: product.id,
@@ -432,7 +432,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setPurchases(prev => [newPurchase, ...prev]);
 
     if (isDirectReceive) {
-      applyPurchaseStockReception(newPurchase);
+      applyPurchaseStockReception(newPurchase, now);
     }
 
     return newPurchase;
@@ -445,7 +445,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
 
     const now = new Date().toISOString();
-    applyPurchaseStockReception(purchase);
+    applyPurchaseStockReception(purchase, now);
 
     setPurchases(prev => prev.map(p => p.id === purchaseId ? {
       ...p,
@@ -580,7 +580,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           pur.items.forEach(item => {
             movementsToAdd.push({
               id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-              fecha: pur.fecha || new Date().toISOString(),
+              fecha: pur.recibidaFecha || (pur.fecha && pur.fecha.includes('T') ? pur.fecha : undefined) || new Date().toISOString(),
               tipo: 'ENTRADA_COMPRA',
               referenciaDoc: pur.numeroCompra,
               productoId: item.productoId,
@@ -603,7 +603,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           pur.items.forEach(item => {
             movementsToAdd.push({
               id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-              fecha: pur.anuladoFecha || pur.fecha || new Date().toISOString(),
+              fecha: pur.anuladoFecha || (pur.fecha && pur.fecha.includes('T') ? pur.fecha : undefined) || new Date().toISOString(),
               tipo: 'ANULACION_COMPRA',
               referenciaDoc: pur.numeroCompra,
               productoId: item.productoId,
@@ -810,8 +810,8 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       numeroFactura: numFactura,
       cotizacionIdOrigen: quote.id,
       clienteId: quote.clienteId,
-      fechaEmision: new Date().toISOString().split('T')[0],
-      fechaVencimiento: new Date(Date.now() + (client?.diasCredito || 0) * 86400000).toISOString().split('T')[0],
+      fechaEmision: getTodayLocalDateString(),
+      fechaVencimiento: getFutureLocalDateString(client?.diasCredito || 0),
       tipoPago: tipoPago,
       estado: directIssue ? (quote.total <= 0 ? 'pagada' : 'emitida') : 'borrador',
       emitidaFecha: directIssue ? now : undefined,

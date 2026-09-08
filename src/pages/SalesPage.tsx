@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useERP } from '../context/ERPContext';
 import type { Invoice, Quote, PaymentMethod, PaymentTerm } from '../types/erp';
-import { formatCurrency, formatDate, generateDocNumber, formatMonthLabel } from '../utils/formatters';
+import { formatCurrency, formatDate, generateDocNumber, formatMonthLabel, getTodayLocalDateString, getFutureLocalDateString } from '../utils/formatters';
 import {
   TrendingUp,
   Plus,
@@ -110,7 +110,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
 
   // Invoice / Quote Form Builder State
   const [formClienteId, setFormClienteId] = useState('');
-  const [formFechaEmision, setFormFechaEmision] = useState(new Date().toISOString().split('T')[0]);
+  const [formFechaEmision, setFormFechaEmision] = useState(getTodayLocalDateString());
   const [formFechaVencimiento, setFormFechaVencimiento] = useState('');
   const [formTipoPago, setFormTipoPago] = useState<PaymentTerm>('contado');
   const [formTasaImpuesto, setFormTasaImpuesto] = useState<number>(settings.tasaImpuestoDefecto ?? 16);
@@ -157,8 +157,8 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
     const defaultClient = clients[0];
     setFormClienteId(defaultClient?.id || '');
     setFormTipoPago(defaultClient?.tipoPago || 'contado');
-    setFormFechaEmision(new Date().toISOString().split('T')[0]);
-    const due = new Date(Date.now() + (defaultClient?.diasCredito || 0) * 86400000).toISOString().split('T')[0];
+    setFormFechaEmision(getTodayLocalDateString());
+    const due = getFutureLocalDateString(defaultClient?.diasCredito || 0);
     setFormFechaVencimiento(due);
     setFormTasaImpuesto(settings.tasaImpuestoDefecto ?? 16);
     setFormNotas('');
@@ -174,8 +174,8 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
   const handleOpenNewQuote = () => {
     const defaultClient = clients[0];
     setFormClienteId(defaultClient?.id || '');
-    setFormFechaEmision(new Date().toISOString().split('T')[0]);
-    const validUntil = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
+    setFormFechaEmision(getTodayLocalDateString());
+    const validUntil = getFutureLocalDateString(30);
     setFormFechaVencimiento(validUntil);
     setFormTasaImpuesto(settings.tasaImpuestoDefecto ?? 16);
     setFormNotas('Cotización con vigencia de 30 días naturales.');
@@ -193,7 +193,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
     const client = clients.find(c => c.id === clientId);
     if (client) {
       setFormTipoPago(client.tipoPago);
-      const due = new Date(Date.now() + (client.diasCredito || 0) * 86400000).toISOString().split('T')[0];
+      const due = getFutureLocalDateString(client.diasCredito || 0);
       setFormFechaVencimiento(due);
     }
   };
@@ -378,7 +378,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
       clientName: client?.nombre || 'Cliente',
       clientRFC: client?.identificacionFiscal || 'N/A',
       tipoPago: (client?.tipoPago || 'contado').toUpperCase(),
-      fechaEmision: new Date().toISOString().split('T')[0],
+      fechaEmision: getTodayLocalDateString(),
       totalPieces,
       totalItems: quote.items.length,
       subtotal: quote.subtotal,
@@ -433,7 +433,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
 
     addClientPayment({
       facturaId: selectedInvoice.id,
-      fecha: new Date().toISOString().split('T')[0],
+      fecha: getTodayLocalDateString(),
       monto: Number(paymentAmount),
       metodoPago: paymentMethod,
       referencia: paymentRef || `COBRO-${Date.now().toString().slice(-4)}`,

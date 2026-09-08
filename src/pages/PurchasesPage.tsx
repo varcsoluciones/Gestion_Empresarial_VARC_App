@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useERP } from '../context/ERPContext';
 import type { Purchase, PaymentMethod } from '../types/erp';
-import { formatCurrency, formatDate, formatMonthLabel } from '../utils/formatters';
+import { formatCurrency, formatDate, formatDateTime, formatMonthLabel, getTodayLocalDateString } from '../utils/formatters';
 import {
   Plus,
   Search,
@@ -57,7 +57,7 @@ export const PurchasesPage: React.FC = () => {
 
   // New Purchase Form State
   const [formProveedorId, setFormProveedorId] = useState('');
-  const [formFecha, setFormFecha] = useState(new Date().toISOString().split('T')[0]);
+  const [formFecha, setFormFecha] = useState(getTodayLocalDateString());
   const [formTasaImpuesto, setFormTasaImpuesto] = useState<number>(settings.tasaImpuestoDefecto ?? 16);
   const [formNotas, setFormNotas] = useState('');
   const [formItems, setFormItems] = useState<{
@@ -77,7 +77,7 @@ export const PurchasesPage: React.FC = () => {
 
   const handleOpenNewPurchase = () => {
     setFormProveedorId(suppliers[0]?.id || '');
-    setFormFecha(new Date().toISOString().split('T')[0]);
+    setFormFecha(getTodayLocalDateString());
     setFormTasaImpuesto(settings.tasaImpuestoDefecto ?? 16);
     setFormNotas('');
     setFormItems([]);
@@ -192,7 +192,7 @@ export const PurchasesPage: React.FC = () => {
 
     addSupplierPayment({
       compraId: selectedPurchase.id,
-      fecha: new Date().toISOString().split('T')[0],
+      fecha: getTodayLocalDateString(),
       monto: Number(paymentAmount),
       metodoPago: paymentMethod,
       referencia: paymentRef || `PAGO-${Date.now().toString().slice(-4)}`,
@@ -796,9 +796,16 @@ export const PurchasesPage: React.FC = () => {
               </div>
             </div>
 
+            {selectedPurchase.recibidaFecha && (
+              <div style={{ padding: '0.65rem 0.85rem', backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', fontSize: '0.825rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <CheckCircle size={15} style={{ color: 'var(--color-success)' }} />
+                <span><strong>Ingreso a Almacén / Kardex:</strong> {formatDateTime(selectedPurchase.recibidaFecha)}</span>
+              </div>
+            )}
+
             {selectedPurchase.anuladoMotivo && (
               <div style={{ padding: '0.75rem', backgroundColor: 'var(--color-danger-bg)', border: '1px solid var(--color-danger-border)', borderRadius: 'var(--radius-md)', color: 'var(--color-danger-text)', fontSize: '0.85rem' }}>
-                <strong>Compra Anulada el {formatDate(selectedPurchase.anuladoFecha)}:</strong> {selectedPurchase.anuladoMotivo}
+                <strong>Compra Anulada el {formatDateTime(selectedPurchase.anuladoFecha)}:</strong> {selectedPurchase.anuladoMotivo}
               </div>
             )}
 

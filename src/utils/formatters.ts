@@ -38,11 +38,31 @@ export function formatCurrency(amount: number, _currency = 'MXN', symbol?: strin
   })}`;
 }
 
+export function parseDateSafe(dateString?: string): Date | null {
+  if (!dateString) return null;
+  const str = String(dateString).trim();
+  if (!str) return null;
+
+  // Handle YYYY-MM-DD explicitly to prevent UTC midnight shifts on negative timezones (e.g. America/Mexico)
+  const dateOnlyMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateOnlyMatch) {
+    const year = parseInt(dateOnlyMatch[1], 10);
+    const month = parseInt(dateOnlyMatch[2], 10) - 1;
+    const day = parseInt(dateOnlyMatch[3], 10);
+    return new Date(year, month, day, 12, 0, 0); // Noon local avoids all boundary shift issues
+  }
+
+  // Handle date-time strings with or without timezone
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return null;
+  return d;
+}
+
 export function formatDate(dateString?: string): string {
   if (!dateString) return '-';
   try {
-    const d = new Date(dateString);
-    if (isNaN(d.getTime())) return dateString;
+    const d = parseDateSafe(dateString);
+    if (!d) return dateString;
     return d.toLocaleDateString('es-MX', {
       year: 'numeric',
       month: 'short',
@@ -56,8 +76,13 @@ export function formatDate(dateString?: string): string {
 export function formatDateTime(dateString?: string): string {
   if (!dateString) return '-';
   try {
-    const d = new Date(dateString);
-    if (isNaN(d.getTime())) return dateString;
+    const str = String(dateString).trim();
+    // If it only has YYYY-MM-DD (no time component), format as date only
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+      return formatDate(str);
+    }
+    const d = parseDateSafe(str);
+    if (!d) return dateString;
     return d.toLocaleDateString('es-MX', {
       year: 'numeric',
       month: 'short',
@@ -68,6 +93,23 @@ export function formatDateTime(dateString?: string): string {
   } catch {
     return dateString;
   }
+}
+
+export function getTodayLocalDateString(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function getFutureLocalDateString(daysToAdd: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + daysToAdd);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export function generateDocNumber(prefix: string, count: number): string {
