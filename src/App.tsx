@@ -14,6 +14,7 @@ import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { useAutoTableResizer } from './hooks/useTableResizer';
 import { UserGuideModal } from './components/guide/UserGuideModal';
+import { QuickNavigationModal } from './components/navigation/QuickNavigationModal';
 
 const AppContent: React.FC = () => {
   useAutoTableResizer();
@@ -21,6 +22,7 @@ const AppContent: React.FC = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const [isQuickNavOpen, setIsQuickNavOpen] = useState(false);
 
   const renderActivePage = () => {
     switch (currentTab) {
@@ -60,6 +62,7 @@ const AppContent: React.FC = () => {
         <Topbar
           currentTab={currentTab}
           onNavigate={setCurrentTab}
+          onOpenQuickNav={() => setIsQuickNavOpen(true)}
           onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           onOpenGuide={() => setIsGuideOpen(true)}
         />
@@ -72,6 +75,12 @@ const AppContent: React.FC = () => {
         isOpen={isGuideOpen}
         onClose={() => setIsGuideOpen(false)}
         initialTab={currentTab}
+      />
+
+      <QuickNavigationModal
+        isOpen={isQuickNavOpen}
+        onClose={() => setIsQuickNavOpen(false)}
+        onNavigate={setCurrentTab}
       />
     </div>
   );

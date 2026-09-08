@@ -363,7 +363,7 @@ export const SettingsPage: React.FC = () => {
                 >
                   {APP_LANGUAGES.map((langOpt) => (
                     <option key={langOpt.code} value={langOpt.code}>
-                      {langOpt.flag} {langOpt.name}
+                      {langOpt.name} ({langOpt.shortCode})
                     </option>
                   ))}
                 </select>

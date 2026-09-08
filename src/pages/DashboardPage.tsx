@@ -540,8 +540,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
               </div>
             ) : (
               <div>
-                <div style={{ fontSize: '0.725rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
-                  🔥 Mayores Ingresos Generados
+                <div style={{ fontSize: '0.725rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <TrendingUp size={13} style={{ color: 'var(--color-accent)' }} />
+                  Mayores Ingresos Generados
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                   {topSellingProducts.map(({ product, qty, total }, index) => {
@@ -584,7 +585,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
             {deadStockProducts.length > 0 && (
               <div style={{ marginTop: 'auto', paddingTop: '0.5rem', borderTop: '1px solid var(--border-default)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.725rem', fontWeight: 700, color: 'var(--color-warning-text)', marginBottom: '0.35rem' }}>
-                  <span>⚠️ Inventario sin Ventas en el Mes:</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <AlertTriangle size={13} />
+                    Inventario sin Ventas en el Mes:
+                  </span>
                   <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>Sugerencia: Promocionar</span>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>

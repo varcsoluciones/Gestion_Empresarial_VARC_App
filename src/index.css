@@ -333,8 +333,9 @@ body {
 }
 
 .brand-icon {
-  width: 36px;
-  height: 36px;
+  width: 46px;
+  height: 46px;
+  min-width: 46px;
   border-radius: var(--radius-md);
   background: linear-gradient(135deg, var(--color-accent), var(--color-accent-hover));
   color: white;
@@ -1196,6 +1197,31 @@ body {
 .tab-btn.active {
   color: var(--color-accent);
   border-bottom-color: var(--color-accent);
+}
+
+/* Guide Tabs Strip with Visible Custom Scrollbar */
+.guide-tabs-strip {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-accent) var(--bg-subtle);
+}
+
+.guide-tabs-strip::-webkit-scrollbar {
+  height: 5px;
+  display: block;
+}
+
+.guide-tabs-strip::-webkit-scrollbar-track {
+  background: var(--bg-subtle);
+  border-radius: 999px;
+}
+
+.guide-tabs-strip::-webkit-scrollbar-thumb {
+  background: var(--color-accent);
+  border-radius: 999px;
+}
+
+.guide-tabs-strip::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent-hover);
 }
 
 /* Search and Filters Bar */

@@ -108,26 +108,59 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <aside className={`app-sidebar ${isCollapsed ? 'collapsed' : ''} ${isOpenMobile ? 'open' : ''}`}>
         <div className="sidebar-header">
           {!isCollapsed && (
-            <div className="brand-logo">
-              <div className="brand-icon" style={{ padding: '2px', overflow: 'hidden', background: '#ffffff', border: '1px solid rgba(0,0,0,0.1)', boxShadow: '0 2px 6px rgba(0,0,0,0.08)' }}>
+            <div className="brand-logo" style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+              <div
+                className="brand-icon"
+                style={{
+                  width: '46px',
+                  height: '46px',
+                  minWidth: '46px',
+                  minHeight: '46px',
+                  padding: '3px',
+                  overflow: 'hidden',
+                  background: '#ffffff',
+                  border: '1px solid rgba(0,0,0,0.12)',
+                  boxShadow: '0 3px 8px rgba(0,0,0,0.08)',
+                  borderRadius: '11px'
+                }}
+              >
                 <img
                   src="/apple-touch-icon.png"
                   alt="Logo Gestor Modular"
-                  style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 'calc(var(--radius-md) - 2px)' }}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '8px' }}
                 />
               </div>
-              <div className="brand-info">
-                <span className="brand-title">{APP_NAME}</span>
-                <span className="brand-subtitle">{APP_BRAND} v{APP_VERSION}</span>
+              <div className="brand-info" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <span className="brand-title" style={{ fontSize: '0.95rem', fontWeight: 800, lineHeight: 1.2, letterSpacing: '-0.01em' }}>
+                  {APP_NAME}
+                </span>
+                <span className="brand-subtitle" style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-accent)' }}>
+                  {APP_BRAND} v{APP_VERSION}
+                </span>
               </div>
             </div>
           )}
           {isCollapsed && (
-            <div className="brand-icon" style={{ margin: '0 auto', padding: '2px', overflow: 'hidden', background: '#ffffff', border: '1px solid rgba(0,0,0,0.1)', boxShadow: '0 2px 6px rgba(0,0,0,0.08)' }}>
+            <div
+              className="brand-icon"
+              style={{
+                margin: '0 auto',
+                width: '42px',
+                height: '42px',
+                minWidth: '42px',
+                minHeight: '42px',
+                padding: '3px',
+                overflow: 'hidden',
+                background: '#ffffff',
+                border: '1px solid rgba(0,0,0,0.12)',
+                boxShadow: '0 3px 8px rgba(0,0,0,0.08)',
+                borderRadius: '10px'
+              }}
+            >
               <img
                 src="/apple-touch-icon.png"
                 alt="Logo Gestor Modular"
-                style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 'calc(var(--radius-md) - 2px)' }}
+                style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '7px' }}
               />
             </div>
           )}

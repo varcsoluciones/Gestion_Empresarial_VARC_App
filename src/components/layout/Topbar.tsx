@@ -8,6 +8,7 @@ interface TopbarProps {
   currentTab: NavigationTab;
   onNavigate: (tab: NavigationTab) => void;
   onToggleMobileMenu?: () => void;
+  onOpenQuickNav?: () => void;
   onOpenGuide?: () => void;
   onOpenQuickSale?: () => void;
   onOpenQuickPurchase?: () => void;
@@ -16,7 +17,7 @@ interface TopbarProps {
 export const Topbar: React.FC<TopbarProps> = ({
   currentTab,
   onNavigate,
-  onToggleMobileMenu,
+  onOpenQuickNav,
   onOpenGuide
 }) => {
   const { settings, updateSettings } = useERP();
@@ -43,13 +44,14 @@ export const Topbar: React.FC<TopbarProps> = ({
   return (
     <header className="app-topbar no-print">
       <div className="topbar-left">
-        {onToggleMobileMenu && (
+        {/* Modular Navigation Map & Quick Access Hub Button */}
+        {onOpenQuickNav && (
           <button
             type="button"
-            className="btn-icon mobile-menu-btn"
-            onClick={onToggleMobileMenu}
-            title="Abrir menú"
-            aria-label="Abrir menú de navegación"
+            className="btn-icon"
+            onClick={onOpenQuickNav}
+            title="Mapa Modular & Accesos Rápidos"
+            aria-label="Abrir mapa modular y accesos rápidos"
           >
             <Menu size={20} />
           </button>

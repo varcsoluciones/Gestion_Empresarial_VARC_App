@@ -29,13 +29,13 @@ export const AMERICAS_CURRENCIES: CurrencyOption[] = [
 export interface LanguageOption {
   code: AppLanguage;
   name: string;
-  flag: string;
+  shortCode: string;
 }
 
 export const APP_LANGUAGES: LanguageOption[] = [
-  { code: 'es', name: 'Español (América Latina)', flag: '🇪🇸' },
-  { code: 'en', name: 'English (United States)', flag: '🇺🇸' },
-  { code: 'pt', name: 'Português (Brasil)', flag: '🇧🇷' }
+  { code: 'es', name: 'Español (América Latina)', shortCode: 'ES' },
+  { code: 'en', name: 'English (United States)', shortCode: 'EN' },
+  { code: 'pt', name: 'Português (Brasil)', shortCode: 'PT' }
 ];
 
 export const translations = {

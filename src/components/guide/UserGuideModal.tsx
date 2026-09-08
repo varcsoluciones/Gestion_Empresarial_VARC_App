@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   LayoutDashboard,
   Database,
@@ -13,7 +13,12 @@ import {
   AlertTriangle,
   ArrowRight,
   Layers,
-  Sparkles
+  Sparkles,
+  ChevronLeft,
+  ChevronRight,
+  Lightbulb,
+  Sliders,
+  RefreshCw
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { APP_NAME, APP_BRAND, APP_VERSION } from '../../config/version';
@@ -42,19 +47,20 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<GuideTab>(initialTab as GuideTab);
   const [searchTerm, setSearchTerm] = useState('');
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
 
   if (!isOpen) return null;
 
-  const guideSections: { id: GuideTab; label: string; icon: React.ReactNode; badge?: string }[] = [
-    { id: 'overview', label: '1. Flujo Operativo Global', icon: <Layers size={17} /> },
+  const guideSections: { id: GuideTab; label: string; icon: React.ReactNode }[] = [
+    { id: 'overview', label: '1. Flujo Global', icon: <Layers size={17} /> },
     { id: 'dashboard', label: '2. Tablero & Alertas', icon: <LayoutDashboard size={17} /> },
     { id: 'master-data', label: '3. Catálogos Base', icon: <Database size={17} /> },
     { id: 'purchases', label: '4. Compras & Proveedores', icon: <ShoppingBag size={17} /> },
     { id: 'inventory', label: '5. Inventario & Kardex', icon: <Boxes size={17} /> },
-    { id: 'sales', label: '6. Ventas, Cotizaciones & CxC', icon: <TrendingUp size={17} /> },
+    { id: 'sales', label: '6. Ventas & CxC', icon: <TrendingUp size={17} /> },
     { id: 'accounting', label: '7. Gastos & Prorrateo', icon: <Calculator size={17} /> },
     { id: 'reports', label: '8. Reportes Financieros', icon: <BarChart3 size={17} /> },
-    { id: 'settings', label: '9. Configuración & Respaldos', icon: <Settings size={17} /> }
+    { id: 'settings', label: '9. Configuración & PWA', icon: <Settings size={17} /> }
   ];
 
   const allTopics = [
@@ -95,80 +101,98 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
       desc: 'Al recibir compras, se ingresa la mercancía al almacén y se recalcula el costo unitario promedio ponderado.'
     },
     {
-      tab: 'purchases' as GuideTab,
-      tabLabel: '4. Compras',
-      title: 'Cuentas por Pagar (CxP) a Proveedores',
-      desc: 'Abonos parciales o totales a compras recibidas con registro de método de pago y número de referencia.'
+      tab: 'inventory' as GuideTab,
+      tabLabel: '5. Inventario',
+      title: 'Kardex Físico Inmutable y Auditoría',
+      desc: 'Historial estricto de entradas, salidas y reingresos con cálculo de saldos y valores monetarios.'
     },
     {
       tab: 'inventory' as GuideTab,
       tabLabel: '5. Inventario',
-      title: 'Kardex Permanente Inmutable',
-      desc: 'Historial de movimientos: entradas por compras, salidas por facturas, reingresos por anulación y ajustes físicos.'
-    },
-    {
-      tab: 'inventory' as GuideTab,
-      tabLabel: '5. Inventario',
-      title: 'Ajustes de Inventario & Auditoría',
-      desc: 'Aumentos o disminuciones manuales por mermas, conteos físicos o inventario inicial.'
+      title: 'Ajustes de Stock y Mermas',
+      desc: 'Registro de conteos físicos y mermas con justificación obligatoria.'
     },
     {
       tab: 'sales' as GuideTab,
       tabLabel: '6. Ventas',
-      title: 'Cotizaciones & Conversión a Factura',
-      desc: 'Cotizador con semáforo de existencias en tiempo real y botón de facturación inmediata en 1 clic.'
+      title: 'Cotizaciones con Semáforo de Existencias en Vivo',
+      desc: 'Armado de cotizaciones con indicador de disponibilidad y conversión a factura en 1 clic.'
     },
     {
       tab: 'sales' as GuideTab,
       tabLabel: '6. Ventas',
-      title: 'Facturación & Salida de Almacén',
-      desc: 'Emisión de facturas con descuento inmediato de inventario en Kardex y registro en CxC.'
+      title: 'Facturación y Salida Automática de Almacén',
+      desc: 'Al emitir la factura se descuentan las existencias y se genera la cuenta por cobrar.'
     },
     {
       tab: 'sales' as GuideTab,
       tabLabel: '6. Ventas',
-      title: 'Anulación Inmutable de Facturas',
-      desc: 'Las facturas no se borran; quedan como Anuladas con auditoría y sus productos reingresan al almacén.'
+      title: 'Anulación de Facturas y Reingreso de Mercancía',
+      desc: 'Inmutabilidad contable: la factura pasa a ANULADA y las piezas vuelven al almacén.'
     },
     {
       tab: 'accounting' as GuideTab,
       tabLabel: '7. Contabilidad',
-      title: 'Gastos Fijos y Variables & Depreciación de Activos',
-      desc: 'Registro de renta, nóminas, servicios, comisiones y depreciación mensual de activos fijos.'
+      title: 'Gastos Operativos (Fijos y Variables)',
+      desc: 'Registro de rentas, nóminas, servicios públicos y fletes con centros de costos.'
     },
     {
       tab: 'accounting' as GuideTab,
       tabLabel: '7. Contabilidad',
-      title: 'Prorrateo & Costo Real Absorbido',
-      desc: 'Distribución de gastos entre unidades vendidas para conocer la utilidad neta verdadera por producto.'
+      title: 'Activos Fijos y Depreciación Mensual',
+      desc: 'Control de maquinaria y mobiliario con cálculo de depreciación en línea recta.'
+    },
+    {
+      tab: 'accounting' as GuideTab,
+      tabLabel: '7. Contabilidad',
+      title: 'Prorrateo de Costos Absorbidos',
+      desc: 'Distribución de los gastos mensuales entre las unidades vendidas para conocer el costo real.'
     },
     {
       tab: 'reports' as GuideTab,
       tabLabel: '8. Reportes',
-      title: 'Estado de Resultados & Flujo de Caja',
-      desc: 'Márgenes brutos y operativos, cobranza real en caja vs pagos, balance general y exportación a Excel.'
+      title: 'Estado de Resultados (P&L)',
+      desc: 'Ventas − Costo de Ventas = Margen Bruto, menos Gastos y Depreciaciones = Utilidad Operativa.'
+    },
+    {
+      tab: 'reports' as GuideTab,
+      tabLabel: '8. Reportes',
+      title: 'Flujo de Efectivo y Balance General',
+      desc: 'Entradas/salidas reales de caja y estructura patrimonial (Activos, Pasivos y Capital).'
     },
     {
       tab: 'settings' as GuideTab,
       tabLabel: '9. Configuración',
-      title: 'Respaldos JSON & Restauración de Base de Datos',
-      desc: 'Descarga de copias de seguridad de toda la base de datos en 1 clic y restauración de archivos.'
+      title: 'Respaldos de Base de Datos .JSON',
+      desc: 'Descarga copias de seguridad completas y restaura tu información en cualquier momento.'
     },
     {
       tab: 'settings' as GuideTab,
       tabLabel: '9. Configuración',
-      title: 'Instalación Móvil PWA (Pantalla de Inicio)',
-      desc: 'Cómo agregar la app a la pantalla de inicio de tu iPhone o Android con su icono oficial.'
+      title: 'Instalación en Celular (PWA)',
+      desc: 'Cómo agregar la app a la pantalla de inicio de tu iPhone o Android.'
     }
   ];
 
-  const filteredTopics = searchTerm.trim() === ''
-    ? []
-    : allTopics.filter(t => 
-        t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.desc.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.tabLabel.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+  const filteredTopics = allTopics.filter(t => {
+    const q = searchTerm.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      t.title.toLowerCase().includes(q) ||
+      t.desc.toLowerCase().includes(q) ||
+      t.tabLabel.toLowerCase().includes(q)
+    );
+  });
+
+  const scrollTabs = (direction: 'left' | 'right') => {
+    if (tabsContainerRef.current) {
+      const scrollAmount = 220;
+      tabsContainerRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   return (
     <Modal
@@ -177,21 +201,11 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
       title="Manual de Uso & Guía del Sistema"
       subtitle={`${APP_NAME} — ${APP_BRAND} v${APP_VERSION}`}
       size="xl"
-      footer={
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: '0.75rem' }}>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-            ¿Tienes dudas en un módulo? Consulta la pestaña correspondiente o busca una palabra clave.
-          </div>
-          <button type="button" className="btn btn-primary" onClick={onClose}>
-            Entendido / Cerrar Guía
-          </button>
-        </div>
-      }
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-        {/* Search in guide */}
-        <div className="search-input-wrapper" style={{ maxWidth: '100%' }}>
-          <Search size={16} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
+        {/* Search in Guide */}
+        <div className="search-box">
+          <Search size={18} className="search-icon" />
           <input
             type="text"
             className="form-control"
@@ -201,20 +215,66 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
           />
         </div>
 
-        {/* Navigation Tabs */}
+        {/* Navigation Tabs Strip with Visible Scrollbar & Chevron Nav */}
         {searchTerm.trim() === '' && (
-          <div className="tabs-nav" style={{ marginBottom: '0.5rem' }}>
-            {guideSections.map(s => (
-              <button
-                key={s.id}
-                type="button"
-                className={`tab-btn ${activeTab === s.id ? 'active' : ''}`}
-                onClick={() => { setActiveTab(s.id); }}
-              >
-                {s.icon}
-                <span>{s.label}</span>
-              </button>
-            ))}
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <button
+              type="button"
+              className="btn-icon"
+              style={{ flexShrink: 0, width: '28px', height: '28px' }}
+              onClick={() => scrollTabs('left')}
+              title="Desplazar pestañas a la izquierda"
+              aria-label="Desplazar a la izquierda"
+            >
+              <ChevronLeft size={16} />
+            </button>
+
+            <div
+              ref={tabsContainerRef}
+              className="guide-tabs-strip"
+              style={{
+                display: 'flex',
+                gap: '0.4rem',
+                overflowX: 'auto',
+                paddingBottom: '0.5rem',
+                borderBottom: '1px solid var(--border-default)',
+                flex: 1,
+                scrollBehavior: 'smooth'
+              }}
+            >
+              {guideSections.map(s => (
+                <button
+                  key={s.id}
+                  type="button"
+                  className={`tab-btn ${activeTab === s.id ? 'active' : ''}`}
+                  style={{
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    padding: '0.55rem 0.95rem',
+                    fontSize: '0.825rem',
+                    borderRadius: 'var(--radius-md)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.45rem'
+                  }}
+                  onClick={() => { setActiveTab(s.id); }}
+                >
+                  {s.icon}
+                  <span>{s.label}</span>
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              className="btn-icon"
+              style={{ flexShrink: 0, width: '28px', height: '28px' }}
+              onClick={() => scrollTabs('right')}
+              title="Desplazar pestañas a la derecha"
+              aria-label="Desplazar a la derecha"
+            >
+              <ChevronRight size={16} />
+            </button>
           </div>
         )}
 
@@ -271,8 +331,9 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
                 </p>
               </div>
 
-              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                🔄 El Ciclo Operativo en 6 Pasos Fundamentales:
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <RefreshCw size={17} style={{ color: 'var(--color-accent)' }} />
+                El Ciclo Operativo en 6 Pasos Fundamentales:
               </h4>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
@@ -339,7 +400,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
                     <AlertTriangle size={20} />
                   </div>
                   <div>
-                    <h4 style={{ fontSize: '0.9rem', fontWeight: 700 }}>🚨 Semáforo de Cobranza & Créditos CxC</h4>
+                    <h4 style={{ fontSize: '0.9rem', fontWeight: 700 }}>Semáforo de Cobranza & Créditos CxC</h4>
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                       Te avisa qué facturas están <strong>vencidas</strong> (en mora), cuáles están <strong>por vencer en los próximos 7 días</strong> y cuáles están en plazo normal. Incluye un botón directo para registrar cobros.
                     </p>
@@ -351,7 +412,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
                     <Boxes size={20} />
                   </div>
                   <div>
-                    <h4 style={{ fontSize: '0.9rem', fontWeight: 700 }}>📦 Reabastecimiento Sugerido & Compras Necesarias</h4>
+                    <h4 style={{ fontSize: '0.9rem', fontWeight: 700 }}>Reabastecimiento Sugerido & Compras Necesarias</h4>
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                       Detecta automáticamente los productos que llegaron a su <strong>stock mínimo o están agotados</strong>, calculando cuántas piezas pedir y la inversión requerida.
                     </p>
@@ -363,7 +424,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
                     <TrendingUp size={20} />
                   </div>
                   <div>
-                    <h4 style={{ fontSize: '0.9rem', fontWeight: 700 }}>📊 Proyección de Flujo de Caja & Margen Operativo</h4>
+                    <h4 style={{ fontSize: '0.9rem', fontWeight: 700 }}>Proyección de Flujo de Caja & Margen Operativo</h4>
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                       Compara las entradas esperadas por cobrar vs los pagos y gastos obligatorios del mes para predecir tu saldo neto de liquidez a 30 días.
                     </p>
@@ -375,7 +436,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
                     <CheckCircle2 size={20} />
                   </div>
                   <div>
-                    <h4 style={{ fontSize: '0.9rem', fontWeight: 700 }}>🏆 Top Productos Estrella & Alerta de Inventario Inactivo</h4>
+                    <h4 style={{ fontSize: '0.9rem', fontWeight: 700 }}>Top Productos Estrella & Alerta de Inventario Inactivo</h4>
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                       Muestra los productos con mayor rotación e ingresos, y alerta sobre artículos sin ventas en el mes para planear promociones.
                     </p>
@@ -430,8 +491,11 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
                 </div>
               </div>
 
-              <div style={{ padding: '0.85rem', backgroundColor: 'var(--bg-subtle)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                💡 <strong>Creación Rápida:</strong> Puedes crear clientes y productos directamente desde las ventanas de facturación y compras sin salirte de tu trabajo.
+              <div style={{ padding: '0.85rem', backgroundColor: 'var(--bg-subtle)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)', fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Lightbulb size={16} style={{ color: 'var(--color-accent)', flexShrink: 0 }} />
+                <span>
+                  <strong>Creación Rápida:</strong> Puedes crear clientes y productos directamente desde las ventanas de facturación y compras sin salirte de tu trabajo.
+                </span>
               </div>
             </div>
           )}
@@ -451,7 +515,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                 <div className="card" style={{ padding: '1rem' }}>
                   <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
-                    🔹 Estados de una Orden de Compra:
+                    1. Estados de una Orden de Compra:
                   </h4>
                   <ul style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                     <li><strong>Pendiente / Borrador:</strong> La orden está colocada con el proveedor pero la mercancía aún no ha llegado al almacén físico. No afecta stock ni Kardex.</li>
@@ -462,7 +526,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
 
                 <div className="card" style={{ padding: '1rem' }}>
                   <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
-                    🔹 Registro de Pagos a Proveedores (CxP):
+                    2. Registro de Pagos a Proveedores (CxP):
                   </h4>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                     Pulsa el botón <strong>+ Abono</strong> en cualquier compra recibida con saldo para registrar pagos parciales o totales indicando el método (Transferencia, Efectivo, Cheque o Tarjeta) y número de referencia.
@@ -487,7 +551,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
                 <div className="card" style={{ padding: '1rem' }}>
                   <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-accent)', marginBottom: '0.35rem' }}>
-                    📦 Pestaña 1: Existencias Físicas
+                    1. Existencias Físicas
                   </h4>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
                     Muestra el stock total de cada producto y el desglose de cada una de sus variantes (colores y tallas), el costo promedio unitario y el valor monetario total del inventario.
@@ -496,7 +560,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
 
                 <div className="card" style={{ padding: '1rem' }}>
                   <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-accent)', marginBottom: '0.35rem' }}>
-                    📜 Pestaña 2: Kardex Inmutable
+                    2. Kardex Inmutable
                   </h4>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
                     Bitácora histórica de cada movimiento: Entradas por compras, Salidas por ventas facturadas, Reingresos por anulación de facturas y Ajustes manuales con auditoría.
@@ -505,8 +569,9 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
               </div>
 
               <div style={{ padding: '1rem', backgroundColor: 'var(--bg-subtle)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)' }}>
-                <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
-                  ⚙️ Realizar un Ajuste de Inventario:
+                <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Sliders size={16} style={{ color: 'var(--color-accent)' }} />
+                  Realizar un Ajuste de Inventario:
                 </h4>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                   Usa el botón <strong>+ Ajuste de Inventario</strong> para registrar aumentos o disminuciones por conteo físico, mermas o inventario inicial, justificando siempre el motivo para la auditoría.
@@ -556,7 +621,8 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
                 </div>
 
                 <div className="card" style={{ padding: '1rem', borderLeft: '4px solid var(--color-danger)' }}>
-                  <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-danger-text)', marginBottom: '0.25rem' }}>
+                  <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-danger-text)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <AlertTriangle size={15} />
                     4. Principio de Inmutabilidad Contable (Anulación de Facturas):
                   </h4>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
@@ -582,7 +648,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
                 <div className="card" style={{ padding: '1rem' }}>
                   <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-accent)', marginBottom: '0.35rem' }}>
-                    💸 Gastos Operativos
+                    1. Gastos Operativos
                   </h4>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                     Registra rentas, sueldos, servicios de luz/agua, fletes y comisiones, clasificándolos en <strong>Fijos</strong> o <strong>Variables</strong>.
@@ -591,7 +657,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
 
                 <div className="card" style={{ padding: '1rem' }}>
                   <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-accent)', marginBottom: '0.35rem' }}>
-                    🏢 Activos Fijos & Depreciación
+                    2. Activos Fijos & Depreciación
                   </h4>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                     Registra maquinaria, equipo de transporte o mobiliario. El sistema calcula automáticamente su <strong>depreciación mensual</strong> en línea recta.
@@ -600,7 +666,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
 
                 <div className="card" style={{ padding: '1rem' }}>
                   <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-accent)', marginBottom: '0.35rem' }}>
-                    🎯 Prorrateo de Costos
+                    3. Prorrateo de Costos
                   </h4>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                     Distribuye los gastos del mes entre las prendas vendidas para obtener el <strong>Costo Total Absorbido</strong> y la rentabilidad neta real.
@@ -625,7 +691,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                 <div className="card" style={{ padding: '1rem' }}>
                   <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
-                    📈 Estado de Resultados Devengado:
+                    1. Estado de Resultados Devengado:
                   </h4>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                     Ventas Netas − Costo de Ventas = <strong>Margen Bruto</strong>. Al restar los Gastos Operativos y Depreciaciones se obtiene la <strong>Utilidad Operativa Neta</strong> del periodo.
@@ -634,7 +700,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
 
                 <div className="card" style={{ padding: '1rem' }}>
                   <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
-                    💵 Estado de Flujo de Efectivo:
+                    2. Estado de Flujo de Efectivo:
                   </h4>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                     Dinero real cobrado en caja/bancos vs dinero real pagado a proveedores y gastos del mes.
@@ -643,7 +709,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
 
                 <div className="card" style={{ padding: '1rem' }}>
                   <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
-                    🏛️ Balance General (Estructura Patrimonial):
+                    3. Balance General (Estructura Patrimonial):
                   </h4>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                     Resumen de Activos (Cuentas por Cobrar + Inventario en Almacén + Activos Fijos Netos) vs Pasivos (Cuentas por Pagar) y Capital de la Empresa.
@@ -652,7 +718,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
 
                 <div className="card" style={{ padding: '1rem' }}>
                   <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
-                    📊 Ventas por Producto y Cliente con Fila de Totales:
+                    4. Ventas por Producto y Cliente con Fila de Totales:
                   </h4>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                     Tablas detalladas con el total de piezas vendidas, saldos de clientes y participación porcentual.
@@ -677,7 +743,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
                 <div className="card" style={{ padding: '1rem' }}>
                   <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-accent)', marginBottom: '0.35rem' }}>
-                    🎨 Temas & Colores de Acento
+                    1. Temas & Colores de Acento
                   </h4>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                     Modo Claro y Oscuro con 9 colores de acento inspirados en Apple (Azul, Púrpura, Verde, Amarillo, Vino, Naranja, Rosa, Turquesa y Grafito).
@@ -686,7 +752,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
 
                 <div className="card" style={{ padding: '1rem' }}>
                   <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-accent)', marginBottom: '0.35rem' }}>
-                    💾 Respaldos de Base de Datos
+                    2. Respaldos de Base de Datos
                   </h4>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                     Descarga copias de seguridad completas en formato <strong>.JSON</strong> en 1 clic. Si cambias de equipo, puedes restaurar tu archivo de respaldo inmediatamente.
@@ -695,7 +761,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
 
                 <div className="card" style={{ padding: '1rem' }}>
                   <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-accent)', marginBottom: '0.35rem' }}>
-                    📱 Uso en Pantalla de Inicio Móvil (PWA)
+                    3. Uso en Pantalla de Inicio Móvil (PWA)
                   </h4>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                     En tu iPhone o Android abre el link en el navegador y selecciona <strong>"Agregar al Inicio"</strong> para tener el icono oficial del Gestor Modular y usarlo como app nativa.
