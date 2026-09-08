@@ -29,6 +29,7 @@ export const SettingsPage: React.FC = () => {
     moneda: settings.moneda,
     monedaSimbolo: settings.monedaSimbolo,
     tasaImpuestoDefecto: settings.tasaImpuestoDefecto,
+    criterioProrrateoDefecto: settings.criterioProrrateoDefecto || 'costo_material',
     direccion: settings.direccion,
     telefono: settings.telefono,
     email: settings.email,
@@ -251,6 +252,19 @@ export const SettingsPage: React.FC = () => {
                 min={0}
                 max={100}
               />
+            </div>
+
+            <div className="form-group" style={{ flex: 1.5 }}>
+              <label className="form-label">Base de Prorrateo Contable por Defecto</label>
+              <select
+                className="form-control"
+                value={formData.criterioProrrateoDefecto}
+                onChange={(e) => setFormData({ ...formData, criterioProrrateoDefecto: e.target.value as any })}
+              >
+                <option value="costo_material">💎 Costo de Material Directo (Recomendado - No castiga PTs bajos)</option>
+                <option value="valor_venta">🏷️ Precio de Venta (Capacidad de Ingresos)</option>
+                <option value="unidades_iguales">⚖️ Unidades Físicas Iguales (Lineal)</option>
+              </select>
             </div>
           </div>
 

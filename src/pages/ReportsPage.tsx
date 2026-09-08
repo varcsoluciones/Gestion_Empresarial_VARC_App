@@ -20,7 +20,8 @@ export const ReportsPage: React.FC = () => {
     expenses,
     fixedAssets,
     settings,
-    getProrrateoMensual
+    getProrrateoMensual,
+    getProductRealCost
   } = useERP();
 
   const [selectedMonth, setSelectedMonth] = useState(getMonthKey());
@@ -398,7 +399,7 @@ export const ReportsPage: React.FC = () => {
             <div>
               <h2 className="card-title">Matriz de Costo Directo vs Costo Real Absorbido</h2>
               <p className="card-subtitle">
-                Carga operativa mensual prorrateada: <strong>{formatCurrency(prorrateo.costoOperativoProrrateadoPorUnidad)} por unidad</strong>
+                Regla Activa: <strong>{prorrateo.criterio === 'costo_material' ? `Distribución proporcional por Material Directo (+${prorrateo.tasaAbsorcionPorcentaje}% sobre costo de compra)` : prorrateo.criterio === 'valor_venta' ? `Distribución por Precio de Venta (+${prorrateo.tasaAbsorcionPorcentaje}% sobre PVP)` : `División lineal (${formatCurrency(prorrateo.costoOperativoProrrateadoPorUnidad)}/unidad)`}</strong>
               </p>
             </div>
           </div>
@@ -410,26 +411,29 @@ export const ReportsPage: React.FC = () => {
                   <th>Código</th>
                   <th>Producto</th>
                   <th style={{ textAlign: 'right' }}>Precio Venta</th>
-                  <th style={{ textAlign: 'right' }}>Costo Compra</th>
-                  <th style={{ textAlign: 'right' }}>Costo Operativo Absorvido</th>
-                  <th style={{ textAlign: 'right', fontWeight: 800 }}>Costo Real Total</th>
+                  <th style={{ textAlign: 'right' }}>1. Costo Compra Directo</th>
+                  <th style={{ textAlign: 'center' }}>% Absorción</th>
+                  <th style={{ textAlign: 'right' }}>2. Gasto Operativo Absorbido</th>
+                  <th style={{ textAlign: 'right', fontWeight: 800 }}>3. Costo Real Total</th>
                   <th style={{ textAlign: 'center' }}>Margen Real %</th>
                 </tr>
               </thead>
               <tbody>
                 {products.map(p => {
-                  const unitProrrated = prorrateo.costoOperativoProrrateadoPorUnidad;
-                  const realCost = p.costoPromedio + unitProrrated;
-                  const realMargin = p.precioVenta > 0 ? (((p.precioVenta - realCost) / p.precioVenta) * 100).toFixed(1) : 0;
+                  const costs = getProductRealCost(p.id, selectedMonth);
+                  const realMargin = p.precioVenta > 0 ? (((p.precioVenta - costs.costoReal) / p.precioVenta) * 100).toFixed(1) : 0;
 
                   return (
                     <tr key={p.id}>
                       <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{p.codigo}</td>
                       <td style={{ fontWeight: 600 }}>{p.nombre}</td>
                       <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatCurrency(p.precioVenta)}</td>
-                      <td style={{ textAlign: 'right' }}>{formatCurrency(p.costoPromedio)}</td>
-                      <td style={{ textAlign: 'right', color: 'var(--color-warning-text)' }}>+{formatCurrency(unitProrrated)}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--color-accent)' }}>{formatCurrency(realCost)}</td>
+                      <td style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>{formatCurrency(costs.costoCompra)}</td>
+                      <td style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        {costs.criterio === 'costo_material' ? `+${costs.tasaAbsorcionPorcentaje}%` : costs.criterio === 'valor_venta' ? `+${costs.tasaAbsorcionPorcentaje}% PVP` : 'Fijo'}
+                      </td>
+                      <td style={{ textAlign: 'right', color: 'var(--color-warning-text)' }}>+{formatCurrency(costs.costoOperativoProrrateado)}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--color-accent)' }}>{formatCurrency(costs.costoReal)}</td>
                       <td style={{ textAlign: 'center' }}>
                         <span className={`badge ${Number(realMargin) >= 30 ? 'badge-success' : Number(realMargin) > 0 ? 'badge-warning' : 'badge-danger'}`}>
                           {realMargin}%

@@ -206,7 +206,33 @@ export interface Invoice {
   emitidaFecha?: string;
 }
 
-// 5. Contabilidad
+// 5. Contabilidad & Prorrateo
+export type ProrrateoCriterion = 'costo_material' | 'valor_venta' | 'unidades_iguales';
+
+export interface MonthlyProrrateo {
+  mes: string;
+  gastosFijos: number;
+  gastosVariables: number;
+  depreciacionActivos: number;
+  gastoOperativoTotal: number;
+  unidadesVendidasPeriodo: number;
+  unidadesEnInventario: number;
+  valorInventarioCostoTotal: number;
+  valorInventarioVentaTotal: number;
+  baseTotalProrrateo: number;
+  criterio: ProrrateoCriterion;
+  tasaAbsorcionPorcentaje: number;
+  costoOperativoProrrateadoPorUnidad: number;
+}
+
+export interface ProductRealCostResult {
+  costoCompra: number;
+  costoOperativoProrrateado: number;
+  costoReal: number;
+  tasaAbsorcionPorcentaje: number;
+  criterio: ProrrateoCriterion;
+}
+
 export interface OperatingExpense {
   id: string;
   fecha: string;
@@ -239,6 +265,7 @@ export interface CompanySettings {
   moneda: string; // $, USD, MXN, EUR, etc.
   monedaSimbolo: string;
   tasaImpuestoDefecto: number; // e.g. 16
+  criterioProrrateoDefecto: ProrrateoCriterion; // 'costo_material' | 'valor_venta' | 'unidades_iguales'
   direccion: string;
   telefono: string;
   email: string;
@@ -247,3 +274,4 @@ export interface CompanySettings {
   tema: ThemeMode;
   colorAcento: AccentColor;
 }
+

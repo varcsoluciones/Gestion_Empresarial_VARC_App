@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useERP } from '../context/ERPContext';
-import type { ExpenseType } from '../types/erp';
+import type { ExpenseType, ProrrateoCriterion } from '../types/erp';
 import { formatCurrency, formatDate, getMonthKey } from '../utils/formatters';
 import {
   Calculator,
@@ -12,13 +12,17 @@ import {
   Calendar,
   Layers,
   Sparkles,
-  DollarSign
+  DollarSign,
+  ShieldCheck,
+  Info,
+  SlidersHorizontal
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 
 export const AccountingPage: React.FC = () => {
   const {
+    settings,
     expenses,
     fixedAssets,
     products,
@@ -31,6 +35,9 @@ export const AccountingPage: React.FC = () => {
 
   const [selectedMonth, setSelectedMonth] = useState(getMonthKey());
   const [activeTab, setActiveTab] = useState<'prorrateo' | 'expenses' | 'assets'>('prorrateo');
+  const [selectedCriterio, setSelectedCriterio] = useState<ProrrateoCriterion>(
+    settings.criterioProrrateoDefecto || 'costo_material'
+  );
 
   // New Expense Modal State
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
@@ -49,8 +56,8 @@ export const AccountingPage: React.FC = () => {
   const [astVidaMeses, setAstVidaMeses] = useState<number | ''>(36);
   const [astNotas, setAstNotas] = useState('');
 
-  // Monthly Prorrateo Calculation
-  const prorrateo = getProrrateoMensual(selectedMonth);
+  // Monthly Prorrateo Calculation with selected criterion
+  const prorrateo = getProrrateoMensual(selectedMonth, selectedCriterio);
 
   // Handlers
   const handleSaveExpense = (e: React.FormEvent) => {
@@ -210,7 +217,15 @@ export const AccountingPage: React.FC = () => {
           <div className="stat-value" style={{ color: 'var(--color-accent)' }}>{formatCurrency(prorrateo.gastoOperativoTotal)}</div>
           <div className="stat-footer">
             <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
-              Carga: {formatCurrency(prorrateo.costoOperativoProrrateadoPorUnidad)} / unidad
+              {selectedCriterio === 'costo_material' && (
+                <>Tasa Absorción: <strong>+{prorrateo.tasaAbsorcionPorcentaje}% s/ costo</strong></>
+              )}
+              {selectedCriterio === 'valor_venta' && (
+                <>Tasa Absorción: <strong>+{prorrateo.tasaAbsorcionPorcentaje}% s/ venta</strong></>
+              )}
+              {selectedCriterio === 'unidades_iguales' && (
+                <>Carga fija: <strong>{formatCurrency(prorrateo.costoOperativoProrrateadoPorUnidad)} / pza</strong></>
+              )}
             </span>
           </div>
         </div>
@@ -218,76 +233,207 @@ export const AccountingPage: React.FC = () => {
 
       {/* Tab 1: Prorrateo & Real Cost Comparison Table */}
       {activeTab === 'prorrateo' && (
-        <div className="card">
-          <div className="card-header">
-            <div>
-              <h2 className="card-title">Análisis de Costo Real con Absorción de Gastos Operativos</h2>
-              <p className="card-subtitle">
-                Fórmula: <strong>Costo Real = Costo de Compra + Costo Operativo Prorrateado por Unidad ({formatCurrency(prorrateo.costoOperativoProrrateadoPorUnidad)})</strong>
-              </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Rule Selector Controls */}
+          <div className="card" style={{ padding: '1.25rem', backgroundColor: 'var(--bg-surface)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <SlidersHorizontal size={18} style={{ color: 'var(--color-accent)' }} />
+                <div>
+                  <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>Base / Regla de Prorrateo Contable</h3>
+                  <p style={{ fontSize: '0.775rem', color: 'var(--text-muted)', margin: 0 }}>
+                    Selecciona cómo distribuir los gastos operativos y depreciación entre los productos
+                  </p>
+                </div>
+              </div>
+
+              {/* Criterion Selector Pills */}
+              <div style={{ display: 'flex', gap: '0.5rem', backgroundColor: 'var(--bg-subtle)', padding: '0.25rem', borderRadius: 'var(--radius-lg)' }}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCriterio('costo_material')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    padding: '0.45rem 0.85rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: 'none',
+                    fontSize: '0.825rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    backgroundColor: selectedCriterio === 'costo_material' ? 'var(--color-accent)' : 'transparent',
+                    color: selectedCriterio === 'costo_material' ? '#ffffff' : 'var(--text-secondary)',
+                    boxShadow: selectedCriterio === 'costo_material' ? '0 2px 8px var(--color-accent-glow)' : 'none'
+                  }}
+                >
+                  <ShieldCheck size={14} />
+                  Costo de Material Directo (Recomendado)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedCriterio('valor_venta')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    padding: '0.45rem 0.85rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: 'none',
+                    fontSize: '0.825rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    backgroundColor: selectedCriterio === 'valor_venta' ? 'var(--color-accent)' : 'transparent',
+                    color: selectedCriterio === 'valor_venta' ? '#ffffff' : 'var(--text-secondary)',
+                    boxShadow: selectedCriterio === 'valor_venta' ? '0 2px 8px var(--color-accent-glow)' : 'none'
+                  }}
+                >
+                  <PieChart size={14} />
+                  Precio de Venta
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedCriterio('unidades_iguales')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    padding: '0.45rem 0.85rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: 'none',
+                    fontSize: '0.825rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    backgroundColor: selectedCriterio === 'unidades_iguales' ? 'var(--color-accent)' : 'transparent',
+                    color: selectedCriterio === 'unidades_iguales' ? '#ffffff' : 'var(--text-secondary)',
+                    boxShadow: selectedCriterio === 'unidades_iguales' ? '0 2px 8px var(--color-accent-glow)' : 'none'
+                  }}
+                >
+                  <Layers size={14} />
+                  Por Unidades Iguales
+                </button>
+              </div>
+            </div>
+
+            {/* Explanatory Banner */}
+            <div style={{
+              padding: '0.85rem 1rem',
+              borderRadius: 'var(--radius-md)',
+              backgroundColor: selectedCriterio === 'costo_material' ? 'var(--color-accent-subtle)' : 'var(--bg-subtle)',
+              border: '1px solid ' + (selectedCriterio === 'costo_material' ? 'var(--color-accent)' : 'var(--border-default)'),
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '0.75rem',
+              fontSize: '0.825rem',
+              lineHeight: 1.45
+            }}>
+              <Info size={18} style={{ color: 'var(--color-accent)', flexShrink: 0, marginTop: '2px' }} />
+              <div>
+                {selectedCriterio === 'costo_material' && (
+                  <>
+                    <strong style={{ color: 'var(--color-accent)' }}>Criterio Contable Basado en Material Directo: </strong>
+                    Los gastos operativos totales ({formatCurrency(prorrateo.gastoOperativoTotal)}) se distribuyen como una tasa del <strong>+{prorrateo.tasaAbsorcionPorcentaje}%</strong> sobre el costo de compra de cada producto (Base inventario valuado: {formatCurrency(prorrateo.valorInventarioCostoTotal)}). 
+                    <em> Esto evita castigar productos terminados de bajo costo (ej. calcetines o accesorios), manteniendo márgenes reales y proporcionales.</em>
+                  </>
+                )}
+                {selectedCriterio === 'valor_venta' && (
+                  <>
+                    <strong style={{ color: 'var(--color-accent)' }}>Criterio Basado en Precio de Venta: </strong>
+                    Cada producto absorbe gastos proporcionalmente a su capacidad de generación de ingresos ({prorrateo.tasaAbsorcionPorcentaje}% sobre su precio de lista).
+                  </>
+                )}
+                {selectedCriterio === 'unidades_iguales' && (
+                  <>
+                    <strong style={{ color: 'var(--color-warning)' }}>Criterio Lineal por Unidades: </strong>
+                    Se asignan {formatCurrency(prorrateo.costoOperativoProrrateadoPorUnidad)} fijos a cada prenda sin importar su precio de costo o venta.
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="table-container" style={{ border: 'none', boxShadow: 'none' }}>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Código / SKU</th>
-                  <th>Producto</th>
-                  <th style={{ textAlign: 'right' }}>Precio Venta</th>
-                  <th style={{ textAlign: 'right' }}>1. Costo Compra (Directo)</th>
-                  <th style={{ textAlign: 'right' }}>2. Gasto Operativo Absorvido</th>
-                  <th style={{ textAlign: 'right', backgroundColor: 'var(--bg-subtle)' }}>3. Costo Real Unitario</th>
-                  <th style={{ textAlign: 'center' }}>Margen Bruto</th>
-                  <th style={{ textAlign: 'center', backgroundColor: 'var(--bg-subtle)' }}>Margen Real</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map(p => {
-                  const costs = getProductRealCost(p.id, selectedMonth);
-                  const grossMarginPercent = p.precioVenta > 0
-                    ? Number((((p.precioVenta - costs.costoCompra) / p.precioVenta) * 100).toFixed(1))
-                    : 0;
+          {/* Real Cost Comparison Table */}
+          <div className="card">
+            <div className="card-header">
+              <div>
+                <h2 className="card-title">Análisis de Costo Real con Absorción Operativa</h2>
+                <p className="card-subtitle">
+                  Fórmula Activa: <strong>Costo Real = Costo de Compra + Gasto Operativo Absorbido ({selectedCriterio === 'costo_material' ? `+${prorrateo.tasaAbsorcionPorcentaje}% del material` : selectedCriterio === 'valor_venta' ? `+${prorrateo.tasaAbsorcionPorcentaje}% del PVP` : `${formatCurrency(prorrateo.costoOperativoProrrateadoPorUnidad)} fijo`})</strong>
+                </p>
+              </div>
+            </div>
 
-                  const realMarginPercent = p.precioVenta > 0
-                    ? Number((((p.precioVenta - costs.costoReal) / p.precioVenta) * 100).toFixed(1))
-                    : 0;
+            <div className="table-container" style={{ border: 'none', boxShadow: 'none' }}>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Código / SKU</th>
+                    <th>Producto & Existencias</th>
+                    <th style={{ textAlign: 'right' }}>Precio Venta</th>
+                    <th style={{ textAlign: 'right' }}>1. Costo Compra Directo</th>
+                    <th style={{ textAlign: 'center' }}>% Absorción</th>
+                    <th style={{ textAlign: 'right' }}>2. Gasto Operativo Absorbido</th>
+                    <th style={{ textAlign: 'right', backgroundColor: 'var(--bg-subtle)' }}>3. Costo Real Total</th>
+                    <th style={{ textAlign: 'center' }}>Margen Bruto</th>
+                    <th style={{ textAlign: 'center', backgroundColor: 'var(--bg-subtle)' }}>Margen Real</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {products.map(p => {
+                    const costs = getProductRealCost(p.id, selectedMonth, selectedCriterio);
+                    const grossMarginPercent = p.precioVenta > 0
+                      ? Number((((p.precioVenta - costs.costoCompra) / p.precioVenta) * 100).toFixed(1))
+                      : 0;
 
-                  return (
-                    <tr key={p.id}>
-                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{p.codigo}</td>
-                      <td>
-                        <div style={{ fontWeight: 600 }}>{p.nombre}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Stock actual: {p.stockActual} {p.unidadMedida}</div>
-                      </td>
-                      <td style={{ textAlign: 'right', fontWeight: 700 }}>
-                        {formatCurrency(p.precioVenta)}
-                      </td>
-                      <td style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>
-                        {formatCurrency(costs.costoCompra)}
-                      </td>
-                      <td style={{ textAlign: 'right', color: 'var(--color-warning-text)' }}>
-                        +{formatCurrency(costs.costoOperativoProrrateado)}
-                      </td>
-                      <td style={{ textAlign: 'right', fontWeight: 800, backgroundColor: 'var(--bg-subtle)', color: 'var(--color-accent)' }}>
-                        {formatCurrency(costs.costoReal)}
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <span className="badge badge-success">{grossMarginPercent}%</span>
-                      </td>
-                      <td style={{ textAlign: 'center', backgroundColor: 'var(--bg-subtle)' }}>
-                        <span className={`badge ${realMarginPercent >= 30 ? 'badge-success' : realMarginPercent > 0 ? 'badge-warning' : 'badge-danger'}`}>
-                          {realMarginPercent}%
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                    const realMarginPercent = p.precioVenta > 0
+                      ? Number((((p.precioVenta - costs.costoReal) / p.precioVenta) * 100).toFixed(1))
+                      : 0;
+
+                    return (
+                      <tr key={p.id}>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{p.codigo}</td>
+                        <td>
+                          <div style={{ fontWeight: 600 }}>{p.nombre}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Stock: {p.stockActual} {p.unidadMedida}</div>
+                        </td>
+                        <td style={{ textAlign: 'right', fontWeight: 700 }}>
+                          {formatCurrency(p.precioVenta)}
+                        </td>
+                        <td style={{ textAlign: 'right', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                          {formatCurrency(costs.costoCompra)}
+                        </td>
+                        <td style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                          {selectedCriterio === 'costo_material' ? `+${costs.tasaAbsorcionPorcentaje}%` : selectedCriterio === 'valor_venta' ? `+${costs.tasaAbsorcionPorcentaje}% PVP` : 'Fijo'}
+                        </td>
+                        <td style={{ textAlign: 'right', color: 'var(--color-warning-text)', fontWeight: 600 }}>
+                          +{formatCurrency(costs.costoOperativoProrrateado)}
+                        </td>
+                        <td style={{ textAlign: 'right', fontWeight: 800, backgroundColor: 'var(--bg-subtle)', color: 'var(--color-accent)', fontSize: '0.95rem' }}>
+                          {formatCurrency(costs.costoReal)}
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <span className="badge badge-success">{grossMarginPercent}%</span>
+                        </td>
+                        <td style={{ textAlign: 'center', backgroundColor: 'var(--bg-subtle)' }}>
+                          <span className={`badge ${realMarginPercent >= 30 ? 'badge-success' : realMarginPercent > 0 ? 'badge-warning' : 'badge-danger'}`}>
+                            {realMarginPercent}%
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
+
 
       {/* Tab 2: Expenses List Table */}
       {activeTab === 'expenses' && (

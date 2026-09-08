@@ -14,7 +14,10 @@ import type {
   InventoryMovement,
   OperatingExpense,
   FixedAsset,
-  CompanySettings
+  CompanySettings,
+  ProrrateoCriterion,
+  MonthlyProrrateo,
+  ProductRealCostResult
 } from '../types/erp';
 import {
   initialSettings,
@@ -30,17 +33,6 @@ import {
   initialFixedAssets
 } from '../data/seedData';
 import { calculateWeightedAverageCost, generateDocNumber, getMonthKey } from '../utils/formatters';
-
-export interface MonthlyProrrateo {
-  mes: string;
-  gastosFijos: number;
-  gastosVariables: number;
-  depreciacionActivos: number;
-  gastoOperativoTotal: number;
-  unidadesVendidasPeriodo: number;
-  unidadesEnInventario: number;
-  costoOperativoProrrateadoPorUnidad: number;
-}
 
 export interface ERPContextType {
   // Entidades
@@ -94,8 +86,8 @@ export interface ERPContextType {
   updateFixedAsset: (id: string, data: Partial<FixedAsset>) => void;
 
   // Cálculos de Prorrateo & KPIs
-  getProrrateoMensual: (mesKey?: string) => MonthlyProrrateo;
-  getProductRealCost: (productoId: string, mesKey?: string) => { costoCompra: number; costoOperativoProrrateado: number; costoReal: number };
+  getProrrateoMensual: (mesKey?: string, overrideCriterio?: ProrrateoCriterion) => MonthlyProrrateo;
+  getProductRealCost: (productoId: string, mesKey?: string, overrideCriterio?: ProrrateoCriterion) => ProductRealCostResult;
 
   // Ajustes y Configuración
   updateSettings: (newSettings: Partial<CompanySettings>) => void;
@@ -851,8 +843,10 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setFixedAssets(prev => prev.map(a => a.id === id ? { ...a, ...data } : a));
   };
 
-  // Cálculos de Prorrateo & Costo Real
-  const getProrrateoMensual = (mesKey = getMonthKey()): MonthlyProrrateo => {
+  // Cálculos de Prorrateo & Costo Real (Contabilidad Analítica)
+  const getProrrateoMensual = (mesKey = getMonthKey(), overrideCriterio?: ProrrateoCriterion): MonthlyProrrateo => {
+    const criterio: ProrrateoCriterion = overrideCriterio || settings.criterioProrrateoDefecto || 'costo_material';
+
     const monthExpenses = expenses.filter(e => e.periodoMes === mesKey || e.fecha.startsWith(mesKey));
     const gastosFijos = monthExpenses.filter(e => e.tipo === 'fijo').reduce((sum, e) => sum + e.monto, 0);
     const gastosVariables = monthExpenses.filter(e => e.tipo === 'variable').reduce((sum, e) => sum + e.monto, 0);
@@ -873,9 +867,29 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }, 0);
 
     const unidadesEnInventario = products.reduce((sum, p) => sum + p.stockActual, 0);
+    const valorInventarioCostoTotal = products.reduce((sum, p) => sum + (p.stockActual * p.costoPromedio), 0);
+    const valorInventarioVentaTotal = products.reduce((sum, p) => sum + (p.stockActual * p.precioVenta), 0);
 
-    const baseUnidades = unidadesVendidasPeriodo > 0 ? unidadesVendidasPeriodo : (unidadesEnInventario > 0 ? unidadesEnInventario : 1);
-    const costoOperativoProrrateadoPorUnidad = Number((gastoOperativoTotal / baseUnidades).toFixed(2));
+    let baseTotalProrrateo = 1;
+    let tasaAbsorcionPorcentaje = 0;
+
+    if (criterio === 'costo_material') {
+      // Base: Costo Directo de Materiales / Inventario Valuado
+      baseTotalProrrateo = valorInventarioCostoTotal > 0 ? valorInventarioCostoTotal : 1;
+      tasaAbsorcionPorcentaje = Number(((gastoOperativoTotal / baseTotalProrrateo) * 100).toFixed(2));
+    } else if (criterio === 'valor_venta') {
+      // Base: Valor Comercial / Ventas Totales
+      baseTotalProrrateo = valorInventarioVentaTotal > 0 ? valorInventarioVentaTotal : 1;
+      tasaAbsorcionPorcentaje = Number(((gastoOperativoTotal / baseTotalProrrateo) * 100).toFixed(2));
+    } else {
+      // Base: Unidades Físicas Iguales
+      const baseUnidades = unidadesVendidasPeriodo > 0 ? unidadesVendidasPeriodo : (unidadesEnInventario > 0 ? unidadesEnInventario : 1);
+      baseTotalProrrateo = baseUnidades;
+      tasaAbsorcionPorcentaje = Number((gastoOperativoTotal / baseUnidades).toFixed(2));
+    }
+
+    const divisorUnidades = unidadesVendidasPeriodo > 0 ? unidadesVendidasPeriodo : (unidadesEnInventario > 0 ? unidadesEnInventario : 1);
+    const costoOperativoProrrateadoPorUnidad = Number((gastoOperativoTotal / divisorUnidades).toFixed(2));
 
     return {
       mes: mesKey,
@@ -885,21 +899,42 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       gastoOperativoTotal,
       unidadesVendidasPeriodo,
       unidadesEnInventario,
+      valorInventarioCostoTotal,
+      valorInventarioVentaTotal,
+      baseTotalProrrateo,
+      criterio,
+      tasaAbsorcionPorcentaje,
       costoOperativoProrrateadoPorUnidad
     };
   };
 
-  const getProductRealCost = (productoId: string, mesKey = getMonthKey()) => {
+  const getProductRealCost = (productoId: string, mesKey = getMonthKey(), overrideCriterio?: ProrrateoCriterion): ProductRealCostResult => {
     const product = products.find(p => p.id === productoId);
     const costoCompra = product?.costoPromedio || 0;
-    const prorrateo = getProrrateoMensual(mesKey);
-    const costoOperativoProrrateado = prorrateo.costoOperativoProrrateadoPorUnidad;
+    const precioVenta = product?.precioVenta || 0;
+    const prorrateo = getProrrateoMensual(mesKey, overrideCriterio);
+
+    let costoOperativoProrrateado = 0;
+
+    if (prorrateo.criterio === 'costo_material') {
+      // Proporcional al costo de compra directo (material): Tasa % x Costo Directo
+      costoOperativoProrrateado = Number((costoCompra * (prorrateo.tasaAbsorcionPorcentaje / 100)).toFixed(2));
+    } else if (prorrateo.criterio === 'valor_venta') {
+      // Proporcional al precio de venta
+      costoOperativoProrrateado = Number((precioVenta * (prorrateo.tasaAbsorcionPorcentaje / 100)).toFixed(2));
+    } else {
+      // Por partes iguales
+      costoOperativoProrrateado = prorrateo.costoOperativoProrrateadoPorUnidad;
+    }
+
     const costoReal = Number((costoCompra + costoOperativoProrrateado).toFixed(2));
 
     return {
       costoCompra,
       costoOperativoProrrateado,
-      costoReal
+      costoReal,
+      tasaAbsorcionPorcentaje: prorrateo.tasaAbsorcionPorcentaje,
+      criterio: prorrateo.criterio
     };
   };
 

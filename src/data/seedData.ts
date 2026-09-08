@@ -18,6 +18,7 @@ export const initialSettings: CompanySettings = {
   moneda: 'MXN',
   monedaSimbolo: '$',
   tasaImpuestoDefecto: 16,
+  criterioProrrateoDefecto: 'costo_material',
   direccion: 'Av. Insurgentes Sur 1450, Col. del Valle, CDMX',
   telefono: '+52 (55) 8432-9012',
   email: 'contacto@varcsoluciones.com',
@@ -171,6 +172,20 @@ export const initialProducts: Product[] = [
     tieneVariantes: false,
     creadoEn: '2026-01-20T10:00:00Z',
     descripcion: 'Gorra snapback de 5 paneles con bordado en alto relieve.'
+  },
+  {
+    id: 'prod-5',
+    codigo: 'CAL-05',
+    nombre: 'Pack 3 Calcetines Bamboo No-Show',
+    categoriaId: 'cat-4',
+    unidadMedida: 'set',
+    precioVenta: 99,
+    costoPromedio: 35,
+    stockMinimo: 15,
+    stockActual: 25,
+    tieneVariantes: false,
+    creadoEn: '2026-01-22T11:00:00Z',
+    descripcion: 'Calcetines invisibles de fibra de bambú hipoalergénicos.'
   }
 ];
 
