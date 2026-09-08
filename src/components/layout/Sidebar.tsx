@@ -42,7 +42,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpenMobile,
   onCloseMobile
 }) => {
-  const { settings, products, invoices, purchases } = useERP();
+  const { products, invoices, purchases } = useERP();
   const { t } = useTranslation();
 
   // Calculate badge alerts
@@ -109,8 +109,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="sidebar-header">
           {!isCollapsed && (
             <div className="brand-logo">
-              <div className="brand-icon">
-                {settings.nombreEmpresa.charAt(0)}
+              <div className="brand-icon" style={{ padding: 0, overflow: 'hidden', background: 'transparent' }}>
+                <img
+                  src="/apple-touch-icon.png"
+                  alt="Logo Gestor Modular"
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 'var(--radius-md)' }}
+                />
               </div>
               <div className="brand-info">
                 <span className="brand-title">{APP_NAME}</span>
@@ -119,8 +123,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
           {isCollapsed && (
-            <div className="brand-icon" style={{ margin: '0 auto' }}>
-              {settings.nombreEmpresa.charAt(0)}
+            <div className="brand-icon" style={{ margin: '0 auto', padding: 0, overflow: 'hidden', background: 'transparent' }}>
+              <img
+                src="/apple-touch-icon.png"
+                alt="Logo Gestor Modular"
+                style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 'var(--radius-md)' }}
+              />
             </div>
           )}
         </div>
