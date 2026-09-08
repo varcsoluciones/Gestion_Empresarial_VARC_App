@@ -630,8 +630,8 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
                     <th>Producto</th>
                     <th>Categoría</th>
                     <th style={{ textAlign: 'center' }}>Unidades Vendidas</th>
-                    <th style={{ textAlign: 'right' }}>Descuentos ($)</th>
-                    <th style={{ textAlign: 'right', fontWeight: 800 }}>Total Vendido ($)</th>
+                    <th style={{ textAlign: 'right' }}>Descuentos ({settings.monedaSimbolo || '$'})</th>
+                    <th style={{ textAlign: 'right', fontWeight: 800 }}>Total Vendido ({settings.monedaSimbolo || '$'})</th>
                     <th style={{ textAlign: 'center' }}>% Participación</th>
                   </tr>
                 </thead>
@@ -811,7 +811,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
                     <th style={{ textAlign: 'center' }}>No. Facturas</th>
                     <th style={{ textAlign: 'center' }}>Piezas Totales</th>
                     <th style={{ textAlign: 'right' }}>Saldo Pendiente (CxC)</th>
-                    <th style={{ textAlign: 'right', fontWeight: 800 }}>Total Facturado ($)</th>
+                    <th style={{ textAlign: 'right', fontWeight: 800 }}>Total Facturado ({settings.monedaSimbolo || '$'})</th>
                     <th style={{ textAlign: 'center' }}>% Participación</th>
                   </tr>
                 </thead>

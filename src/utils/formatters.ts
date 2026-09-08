@@ -1,8 +1,22 @@
-export function formatCurrency(amount: number, _currency = 'MXN', symbol = '$'): string {
+export function getActiveCurrencySymbol(): string {
+  try {
+    const saved = localStorage.getItem('erp_settings');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && typeof parsed.monedaSimbolo === 'string' && parsed.monedaSimbolo.trim()) {
+        return parsed.monedaSimbolo.trim();
+      }
+    }
+  } catch {}
+  return '$';
+}
+
+export function formatCurrency(amount: number, _currency = 'MXN', symbol?: string): string {
+  const activeSymbol = symbol !== undefined ? symbol : getActiveCurrencySymbol();
   if (isNaN(amount) || amount === null || amount === undefined) {
-    return `${symbol}0.00`;
+    return `${activeSymbol}0.00`;
   }
-  return `${symbol}${amount.toLocaleString('es-MX', {
+  return `${activeSymbol}${amount.toLocaleString('es-MX', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   })}`;

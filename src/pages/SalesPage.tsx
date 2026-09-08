@@ -1049,7 +1049,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
               </div>
 
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Precio ($)</label>
+                <label className="form-label">Precio ({settings.monedaSimbolo || '$'})</label>
                 <input
                   type="number"
                   className="form-control"
@@ -1328,7 +1328,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
               </div>
 
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Precio ($)</label>
+                <label className="form-label">Precio ({settings.monedaSimbolo || '$'})</label>
                 <input
                   type="number"
                   className="form-control"
@@ -1502,7 +1502,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
       >
         <form id="cxc-payment-form" onSubmit={handleSavePayment}>
           <div className="form-group">
-            <label className="form-label">Monto Cobrado ($) *</label>
+            <label className="form-label">Monto Cobrado ({settings.monedaSimbolo || '$'}) *</label>
             <input
               type="number"
               className="form-control"

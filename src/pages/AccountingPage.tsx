@@ -462,7 +462,7 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
                   <th>Categoría</th>
                   <th style={{ textAlign: 'center' }}>Tipo</th>
                   <th>Descripción</th>
-                  <th style={{ textAlign: 'right' }}>Monto ($)</th>
+                  <th style={{ textAlign: 'right' }}>Monto ({settings.monedaSimbolo || '$'})</th>
                   <th style={{ textAlign: 'right' }}>Estado / Acciones</th>
                 </tr>
               </thead>
@@ -803,7 +803,7 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Monto ($) *</label>
+              <label className="form-label">Monto ({settings.monedaSimbolo || '$'}) *</label>
               <input
                 type="number"
                 className="form-control"
@@ -893,7 +893,7 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
 
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Valor de Adquisición ($) *</label>
+              <label className="form-label">Valor de Adquisición ({settings.monedaSimbolo || '$'}) *</label>
               <input
                 type="number"
                 className="form-control"

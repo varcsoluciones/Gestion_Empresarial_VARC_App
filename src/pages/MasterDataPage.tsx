@@ -43,6 +43,7 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
     suppliers,
     categories,
     products,
+    currencySymbol,
     addClient,
     updateClient,
     addSupplier,
@@ -951,7 +952,7 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
 
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Precio de Venta ($) *</label>
+              <label className="form-label">Precio de Venta ({currencySymbol}) *</label>
               <input
                 type="number"
                 className="form-control"
@@ -965,7 +966,7 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Costo Promedio / Inicial ($)</label>
+              <label className="form-label">Costo Promedio / Inicial ({currencySymbol})</label>
               <input
                 type="number"
                 className="form-control"
@@ -1238,7 +1239,7 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
                 />
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Límite de Crédito ($)</label>
+                <label className="form-label">Límite de Crédito ({currencySymbol})</label>
                 <input
                   type="number"
                   className="form-control"

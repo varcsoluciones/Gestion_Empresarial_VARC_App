@@ -20,7 +20,7 @@ export const QuickCreateCustomerModal: React.FC<QuickCreateCustomerModalProps> =
   onClose,
   onCustomerCreated
 }) => {
-  const { addClient } = useERP();
+  const { addClient, currencySymbol } = useERP();
 
   const [nombre, setNombre] = useState('');
   const [identificacionFiscal, setIdentificacionFiscal] = useState('');
@@ -175,7 +175,7 @@ export const QuickCreateCustomerModal: React.FC<QuickCreateCustomerModalProps> =
               />
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Límite de Crédito ($)</label>
+              <label className="form-label">Límite de Crédito ({currencySymbol})</label>
               <input
                 type="number"
                 className="form-control"

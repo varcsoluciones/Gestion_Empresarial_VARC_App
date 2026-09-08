@@ -540,7 +540,7 @@ export const PurchasesPage: React.FC = () => {
               </div>
 
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Costo Unit. ($)</label>
+                <label className="form-label">Costo Unit. ({settings.monedaSimbolo || '$'})</label>
                 <input
                   type="number"
                   className="form-control"
@@ -781,7 +781,7 @@ export const PurchasesPage: React.FC = () => {
       >
         <form id="cxp-payment-form" onSubmit={handleSavePayment}>
           <div className="form-group">
-            <label className="form-label">Monto a Pagar ($) *</label>
+            <label className="form-label">Monto a Pagar ({settings.monedaSimbolo || '$'}) *</label>
             <input
               type="number"
               className="form-control"

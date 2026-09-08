@@ -32,7 +32,7 @@ import {
   initialOperatingExpenses,
   initialFixedAssets
 } from '../data/seedData';
-import { calculateWeightedAverageCost, generateDocNumber, getMonthKey, getNextProductSKU } from '../utils/formatters';
+import { calculateWeightedAverageCost, generateDocNumber, getMonthKey, getNextProductSKU, formatCurrency } from '../utils/formatters';
 import {
   downloadJSONBackup,
   downloadExcelWorkbook,
@@ -42,6 +42,8 @@ import {
 export interface ERPContextType {
   // Entidades
   settings: CompanySettings;
+  currencySymbol: string;
+  formatMoney: (amount: number) => string;
   clients: Client[];
   suppliers: Supplier[];
   categories: Category[];
@@ -1250,6 +1252,8 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     <ERPContext.Provider
       value={{
         settings,
+        currencySymbol: settings.monedaSimbolo || '$',
+        formatMoney: (amount: number) => formatCurrency(amount, settings.moneda, settings.monedaSimbolo || '$'),
         clients,
         suppliers,
         categories,

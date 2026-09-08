@@ -23,7 +23,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
   onClose,
   onProductCreated
 }) => {
-  const { products, categories, addCategory, addProduct } = useERP();
+  const { products, categories, addCategory, addProduct, currencySymbol } = useERP();
 
   const [codigo, setCodigo] = useState('');
   const [nombre, setNombre] = useState('');
@@ -168,7 +168,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
         <div className="form-row">
           <div className="form-group">
             <label className="form-label">
-              Precio de Venta ($) <span className="form-label-required">*</span>
+              Precio de Venta ({currencySymbol}) <span className="form-label-required">*</span>
             </label>
             <input
               type="number"
@@ -182,7 +182,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           </div>
 
           <div className="form-group">
-            <label className="form-label">Costo Inicial ($)</label>
+            <label className="form-label">Costo Inicial ({currencySymbol})</label>
             <input
               type="number"
               className="form-control"

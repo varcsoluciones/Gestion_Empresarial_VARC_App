@@ -86,7 +86,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
       tab: 'master-data' as GuideTab,
       tabLabel: '3. Catálogos',
       title: 'Clientes y Condiciones de Crédito',
-      desc: 'Configuración de límite de crédito ($), días de crédito para vencimiento y condición de pago (contado o crédito).'
+      desc: 'Configuración de límite de crédito, días de crédito para vencimiento y condición de pago (contado o crédito).'
     },
     {
       tab: 'master-data' as GuideTab,
@@ -465,7 +465,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
                   </h4>
                   <ul style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                     <li><strong>Tipo de Pago:</strong> Contado o Crédito.</li>
-                    <li><strong>Límite de Crédito ($):</strong> Monto máximo de saldo pendiente que se le permite acumular.</li>
+                    <li><strong>Límite de Crédito:</strong> Monto máximo de saldo pendiente que se le permite acumular.</li>
                     <li><strong>Días de Crédito:</strong> Plazo otorgado para calcular automáticamente la fecha de vencimiento en cada factura.</li>
                   </ul>
                 </div>
