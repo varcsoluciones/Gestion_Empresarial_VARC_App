@@ -16,7 +16,9 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   DollarSign,
-  AlertTriangle
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
@@ -52,6 +54,7 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
   
   // Prorrateo is strictly informative using the company default established in settings:
   const activeCriterio = settings.criterioProrrateoDefecto || 'costo_material';
+  const [isProrrateoExpanded, setIsProrrateoExpanded] = useState(false);
 
   // New Expense Modal State
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
@@ -201,35 +204,7 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="tabs-nav">
-        <button
-          type="button"
-          className={`tab-btn ${activeTab === 'prorrateo' ? 'active' : ''}`}
-          onClick={() => setActiveTab('prorrateo')}
-        >
-          <Layers size={16} />
-          {t.accounting.tabProrrateo}
-        </button>
-        <button
-          type="button"
-          className={`tab-btn ${activeTab === 'expenses' ? 'active' : ''}`}
-          onClick={() => setActiveTab('expenses')}
-        >
-          <DollarSign size={16} />
-          {t.accounting.tabExpenses} ({filteredExpenses.length})
-        </button>
-        <button
-          type="button"
-          className={`tab-btn ${activeTab === 'assets' ? 'active' : ''}`}
-          onClick={() => setActiveTab('assets')}
-        >
-          <HardDrive size={16} />
-          {t.accounting.tabAssets} ({fixedAssets.length})
-        </button>
-      </div>
-
-      {/* Monthly Summary Cards Banner */}
+      {/* 1. Monthly Summary Cards Banner (Matching Inventory Order: Header -> Stat Cards -> Tabs -> Content) */}
       <div className="grid-4" style={{ marginBottom: '1.75rem' }}>
         <div className="stat-card">
           <div className="stat-header">
@@ -294,76 +269,149 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
         </div>
       </div>
 
-      {/* Tab 1: Prorrateo & Real Cost Comparison Table */}
+      {/* 2. Tabs Navigation */}
+      <div className="tabs-nav">
+        <button
+          type="button"
+          className={`tab-btn ${activeTab === 'prorrateo' ? 'active' : ''}`}
+          onClick={() => setActiveTab('prorrateo')}
+        >
+          <Layers size={16} />
+          {t.accounting.tabProrrateo}
+        </button>
+        <button
+          type="button"
+          className={`tab-btn ${activeTab === 'expenses' ? 'active' : ''}`}
+          onClick={() => setActiveTab('expenses')}
+        >
+          <DollarSign size={16} />
+          {t.accounting.tabExpenses} ({filteredExpenses.length})
+        </button>
+        <button
+          type="button"
+          className={`tab-btn ${activeTab === 'assets' ? 'active' : ''}`}
+          onClick={() => setActiveTab('assets')}
+        >
+          <HardDrive size={16} />
+          {t.accounting.tabAssets} ({fixedAssets.length})
+        </button>
+      </div>
+
+      {/* 3. Tab 1: Prorrateo & Real Cost Comparison Table */}
       {activeTab === 'prorrateo' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {/* Rule Information Banner (Read-only / Institutional) */}
-          <div className="card" style={{ padding: '1.25rem', backgroundColor: 'var(--bg-surface)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <SlidersHorizontal size={18} style={{ color: 'var(--color-accent)' }} />
+          {/* Rule Information Banner (Collapsible / Acordeón) */}
+          <div
+            className="card"
+            style={{
+              padding: '1rem 1.25rem',
+              backgroundColor: 'var(--bg-surface)',
+              cursor: 'pointer',
+              transition: 'all var(--transition-fast)'
+            }}
+            onClick={() => setIsProrrateoExpanded(!isProrrateoExpanded)}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{
+                  padding: '0.45rem',
+                  borderRadius: 'var(--radius-md)',
+                  backgroundColor: 'var(--color-accent-subtle)',
+                  color: 'var(--color-accent)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <SlidersHorizontal size={17} />
+                </div>
                 <div>
-                  <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>
-                    {t.accounting.activeRuleTitle}
-                  </h3>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
-                    {t.accounting.activeRuleNote}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <h3 style={{ fontSize: '0.925rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                      {t.accounting.activeRuleTitle}
+                    </h3>
+                    <span className="badge badge-primary" style={{ padding: '0.2rem 0.6rem', fontSize: '0.775rem' }}>
+                      <ShieldCheck size={13} style={{ marginRight: '3px' }} />
+                      {activeCriterio === 'costo_material' && t.accounting.ruleMaterialName}
+                      {activeCriterio === 'valor_venta' && t.accounting.rulePriceName}
+                      {activeCriterio === 'unidades_iguales' && t.accounting.ruleUnitsName}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '0.785rem', color: 'var(--text-muted)', margin: '0.15rem 0 0 0' }}>
+                    {activeCriterio === 'costo_material' && `Distribución proporcional por Material Directo (+${prorrateo.tasaAbsorcionPorcentaje}% sobre costo compra)`}
+                    {activeCriterio === 'valor_venta' && `Distribución por Precio de Venta (+${prorrateo.tasaAbsorcionPorcentaje}% sobre PVP)`}
+                    {activeCriterio === 'unidades_iguales' && `División lineal (${formatCurrency(prorrateo.costoOperativoProrrateadoPorUnidad)}/unidad)`}
                   </p>
                 </div>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span className="badge badge-primary" style={{ padding: '0.35rem 0.75rem', fontSize: '0.825rem' }}>
-                  <ShieldCheck size={14} style={{ marginRight: '4px' }} />
-                  {activeCriterio === 'costo_material' && t.accounting.ruleMaterialName}
-                  {activeCriterio === 'valor_venta' && t.accounting.rulePriceName}
-                  {activeCriterio === 'unidades_iguales' && t.accounting.ruleUnitsName}
-                </span>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  style={{
+                    fontSize: '0.775rem',
+                    padding: '0.3rem 0.65rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.35rem'
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsProrrateoExpanded(!isProrrateoExpanded);
+                  }}
+                >
+                  <span>{isProrrateoExpanded ? 'Ocultar Detalle' : 'Ver Detalle'}</span>
+                  {isProrrateoExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                </button>
               </div>
             </div>
 
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-              gap: '1rem',
-              backgroundColor: 'var(--bg-subtle)',
-              padding: '1rem',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--border-default)',
-              fontSize: '0.85rem'
-            }}>
-              <div>
-                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.775rem' }}>Base Contable del Mes</span>
-                <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
-                  {formatCurrency(prorrateo.baseTotalProrrateo)}
-                </span>
-                <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '2px' }}>
-                  {activeCriterio === 'costo_material' ? 'Valoración de inventario a costo de compra' : activeCriterio === 'valor_venta' ? 'Valoración total a precio venta' : 'Unidades en inventario'}
-                </span>
-              </div>
+            {isProrrateoExpanded && (
+              <div style={{
+                marginTop: '1rem',
+                paddingTop: '1rem',
+                borderTop: '1px solid var(--border-default)',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                gap: '1rem',
+                backgroundColor: 'var(--bg-subtle)',
+                padding: '1rem',
+                borderRadius: 'var(--radius-md)',
+                fontSize: '0.85rem'
+              }}>
+                <div>
+                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.775rem' }}>Base Contable del Mes</span>
+                  <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
+                    {formatCurrency(prorrateo.baseTotalProrrateo)}
+                  </span>
+                  <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '2px' }}>
+                    {activeCriterio === 'costo_material' ? 'Valoración de inventario a costo de compra' : activeCriterio === 'valor_venta' ? 'Valoración total a precio venta' : 'Unidades en inventario'}
+                  </span>
+                </div>
 
-              <div>
-                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.775rem' }}>{t.accounting.absorptionRate}</span>
-                <span style={{ fontWeight: 700, color: 'var(--color-accent)', fontSize: '0.95rem' }}>
-                  {activeCriterio === 'unidades_iguales'
-                    ? `${formatCurrency(prorrateo.costoOperativoProrrateadoPorUnidad)} / unidad`
-                    : `+${prorrateo.tasaAbsorcionPorcentaje}%`}
-                </span>
-                <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '2px' }}>
-                  Carga por cada peso o unidad de inventario
-                </span>
-              </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.775rem' }}>{t.accounting.absorptionRate}</span>
+                  <span style={{ fontWeight: 700, color: 'var(--color-accent)', fontSize: '0.95rem' }}>
+                    {activeCriterio === 'unidades_iguales'
+                      ? `${formatCurrency(prorrateo.costoOperativoProrrateadoPorUnidad)} / unidad`
+                      : `+${prorrateo.tasaAbsorcionPorcentaje}%`}
+                  </span>
+                  <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '2px' }}>
+                    Carga distribuida sobre cada unidad o valor monetario
+                  </span>
+                </div>
 
-              <div>
-                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.775rem' }}>Modificación de Criterio</span>
-                <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>
-                  Configuración institucional
-                </span>
-                <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '2px' }}>
-                  Para ajustar el criterio, dirígete a <strong style={{ color: 'var(--color-accent)' }}>Configuración &gt; Prorrateo</strong>.
-                </span>
+                <div>
+                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.775rem' }}>Ajuste de Criterio</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    Configuración Institucional
+                  </span>
+                  <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '2px' }}>
+                    Puedes cambiar la regla contable en <strong style={{ color: 'var(--color-accent)' }}>Configuración &gt; Datos de la Empresa</strong>.
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Matrix Table */}
