@@ -134,7 +134,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span className="brand-title" style={{ fontSize: '0.95rem', fontWeight: 800, lineHeight: 1.2, letterSpacing: '-0.01em' }}>
                   {APP_NAME}
                 </span>
-                <span className="brand-subtitle" style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-accent)' }}>
+                <span className="brand-subtitle" style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--color-accent)' }}>
                   {APP_BRAND} v{APP_VERSION}
                 </span>
               </div>
