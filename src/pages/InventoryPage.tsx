@@ -165,6 +165,11 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
     defaultDirection: 'desc',
     defaultIsNumeric: true,
     customGetters: {
+      sku: (m) => {
+        const prod = products.find(p => p.id === m.productoId);
+        const variant = prod?.variantes?.find(v => v.id === m.varianteId);
+        return variant?.sku || prod?.codigo || '';
+      },
       producto: (m) => products.find(p => p.id === m.productoId)?.nombre || '',
     }
   });
@@ -426,13 +431,22 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                   Referencia
                 </SortableTh>
                 <SortableTh
+                  sortKey="sku"
+                  currentSortKey={kardexSortKey}
+                  currentSortDirection={kardexSortDirection}
+                  onSort={requestKardexSort}
+                  isNumeric={false}
+                >
+                  SKU / Código
+                </SortableTh>
+                <SortableTh
                   sortKey="producto"
                   currentSortKey={kardexSortKey}
                   currentSortDirection={kardexSortDirection}
                   onSort={requestKardexSort}
                   isNumeric={false}
                 >
-                  Producto / Variante
+                  Producto / Descripción
                 </SortableTh>
                 <SortableTh
                   sortKey="cantidad"
@@ -455,16 +469,6 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                   Costo Unit.
                 </SortableTh>
                 <SortableTh
-                  sortKey="stockResultante"
-                  currentSortKey={kardexSortKey}
-                  currentSortDirection={kardexSortDirection}
-                  onSort={requestKardexSort}
-                  isNumeric={true}
-                  align="center"
-                >
-                  Stock Resultante
-                </SortableTh>
-                <SortableTh
                   sortKey="motivo"
                   currentSortKey={kardexSortKey}
                   currentSortDirection={kardexSortDirection}
@@ -485,6 +489,8 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
               ) : (
                 sortedMovements.map(m => {
                   const prod = products.find(p => p.id === m.productoId);
+                  const variant = prod?.variantes?.find(v => v.id === m.varianteId);
+                  const skuCode = variant?.sku || prod?.codigo || '—';
                   const isPositive = m.cantidad > 0;
 
                   return (
@@ -496,9 +502,16 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                       <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, fontSize: '0.825rem' }}>
                         {m.referenciaDoc}
                       </td>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, fontSize: '0.825rem' }}>
+                        {skuCode}
+                      </td>
                       <td>
                         <div style={{ fontWeight: 600 }}>{prod?.nombre || 'Producto'}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>SKU: {prod?.codigo}</div>
+                        {variant ? (
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                            Talla: {variant.talla} | Color: {variant.color}
+                          </div>
+                        ) : null}
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         <span style={{
@@ -511,9 +524,6 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                       </td>
                       <td style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>
                         {formatCurrency(m.costoUnitario)}
-                      </td>
-                      <td style={{ textAlign: 'center', fontWeight: 700 }}>
-                        <span className="badge badge-neutral">{m.stockResultante} {prod?.unidadMedida}</span>
                       </td>
                       <td style={{ fontSize: '0.825rem', color: 'var(--text-secondary)' }}>
                         {m.motivo}
@@ -668,23 +678,6 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                         <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{p.codigo}</td>
                         <td>
                           <div style={{ fontWeight: 600 }}>{p.nombre}</div>
-                          {hasVariants ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.25rem' }}>
-                              <span
-                                className="badge badge-accent"
-                                style={{ cursor: 'pointer', fontSize: '0.7rem' }}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleExpandProduct(p.id);
-                                }}
-                                title="Clic para ver u ocultar tabla de variantes"
-                              >
-                                {p.variantes!.length} variantes {isExpanded ? '▲ Ocultar' : '▼ Ver desglose'}
-                              </span>
-                            </div>
-                          ) : (
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Artículo individual</span>
-                          )}
                         </td>
                         <td>{cat?.nombre || 'General'}</td>
                         <td style={{ textAlign: 'center', fontWeight: 700 }}>

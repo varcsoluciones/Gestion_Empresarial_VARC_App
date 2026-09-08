@@ -158,7 +158,7 @@ export interface InventoryMovement {
   varianteId?: string;
   cantidad: number; // Positivo para entradas, negativo para salidas
   costoUnitario: number;
-  stockResultante: number;
+  stockResultante?: number;
   motivo: string;
   usuario?: string;
 }

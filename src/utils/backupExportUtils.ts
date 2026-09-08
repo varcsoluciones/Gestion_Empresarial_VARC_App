@@ -228,11 +228,11 @@ export const downloadExcelWorkbook = (data: FullERPData): void => {
       'Fecha y Hora': m.fecha,
       'Tipo Movimiento': m.tipo,
       'Documento Referencia': m.referenciaDoc,
+      'SKU / Código': varItem?.sku || prod?.codigo || 'N/A',
       'Producto': prod?.nombre || 'Desconocido',
       'Variante (Talla/Color)': varItem ? `${varItem.talla} / ${varItem.color}` : 'N/A',
       'Cantidad': m.cantidad,
       'Costo Unitario': m.costoUnitario,
-      'Saldo Resultante': m.stockResultante,
       'Motivo': m.motivo,
       'Usuario': m.usuario || 'Sistema'
     };
