@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Search,
   LayoutDashboard,
   Database,
   ShoppingBag,
@@ -212,16 +211,13 @@ export const QuickNavigationModal: React.FC<QuickNavigationModalProps> = ({
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         {/* Search & Top Shortcuts */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          <div className="search-box">
-            <Search size={18} className="search-icon" />
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Buscar pestaña o función (ej. Kardex, Cotizador, Gastos, Clientes, Prorrateo, P&L)..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Buscar pestaña o función (ej. Kardex, Cotizador, Gastos, Clientes, Prorrateo, P&L)..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
 
           {/* Quick Action Pills */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>

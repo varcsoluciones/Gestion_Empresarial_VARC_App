@@ -204,8 +204,8 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
         {/* Search in Guide */}
-        <div className="search-box">
-          <Search size={18} className="search-icon" />
+        <div className="search-input-wrapper" style={{ width: '100%', minWidth: '100%', maxWidth: '100%' }}>
+          <Search size={16} />
           <input
             type="text"
             className="form-control"
