@@ -532,6 +532,15 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
                     Pulsa el botón <strong>+ Abono</strong> en cualquier compra recibida con saldo para registrar pagos parciales o totales indicando el método (Transferencia, Efectivo, Cheque o Tarjeta) y número de referencia.
                   </p>
                 </div>
+
+                <div className="card" style={{ padding: '1rem' }}>
+                  <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                    3. Costos con IVA Incluido:
+                  </h4>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    Al ingresar los ítems de compra, el <strong>costo unitario se ingresa con IVA incluido</strong>. El sistema calcula automáticamente el total exacto de la factura y desglosa el subtotal sin IVA y el impuesto soportado al proveedor.
+                  </p>
+                </div>
               </div>
             </div>
           )}

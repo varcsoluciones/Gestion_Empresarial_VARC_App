@@ -145,9 +145,13 @@ export const PurchasesPage: React.FC = () => {
     setFormItems(prev => prev.filter((_, i) => i !== index));
   };
 
-  const formSubtotal = formItems.reduce((sum, item) => sum + item.subtotal, 0);
-  const formImpuestos = Number((formSubtotal * ((formTasaImpuesto || 0) / 100)).toFixed(2));
-  const formTotal = formSubtotal + formImpuestos;
+  // Costo unitario ingresado con IVA incluido: el total es la suma de líneas
+  const formTotal = formItems.reduce((sum, item) => sum + item.subtotal, 0);
+  const taxRate = Number(formTasaImpuesto) || 0;
+  const formSubtotal = taxRate > 0 
+    ? Number((formTotal / (1 + (taxRate / 100))).toFixed(2)) 
+    : formTotal;
+  const formImpuestos = Number((formTotal - formSubtotal).toFixed(2));
 
   const handleSavePurchase = (directReceive = false) => {
     if (!formProveedorId || formItems.length === 0) return;
@@ -547,7 +551,7 @@ export const PurchasesPage: React.FC = () => {
               </div>
 
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Costo Unit. ({settings.monedaSimbolo || '$'})</label>
+                <label className="form-label">Costo Unit. (IVA incl.) ({settings.monedaSimbolo || '$'})</label>
                 <input
                   type="number"
                   className="form-control"
@@ -560,7 +564,7 @@ export const PurchasesPage: React.FC = () => {
               </div>
 
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Subtotal Línea</label>
+                <label className="form-label">Total Línea (IVA incl.)</label>
                 <div className="form-control" style={{ backgroundColor: 'var(--bg-surface)', fontWeight: 700, color: 'var(--color-accent)', display: 'flex', alignItems: 'center' }}>
                   {formatCurrency((Number(lineCantidad) || 0) * (Number(lineCosto) || 0))}
                 </div>
@@ -588,8 +592,8 @@ export const PurchasesPage: React.FC = () => {
                 <tr>
                   <th>Descripción del Producto / Variante</th>
                   <th style={{ textAlign: 'center' }}>Cantidad</th>
-                  <th style={{ textAlign: 'right' }}>Costo Unitario</th>
-                  <th style={{ textAlign: 'right' }}>Subtotal</th>
+                  <th style={{ textAlign: 'right' }}>Costo Unit. (IVA incl.)</th>
+                  <th style={{ textAlign: 'right' }}>Total Línea</th>
                   <th style={{ textAlign: 'center', width: '50px' }}></th>
                 </tr>
               </thead>
@@ -639,12 +643,12 @@ export const PurchasesPage: React.FC = () => {
 
             <div style={{ backgroundColor: 'var(--bg-subtle)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.35rem' }}>
-                <span>Subtotal:</span>
-                <span>{formatCurrency(formSubtotal)}</span>
+                <span style={{ color: 'var(--text-secondary)' }}>Subtotal (Base sin IVA):</span>
+                <span style={{ fontWeight: 600 }}>{formatCurrency(formSubtotal)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', marginBottom: '0.35rem' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  IVA (%):
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)' }}>
+                  IVA al Proveedor (%):
                   <input
                     type="number"
                     min={0}
@@ -665,11 +669,14 @@ export const PurchasesPage: React.FC = () => {
                   />
                   %
                 </span>
-                <span>{formatCurrency(formImpuestos)}</span>
+                <span style={{ fontWeight: 600 }}>{formatCurrency(formImpuestos)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', fontWeight: 800, borderTop: '1px solid var(--border-default)', paddingTop: '0.5rem', color: 'var(--color-accent)' }}>
-                <span>Total de la Compra:</span>
+                <span>Total Factura de Compra:</span>
                 <span>{formatCurrency(formTotal)}</span>
+              </div>
+              <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', marginTop: '0.25rem', textAlign: 'right' }}>
+                (Costo unitario ingresado con IVA incluido)
               </div>
             </div>
           </div>
@@ -724,8 +731,8 @@ export const PurchasesPage: React.FC = () => {
                   <tr>
                     <th>Ítem / Variante</th>
                     <th style={{ textAlign: 'center' }}>Cantidad</th>
-                    <th style={{ textAlign: 'right' }}>Costo Unitario</th>
-                    <th style={{ textAlign: 'right' }}>Subtotal</th>
+                    <th style={{ textAlign: 'right' }}>Costo Unit. (IVA incl.)</th>
+                    <th style={{ textAlign: 'right' }}>Total Línea</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -739,6 +746,24 @@ export const PurchasesPage: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Totals Breakdown in Detail Modal */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <div style={{ minWidth: '240px', backgroundColor: 'var(--bg-subtle)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.825rem', marginBottom: '0.25rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Subtotal (Base sin IVA):</span>
+                  <span style={{ fontWeight: 600 }}>{formatCurrency(selectedPurchase.subtotal)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.825rem', marginBottom: '0.35rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>IVA al proveedor:</span>
+                  <span style={{ fontWeight: 600 }}>{formatCurrency(selectedPurchase.impuestos)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', fontWeight: 800, borderTop: '1px solid var(--border-default)', paddingTop: '0.35rem', color: 'var(--color-accent)' }}>
+                  <span>Total Factura:</span>
+                  <span>{formatCurrency(selectedPurchase.total)}</span>
+                </div>
+              </div>
             </div>
 
             {/* Payments history */}
