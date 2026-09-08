@@ -250,6 +250,9 @@ export interface MonthlyProrrateo {
   gastoOperativoTotal: number;
   unidadesVendidasPeriodo: number;
   unidadesEnInventario: number;
+  totalUnidadesPeriodo: number;
+  costoVentasPeriodo: number;
+  valorVentasPeriodo: number;
   valorInventarioCostoTotal: number;
   valorInventarioVentaTotal: number;
   baseTotalProrrateo: number;
@@ -260,6 +263,8 @@ export interface MonthlyProrrateo {
 
 export interface ProductRealCostResult {
   costoCompra: number;
+  gastoOperativoUnitario: number;
+  gastoDepreciacionUnitario: number;
   costoOperativoProrrateado: number;
   costoReal: number;
   tasaAbsorcionPorcentaje: number;

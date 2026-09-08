@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useERP } from '../context/ERPContext';
 import { formatCurrency, formatDateTime, getMonthKey } from '../utils/formatters';
 import {
@@ -15,13 +15,19 @@ import {
   Boxes,
   DollarSign,
   Layers,
-  ArrowDownRight
+  ArrowDownRight,
+  PieChart,
+  Search,
+  Filter
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { ExcelExportButton } from '../components/common/ExcelExportButton';
+import { SortableTh } from '../components/common/SortableTh';
+import { useTableSort } from '../hooks/useTableSort';
+import type { ExcelColumnDefinition } from '../utils/excelExport';
 
 interface ReportsPageProps {
-  initialReport?: 'pnl' | 'balance' | 'sales' | 'costs';
+  initialReport?: 'pnl' | 'balance' | 'sales' | 'costs' | 'profitability';
 }
 
 export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
@@ -39,7 +45,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
   } = useERP();
 
   const [selectedMonth, setSelectedMonth] = useState(getMonthKey());
-  const [activeReport, setActiveReport] = useState<'pnl' | 'balance' | 'sales' | 'costs'>(initialReport || 'pnl');
+  const [activeReport, setActiveReport] = useState<'pnl' | 'balance' | 'sales' | 'costs' | 'profitability'>(initialReport || 'pnl');
 
   React.useEffect(() => {
     if (initialReport) {
@@ -257,6 +263,225 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
     return sum + (p.stockActual * costs.costoReal);
   }, 0);
 
+  // 5. Calculations for SKU-Level Profitability Analysis (Análisis de Rentabilidad por SKU)
+  const [profitabilitySearch, setProfitabilitySearch] = useState('');
+  const [profitabilityCategoryFilter, setProfitabilityCategoryFilter] = useState('all');
+  const [profitabilityOnlySales, setProfitabilityOnlySales] = useState(false);
+
+  interface SkuProfitabilityRow {
+    id: string;
+    productoId: string;
+    varianteId?: string;
+    sku: string;
+    productoNombre: string;
+    detalleVariante: string;
+    nombreCompleto: string;
+    categoriaNombre: string;
+    cantidadVendida: number;
+    costoCompra: number;
+    gastoOperativo: number;
+    gastoDepreciacion: number;
+    gastoTotal: number;
+    precioVenta: number;
+    costoTotalVenta: number;
+    ingresoTotal: number;
+    margenMonto: number;
+    margenPorcentaje: number;
+  }
+
+  const skuProfitabilityList: SkuProfitabilityRow[] = useMemo(() => {
+    const list: SkuProfitabilityRow[] = [];
+    const matchedInvoiceItemIds = new Set<string>();
+
+    products.forEach(p => {
+      const costs = getProductRealCost(p.id, selectedMonth);
+      const cat = categories.find(c => c.id === p.categoriaId);
+      const catName = cat?.nombre || 'General';
+
+      if (p.tieneVariantes && p.variantes && p.variantes.length > 0) {
+        p.variantes.forEach(v => {
+          const skuCode = v.sku || `${p.codigo}-${v.talla}-${v.color}`;
+          const variantPrice = p.precioVenta + (v.precioExtra || 0);
+          const varDesc = `${v.color} / Talla ${v.talla}`;
+          const fullName = `${p.nombre} (${varDesc})`;
+
+          // Find matching invoice items in this month
+          const matchingItems = monthInvoices.flatMap(inv => inv.items).filter(it => {
+            if (it.productoId === p.id && it.varianteId === v.id) {
+              matchedInvoiceItemIds.add(it.id);
+              return true;
+            }
+            return false;
+          });
+
+          const cantVendida = matchingItems.reduce((sum, it) => sum + it.cantidad, 0);
+          const ingreso = matchingItems.reduce((sum, it) => sum + it.subtotal, 0);
+          const costoTotalVta = cantVendida * costs.costoReal;
+          const margenM = ingreso - costoTotalVta;
+          const margenPct = ingreso > 0
+            ? Number(((margenM / ingreso) * 100).toFixed(1))
+            : (variantPrice > 0 ? Number((((variantPrice - costs.costoReal) / variantPrice) * 100).toFixed(1)) : 0);
+
+          list.push({
+            id: `sku-${p.id}-${v.id}`,
+            productoId: p.id,
+            varianteId: v.id,
+            sku: skuCode,
+            productoNombre: p.nombre,
+            detalleVariante: varDesc,
+            nombreCompleto: fullName,
+            categoriaNombre: catName,
+            cantidadVendida: cantVendida,
+            costoCompra: costs.costoCompra,
+            gastoOperativo: costs.gastoOperativoUnitario,
+            gastoDepreciacion: costs.gastoDepreciacionUnitario,
+            gastoTotal: costs.costoReal,
+            precioVenta: variantPrice,
+            costoTotalVenta: Number(costoTotalVta.toFixed(2)),
+            ingresoTotal: Number(ingreso.toFixed(2)),
+            margenMonto: Number(margenM.toFixed(2)),
+            margenPorcentaje: margenPct
+          });
+        });
+      } else {
+        const skuCode = p.codigo;
+        const fullName = p.nombre;
+
+        const matchingItems = monthInvoices.flatMap(inv => inv.items).filter(it => {
+          if (it.productoId === p.id) {
+            matchedInvoiceItemIds.add(it.id);
+            return true;
+          }
+          return false;
+        });
+
+        const cantVendida = matchingItems.reduce((sum, it) => sum + it.cantidad, 0);
+        const ingreso = matchingItems.reduce((sum, it) => sum + it.subtotal, 0);
+        const costoTotalVta = cantVendida * costs.costoReal;
+        const margenM = ingreso - costoTotalVta;
+        const margenPct = ingreso > 0
+          ? Number(((margenM / ingreso) * 100).toFixed(1))
+          : (p.precioVenta > 0 ? Number((((p.precioVenta - costs.costoReal) / p.precioVenta) * 100).toFixed(1)) : 0);
+
+        list.push({
+          id: `sku-${p.id}-base`,
+          productoId: p.id,
+          varianteId: undefined,
+          sku: skuCode,
+          productoNombre: p.nombre,
+          detalleVariante: '',
+          nombreCompleto: fullName,
+          categoriaNombre: catName,
+          cantidadVendida: cantVendida,
+          costoCompra: costs.costoCompra,
+          gastoOperativo: costs.gastoOperativoUnitario,
+          gastoDepreciacion: costs.gastoDepreciacionUnitario,
+          gastoTotal: costs.costoReal,
+          precioVenta: p.precioVenta,
+          costoTotalVenta: Number(costoTotalVta.toFixed(2)),
+          ingresoTotal: Number(ingreso.toFixed(2)),
+          margenMonto: Number(margenM.toFixed(2)),
+          margenPorcentaje: margenPct
+        });
+      }
+    });
+
+    // Capture any custom/orphaned line items in month invoices
+    monthInvoices.forEach(inv => {
+      inv.items.forEach(it => {
+        if (!matchedInvoiceItemIds.has(it.id)) {
+          const cantVendida = it.cantidad;
+          const ingreso = it.subtotal;
+          const costoUnit = (it.precioUnitario * 0.6);
+          const costoTotalVta = cantVendida * costoUnit;
+          const margenM = ingreso - costoTotalVta;
+          list.push({
+            id: `sku-custom-${it.id}`,
+            productoId: it.productoId || 'custom',
+            sku: 'PERSONALIZADO',
+            productoNombre: it.descripcion,
+            detalleVariante: 'Item en factura',
+            nombreCompleto: it.descripcion,
+            categoriaNombre: 'Otros',
+            cantidadVendida: cantVendida,
+            costoCompra: Number(costoUnit.toFixed(2)),
+            gastoOperativo: 0,
+            gastoDepreciacion: 0,
+            gastoTotal: Number(costoUnit.toFixed(2)),
+            precioVenta: it.precioUnitario,
+            costoTotalVenta: Number(costoTotalVta.toFixed(2)),
+            ingresoTotal: Number(ingreso.toFixed(2)),
+            margenMonto: Number(margenM.toFixed(2)),
+            margenPorcentaje: ingreso > 0 ? Number(((margenM / ingreso) * 100).toFixed(1)) : 0
+          });
+        }
+      });
+    });
+
+    return list;
+  }, [products, categories, monthInvoices, selectedMonth, getProductRealCost]);
+
+  // Filtering for Profitability Analysis
+  const filteredSkuProfitability = useMemo(() => {
+    return skuProfitabilityList.filter(item => {
+      const matchSearch = item.sku.toLowerCase().includes(profitabilitySearch.toLowerCase()) ||
+        item.nombreCompleto.toLowerCase().includes(profitabilitySearch.toLowerCase()) ||
+        item.categoriaNombre.toLowerCase().includes(profitabilitySearch.toLowerCase());
+
+      const matchCat = profitabilityCategoryFilter === 'all' || item.categoriaNombre === profitabilityCategoryFilter;
+      const matchSales = !profitabilityOnlySales || item.cantidadVendida > 0;
+
+      return matchSearch && matchCat && matchSales;
+    });
+  }, [skuProfitabilityList, profitabilitySearch, profitabilityCategoryFilter, profitabilityOnlySales]);
+
+  // Sorting for Profitability Analysis
+  const {
+    sortedItems: sortedSkuProfitability,
+    sortKey: profSortKey,
+    sortDirection: profSortDirection,
+    requestSort: requestProfSort
+  } = useTableSort(filteredSkuProfitability, {
+    defaultKey: 'ingresoTotal',
+    defaultDirection: 'desc',
+    defaultIsNumeric: true
+  });
+
+  // Totals for filtered profitability
+  const profitabilitySummary = useMemo(() => {
+    const totalVendidas = sortedSkuProfitability.reduce((s, i) => s + i.cantidadVendida, 0);
+    const totalCostoVenta = sortedSkuProfitability.reduce((s, i) => s + i.costoTotalVenta, 0);
+    const totalIngreso = sortedSkuProfitability.reduce((s, i) => s + i.ingresoTotal, 0);
+    const totalMargenMonto = totalIngreso - totalCostoVenta;
+    const totalMargenPct = totalIngreso > 0 ? ((totalMargenMonto / totalIngreso) * 100).toFixed(1) : '0';
+
+    return {
+      totalVendidas,
+      totalCostoVenta,
+      totalIngreso,
+      totalMargenMonto,
+      totalMargenPct,
+      countItems: sortedSkuProfitability.length
+    };
+  }, [sortedSkuProfitability]);
+
+  const profitabilityExcelColumns: ExcelColumnDefinition[] = [
+    { key: 'sku', label: 'SKU / Código' },
+    { key: 'productoNombre', label: 'Producto' },
+    { key: 'detalleVariante', label: 'Variante / Detalle' },
+    { key: 'categoriaNombre', label: 'Categoría' },
+    { key: 'cantidadVendida', label: 'Cantidad Vendida' },
+    { key: 'costoCompra', label: 'Costo Compra Unitario', formatter: (v) => formatCurrency(v) },
+    { key: 'gastoOperativo', label: 'Gasto Operativo Unitario', formatter: (v) => formatCurrency(v) },
+    { key: 'gastoDepreciacion', label: 'Gasto Depreciación Unitario', formatter: (v) => formatCurrency(v) },
+    { key: 'gastoTotal', label: 'Gasto Total (Costo Real)', formatter: (v) => formatCurrency(v) },
+    { key: 'precioVenta', label: 'Precio Venta Unitario', formatter: (v) => formatCurrency(v) },
+    { key: 'costoTotalVenta', label: 'Costo Total de Venta', formatter: (v) => formatCurrency(v) },
+    { key: 'ingresoTotal', label: 'Ingreso Total Facturado', formatter: (v) => formatCurrency(v) },
+    { key: 'margenMonto', label: 'Margen Final ($)', formatter: (v) => formatCurrency(v) },
+    { key: 'margenPorcentaje', label: 'Margen Final (%)', formatter: (v) => `${v}%` }
+  ];
+
   const handlePrintReport = () => {
     window.print();
   };
@@ -361,7 +586,15 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
           onClick={() => setActiveReport('costs')}
         >
           <FileSpreadsheet size={16} />
-          Comparativa de Costos (Compra vs Real)
+          Comparativa de Costos
+        </button>
+        <button
+          type="button"
+          className={`tab-btn ${activeReport === 'profitability' ? 'active' : ''}`}
+          onClick={() => setActiveReport('profitability')}
+        >
+          <PieChart size={16} />
+          Análisis de Rentabilidad
         </button>
       </div>
 
@@ -1109,6 +1342,369 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
                     </td>
                   </tr>
                 </tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report 5: SKU-Level Profitability Analysis (Análisis de Rentabilidad por SKU) */}
+      {activeReport === 'profitability' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          
+          {/* Profitability KPI Summary Cards */}
+          <div className="grid-4">
+            <div className="stat-card">
+              <div className="stat-header">
+                <span>Unidades Vendidas</span>
+                <div className="stat-icon" style={{ backgroundColor: 'var(--color-info-bg)', color: 'var(--color-info)' }}>
+                  <Package size={18} />
+                </div>
+              </div>
+              <div className="stat-value">{profitabilitySummary.totalVendidas} pzas</div>
+              <div className="stat-footer">
+                <span style={{ color: 'var(--text-muted)' }}>{profitabilitySummary.countItems} SKUs en filtro ({monthInvoices.length} facturas)</span>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-header">
+                <span>Ingreso Total Facturado</span>
+                <div className="stat-icon" style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)' }}>
+                  <DollarSign size={18} />
+                </div>
+              </div>
+              <div className="stat-value">{formatCurrency(profitabilitySummary.totalIngreso)}</div>
+              <div className="stat-footer">
+                <span style={{ color: 'var(--text-muted)' }}>Ventas netas devengadas</span>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-header">
+                <span>Costo Total Venta Absorbido</span>
+                <div className="stat-icon" style={{ backgroundColor: 'var(--color-warning-bg)', color: 'var(--color-warning)' }}>
+                  <Layers size={18} />
+                </div>
+              </div>
+              <div className="stat-value" style={{ color: 'var(--color-warning-text)' }}>
+                {formatCurrency(profitabilitySummary.totalCostoVenta)}
+              </div>
+              <div className="stat-footer">
+                <span style={{ color: 'var(--text-muted)' }}>Compra directa + Absorción real</span>
+              </div>
+            </div>
+
+            <div
+              className="stat-card"
+              style={{
+                borderColor: profitabilitySummary.totalMargenMonto >= 0 ? 'var(--color-success)' : 'var(--color-danger)',
+                boxShadow: profitabilitySummary.totalMargenMonto >= 0 ? '0 4px 12px rgba(16, 185, 129, 0.12)' : '0 4px 12px rgba(239, 68, 68, 0.12)'
+              }}
+            >
+              <div className="stat-header">
+                <span style={{ color: profitabilitySummary.totalMargenMonto >= 0 ? 'var(--color-success-text)' : 'var(--color-danger-text)', fontWeight: 700 }}>
+                  Margen Final Neto Real
+                </span>
+                <div
+                  className="stat-icon"
+                  style={{
+                    backgroundColor: profitabilitySummary.totalMargenMonto >= 0 ? 'var(--color-success-bg)' : 'var(--color-danger-bg)',
+                    color: profitabilitySummary.totalMargenMonto >= 0 ? 'var(--color-success)' : 'var(--color-danger)'
+                  }}
+                >
+                  <TrendingUp size={18} />
+                </div>
+              </div>
+              <div className="stat-value" style={{ color: profitabilitySummary.totalMargenMonto >= 0 ? 'var(--color-success-text)' : 'var(--color-danger-text)' }}>
+                {formatCurrency(profitabilitySummary.totalMargenMonto)}
+              </div>
+              <div className="stat-footer">
+                <span style={{ fontWeight: 700, color: profitabilitySummary.totalMargenMonto >= 0 ? 'var(--color-success-text)' : 'var(--color-danger-text)' }}>
+                  Margen Global: {profitabilitySummary.totalMargenPct}%
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Table Container Card */}
+          <div className="card">
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h2 className="card-title">Resumen de Análisis de Rentabilidad Detallado por SKU</h2>
+                <p className="card-subtitle">
+                  Desglose financiero por producto y variante: Costo compra, absorción de gasto operativo, depreciación, ingreso total y margen final neto.
+                </p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <ExcelExportButton
+                  data={sortedSkuProfitability}
+                  columns={profitabilityExcelColumns}
+                  filename={`Analisis_Rentabilidad_SKU_${selectedMonth}`}
+                  title="Exportar análisis de rentabilidad a Excel"
+                />
+              </div>
+            </div>
+
+            {/* Filter Bar */}
+            <div className="filter-bar no-print" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <div className="search-input" style={{ flex: '1 1 240px', minWidth: '220px' }}>
+                <Search size={16} />
+                <input
+                  type="text"
+                  placeholder="Buscar por SKU, producto o categoría..."
+                  value={profitabilitySearch}
+                  onChange={(e) => setProfitabilitySearch(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Filter size={15} style={{ color: 'var(--text-muted)' }} />
+                <select
+                  className="form-control"
+                  style={{ width: 'auto', minWidth: '160px', padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
+                  value={profitabilityCategoryFilter}
+                  onChange={(e) => setProfitabilityCategoryFilter(e.target.value)}
+                >
+                  <option value="all">Todas las Categorías</option>
+                  {categories.map(c => (
+                    <option key={c.id} value={c.nombre}>{c.nombre}</option>
+                  ))}
+                </select>
+              </div>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', userSelect: 'none' }}>
+                <input
+                  type="checkbox"
+                  checked={profitabilityOnlySales}
+                  onChange={(e) => setProfitabilityOnlySales(e.target.checked)}
+                  style={{ width: '16px', height: '16px', accentColor: 'var(--color-accent)', cursor: 'pointer' }}
+                />
+                <span>Solo productos con ventas en {selectedMonth}</span>
+              </label>
+            </div>
+
+            <div className="table-container" style={{ border: 'none', boxShadow: 'none' }}>
+              <table className="table" id="tabla-analisis-rentabilidad">
+                <thead>
+                  <tr>
+                    <SortableTh
+                      sortKey="sku"
+                      currentSortKey={profSortKey}
+                      currentSortDirection={profSortDirection}
+                      onSort={requestProfSort}
+                      isNumeric={false}
+                    >
+                      SKU / Código
+                    </SortableTh>
+                    <SortableTh
+                      sortKey="nombreCompleto"
+                      currentSortKey={profSortKey}
+                      currentSortDirection={profSortDirection}
+                      onSort={requestProfSort}
+                      isNumeric={false}
+                    >
+                      Producto / Variante
+                    </SortableTh>
+                    <SortableTh
+                      sortKey="cantidadVendida"
+                      currentSortKey={profSortKey}
+                      currentSortDirection={profSortDirection}
+                      onSort={requestProfSort}
+                      isNumeric={true}
+                      align="center"
+                    >
+                      Cant. Vendida
+                    </SortableTh>
+                    <SortableTh
+                      sortKey="costoCompra"
+                      currentSortKey={profSortKey}
+                      currentSortDirection={profSortDirection}
+                      onSort={requestProfSort}
+                      isNumeric={true}
+                      align="right"
+                    >
+                      Costo Compra
+                    </SortableTh>
+                    <SortableTh
+                      sortKey="gastoOperativo"
+                      currentSortKey={profSortKey}
+                      currentSortDirection={profSortDirection}
+                      onSort={requestProfSort}
+                      isNumeric={true}
+                      align="right"
+                    >
+                      Gasto Operativo
+                    </SortableTh>
+                    <SortableTh
+                      sortKey="gastoDepreciacion"
+                      currentSortKey={profSortKey}
+                      currentSortDirection={profSortDirection}
+                      onSort={requestProfSort}
+                      isNumeric={true}
+                      align="right"
+                    >
+                      Gasto Deprec.
+                    </SortableTh>
+                    <SortableTh
+                      sortKey="gastoTotal"
+                      currentSortKey={profSortKey}
+                      currentSortDirection={profSortDirection}
+                      onSort={requestProfSort}
+                      isNumeric={true}
+                      align="right"
+                    >
+                      Gasto Total (Costo Real)
+                    </SortableTh>
+                    <SortableTh
+                      sortKey="precioVenta"
+                      currentSortKey={profSortKey}
+                      currentSortDirection={profSortDirection}
+                      onSort={requestProfSort}
+                      isNumeric={true}
+                      align="right"
+                    >
+                      Precio Venta
+                    </SortableTh>
+                    <SortableTh
+                      sortKey="costoTotalVenta"
+                      currentSortKey={profSortKey}
+                      currentSortDirection={profSortDirection}
+                      onSort={requestProfSort}
+                      isNumeric={true}
+                      align="right"
+                    >
+                      Costo Total Venta
+                    </SortableTh>
+                    <SortableTh
+                      sortKey="ingresoTotal"
+                      currentSortKey={profSortKey}
+                      currentSortDirection={profSortDirection}
+                      onSort={requestProfSort}
+                      isNumeric={true}
+                      align="right"
+                    >
+                      Ingreso Total
+                    </SortableTh>
+                    <SortableTh
+                      sortKey="margenMonto"
+                      currentSortKey={profSortKey}
+                      currentSortDirection={profSortDirection}
+                      onSort={requestProfSort}
+                      isNumeric={true}
+                      align="right"
+                    >
+                      Margen Final ($)
+                    </SortableTh>
+                    <SortableTh
+                      sortKey="margenPorcentaje"
+                      currentSortKey={profSortKey}
+                      currentSortDirection={profSortDirection}
+                      onSort={requestProfSort}
+                      isNumeric={true}
+                      align="center"
+                    >
+                      Margen Final (%)
+                    </SortableTh>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedSkuProfitability.length === 0 ? (
+                    <tr>
+                      <td colSpan={12} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
+                        No se encontraron productos o variantes con los filtros seleccionados para este periodo.
+                      </td>
+                    </tr>
+                  ) : (
+                    sortedSkuProfitability.map(item => {
+                      const hasSales = item.cantidadVendida > 0;
+                      const isPositive = item.margenMonto >= 0;
+
+                      return (
+                        <tr key={item.id} style={{ opacity: hasSales ? 1 : 0.82 }}>
+                          <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-accent)', whiteSpace: 'nowrap' }}>
+                            {item.sku}
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 600 }}>{item.productoNombre}</div>
+                            {item.detalleVariante ? (
+                              <div style={{ fontSize: '0.75rem', color: 'var(--color-accent)', fontWeight: 500 }}>
+                                {item.detalleVariante}
+                              </div>
+                            ) : (
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                {item.categoriaNombre}
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <Badge variant={hasSales ? 'accent' : 'neutral'}>
+                              {item.cantidadVendida} {item.cantidadVendida === 1 ? 'pza' : 'pzas'}
+                            </Badge>
+                          </td>
+                          <td style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>
+                            {formatCurrency(item.costoCompra)}
+                          </td>
+                          <td style={{ textAlign: 'right', color: 'var(--color-warning-text)' }}>
+                            +{formatCurrency(item.gastoOperativo)}
+                          </td>
+                          <td style={{ textAlign: 'right', color: 'var(--color-warning-text)' }}>
+                            +{formatCurrency(item.gastoDepreciacion)}
+                          </td>
+                          <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-accent)' }}>
+                            {formatCurrency(item.gastoTotal)}
+                          </td>
+                          <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                            {formatCurrency(item.precioVenta)}
+                          </td>
+                          <td style={{ textAlign: 'right', fontWeight: 600, color: hasSales ? 'var(--text-secondary)' : 'var(--text-muted)' }}>
+                            {formatCurrency(item.costoTotalVenta)}
+                          </td>
+                          <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
+                            {formatCurrency(item.ingresoTotal)}
+                          </td>
+                          <td style={{ textAlign: 'right', fontWeight: 800, color: isPositive ? 'var(--color-success-text)' : 'var(--color-danger-text)', fontSize: '0.95rem' }}>
+                            {isPositive ? `+${formatCurrency(item.margenMonto)}` : formatCurrency(item.margenMonto)}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <Badge variant={item.margenPorcentaje >= 30 ? 'success' : item.margenPorcentaje > 0 ? 'warning' : 'danger'}>
+                              {item.margenPorcentaje > 0 ? `+${item.margenPorcentaje}%` : `${item.margenPorcentaje}%`}
+                            </Badge>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+                {sortedSkuProfitability.length > 0 && (
+                  <tfoot>
+                    <tr style={{ borderTop: '2px solid var(--border-default)', backgroundColor: 'var(--bg-subtle)', fontWeight: 800 }}>
+                      <td colSpan={2} style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                        TOTALES FILTRADOS ({profitabilitySummary.countItems} SKUs):
+                      </td>
+                      <td style={{ padding: '0.85rem 0.5rem', textAlign: 'center', fontSize: '0.95rem' }}>
+                        {profitabilitySummary.totalVendidas} pzas
+                      </td>
+                      <td colSpan={5} style={{ padding: '0.85rem 0.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                        -
+                      </td>
+                      <td style={{ padding: '0.85rem 0.5rem', textAlign: 'right', color: 'var(--color-warning-text)', fontSize: '0.95rem' }}>
+                        {formatCurrency(profitabilitySummary.totalCostoVenta)}
+                      </td>
+                      <td style={{ padding: '0.85rem 0.5rem', textAlign: 'right', color: 'var(--color-accent)', fontSize: '1rem' }}>
+                        {formatCurrency(profitabilitySummary.totalIngreso)}
+                      </td>
+                      <td style={{ padding: '0.85rem 0.5rem', textAlign: 'right', color: profitabilitySummary.totalMargenMonto >= 0 ? 'var(--color-success-text)' : 'var(--color-danger-text)', fontSize: '1.05rem' }}>
+                        {profitabilitySummary.totalMargenMonto >= 0 ? `+${formatCurrency(profitabilitySummary.totalMargenMonto)}` : formatCurrency(profitabilitySummary.totalMargenMonto)}
+                      </td>
+                      <td style={{ padding: '0.85rem 0.5rem', textAlign: 'center' }}>
+                        <Badge variant={Number(profitabilitySummary.totalMargenPct) >= 0 ? 'success' : 'danger'}>
+                          {profitabilitySummary.totalMargenPct}%
+                        </Badge>
+                      </td>
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useERP } from '../context/ERPContext';
 import type { Invoice, Quote, PaymentMethod, PaymentTerm } from '../types/erp';
 import { formatCurrency, formatDate, formatDateTime, generateDocNumber, formatMonthLabel, getTodayLocalDateString, getFutureLocalDateString } from '../utils/formatters';
@@ -501,6 +501,23 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
     }
   });
 
+  const filteredInvoicesTotals = useMemo(() => {
+    const activeInvoices = sortedInvoices.filter(i => i.estado !== 'anulada');
+    const totalFacturado = activeInvoices.reduce((sum, inv) => sum + inv.total, 0);
+    const totalSaldoPendiente = activeInvoices.reduce((sum, inv) => sum + (inv.saldoPendiente || 0), 0);
+    const totalCobrado = totalFacturado - totalSaldoPendiente;
+    const countAnuladas = sortedInvoices.filter(i => i.estado === 'anulada').length;
+
+    return {
+      totalFacturado,
+      totalSaldoPendiente,
+      totalCobrado,
+      activeCount: activeInvoices.length,
+      anuladasCount: countAnuladas,
+      totalCount: sortedInvoices.length
+    };
+  }, [sortedInvoices]);
+
   const filteredQuotes = quotes.filter(q => {
     const cli = clients.find(c => c.id === q.clienteId);
     const matchesSearch = q.numeroCotizacion.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -927,6 +944,32 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
                 })
               )}
             </tbody>
+            {sortedInvoices.length > 0 && (
+              <tfoot>
+                <tr style={{ backgroundColor: 'var(--bg-subtle)', fontWeight: 800, borderTop: '2px solid var(--border-default)', fontSize: '0.9rem' }}>
+                  <td colSpan={4} style={{ textAlign: 'right', padding: '0.85rem 1rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.15rem' }}>
+                      <span>TOTALES FILTRADOS:</span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)' }}>
+                        ({filteredInvoicesTotals.activeCount} facturas válidas{filteredInvoicesTotals.anuladasCount > 0 ? `, ${filteredInvoicesTotals.anuladasCount} anuladas` : ''})
+                      </span>
+                    </div>
+                  </td>
+                  <td style={{ textAlign: 'right', padding: '0.85rem 0.6rem', color: 'var(--text-primary)', fontSize: '0.95rem' }}>
+                    {formatCurrency(filteredInvoicesTotals.totalFacturado)}
+                  </td>
+                  <td style={{ textAlign: 'right', padding: '0.85rem 0.6rem', color: filteredInvoicesTotals.totalSaldoPendiente > 0 ? 'var(--color-danger-text)' : 'var(--color-success-text)', fontSize: '0.95rem' }}>
+                    {formatCurrency(filteredInvoicesTotals.totalSaldoPendiente)}
+                  </td>
+                  <td style={{ textAlign: 'center', padding: '0.85rem 0.5rem' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--color-success-text)', fontWeight: 700 }}>
+                      Cobrado: {formatCurrency(filteredInvoicesTotals.totalCobrado)}
+                    </div>
+                  </td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       )}

@@ -1507,33 +1507,52 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       (inv.fechaEmision.startsWith(mesKey) || inv.emitidaFecha?.startsWith(mesKey))
     );
 
+    // Unidades vendidas en el periodo
     const unidadesVendidasPeriodo = validInvoices.reduce((sum, inv) => {
       return sum + inv.items.reduce((iSum, item) => iSum + item.cantidad, 0);
     }, 0);
 
-    const unidadesEnInventario = products.reduce((sum, p) => sum + p.stockActual, 0);
-    const valorInventarioCostoTotal = products.reduce((sum, p) => sum + (p.stockActual * p.costoPromedio), 0);
-    const valorInventarioVentaTotal = products.reduce((sum, p) => sum + (p.stockActual * p.precioVenta), 0);
+    // Costo de ventas directo del periodo (COGS)
+    const costoVentasPeriodo = validInvoices.reduce((sum, inv) => {
+      return sum + inv.items.reduce((iSum, item) => {
+        const prod = products.find(p => p.id === item.productoId);
+        const cost = prod?.costoPromedio || (item.precioUnitario > 0 ? item.precioUnitario * 0.5 : 0);
+        return iSum + (item.cantidad * cost);
+      }, 0);
+    }, 0);
+
+    // Total facturado del periodo
+    const valorVentasPeriodo = validInvoices.reduce((sum, inv) => sum + inv.total, 0);
+
+    // Unidades e inventario final disponible
+    const unidadesEnInventario = products.reduce((sum, p) => sum + Math.max(0, p.stockActual), 0);
+    const valorInventarioCostoTotal = products.reduce((sum, p) => sum + (Math.max(0, p.stockActual) * p.costoPromedio), 0);
+    const valorInventarioVentaTotal = products.reduce((sum, p) => sum + (Math.max(0, p.stockActual) * p.precioVenta), 0);
+
+    // Volumen Total de Operación del periodo (Lo Vendido + Lo disponible en inventario)
+    const totalUnidadesPeriodo = unidadesVendidasPeriodo + unidadesEnInventario;
+    const baseCostoTotalPeriodo = costoVentasPeriodo + valorInventarioCostoTotal;
+    const baseVentaTotalPeriodo = valorVentasPeriodo + valorInventarioVentaTotal;
 
     let baseTotalProrrateo = 1;
     let tasaAbsorcionPorcentaje = 0;
 
     if (criterio === 'costo_material') {
-      // Base: Costo Directo de Materiales / Inventario Valuado
-      baseTotalProrrateo = valorInventarioCostoTotal > 0 ? valorInventarioCostoTotal : 1;
+      // Base: Costo Total de Mercancías del Periodo (Costo Vendido + Inventario en Almacén)
+      baseTotalProrrateo = baseCostoTotalPeriodo > 0 ? baseCostoTotalPeriodo : 1;
       tasaAbsorcionPorcentaje = Number(((gastoOperativoTotal / baseTotalProrrateo) * 100).toFixed(2));
     } else if (criterio === 'valor_venta') {
-      // Base: Valor Comercial / Ventas Totales
-      baseTotalProrrateo = valorInventarioVentaTotal > 0 ? valorInventarioVentaTotal : 1;
+      // Base: Valor Comercial Total del Periodo (Ventas Facturadas + Inventario a Precio Venta)
+      baseTotalProrrateo = baseVentaTotalPeriodo > 0 ? baseVentaTotalPeriodo : 1;
       tasaAbsorcionPorcentaje = Number(((gastoOperativoTotal / baseTotalProrrateo) * 100).toFixed(2));
     } else {
-      // Base: Unidades Físicas Iguales
-      const baseUnidades = unidadesVendidasPeriodo > 0 ? unidadesVendidasPeriodo : (unidadesEnInventario > 0 ? unidadesEnInventario : 1);
+      // Base: Unidades Físicas Totales del Periodo (Vendidas + En Stock)
+      const baseUnidades = totalUnidadesPeriodo > 0 ? totalUnidadesPeriodo : 1;
       baseTotalProrrateo = baseUnidades;
       tasaAbsorcionPorcentaje = Number((gastoOperativoTotal / baseUnidades).toFixed(2));
     }
 
-    const divisorUnidades = unidadesVendidasPeriodo > 0 ? unidadesVendidasPeriodo : (unidadesEnInventario > 0 ? unidadesEnInventario : 1);
+    const divisorUnidades = totalUnidadesPeriodo > 0 ? totalUnidadesPeriodo : 1;
     const costoOperativoProrrateadoPorUnidad = Number((gastoOperativoTotal / divisorUnidades).toFixed(2));
 
     return {
@@ -1544,6 +1563,9 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       gastoOperativoTotal,
       unidadesVendidasPeriodo,
       unidadesEnInventario,
+      totalUnidadesPeriodo,
+      costoVentasPeriodo,
+      valorVentasPeriodo,
       valorInventarioCostoTotal,
       valorInventarioVentaTotal,
       baseTotalProrrateo,
@@ -1559,23 +1581,39 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const precioVenta = product?.precioVenta || 0;
     const prorrateo = getProrrateoMensual(mesKey, overrideCriterio);
 
-    let costoOperativoProrrateado = 0;
+    const gastosFijosYVar = prorrateo.gastosFijos + prorrateo.gastosVariables;
+    const gastosDepr = prorrateo.depreciacionActivos;
+    const base = prorrateo.baseTotalProrrateo > 0 ? prorrateo.baseTotalProrrateo : 1;
+
+    let gastoOperativoUnitario = 0;
+    let gastoDepreciacionUnitario = 0;
 
     if (prorrateo.criterio === 'costo_material') {
-      // Proporcional al costo de compra directo (material): Tasa % x Costo Directo
-      costoOperativoProrrateado = Number((costoCompra * (prorrateo.tasaAbsorcionPorcentaje / 100)).toFixed(2));
+      // Proporcional al costo de compra directo
+      const tasaOp = (gastosFijosYVar / base);
+      const tasaDep = (gastosDepr / base);
+      gastoOperativoUnitario = Number((costoCompra * tasaOp).toFixed(2));
+      gastoDepreciacionUnitario = Number((costoCompra * tasaDep).toFixed(2));
     } else if (prorrateo.criterio === 'valor_venta') {
       // Proporcional al precio de venta
-      costoOperativoProrrateado = Number((precioVenta * (prorrateo.tasaAbsorcionPorcentaje / 100)).toFixed(2));
+      const tasaOp = (gastosFijosYVar / base);
+      const tasaDep = (gastosDepr / base);
+      gastoOperativoUnitario = Number((precioVenta * tasaOp).toFixed(2));
+      gastoDepreciacionUnitario = Number((precioVenta * tasaDep).toFixed(2));
     } else {
       // Por partes iguales
-      costoOperativoProrrateado = prorrateo.costoOperativoProrrateadoPorUnidad;
+      const totalU = prorrateo.totalUnidadesPeriodo > 0 ? prorrateo.totalUnidadesPeriodo : 1;
+      gastoOperativoUnitario = Number((gastosFijosYVar / totalU).toFixed(2));
+      gastoDepreciacionUnitario = Number((gastosDepr / totalU).toFixed(2));
     }
 
+    const costoOperativoProrrateado = Number((gastoOperativoUnitario + gastoDepreciacionUnitario).toFixed(2));
     const costoReal = Number((costoCompra + costoOperativoProrrateado).toFixed(2));
 
     return {
       costoCompra,
+      gastoOperativoUnitario,
+      gastoDepreciacionUnitario,
       costoOperativoProrrateado,
       costoReal,
       tasaAbsorcionPorcentaje: prorrateo.tasaAbsorcionPorcentaje,
