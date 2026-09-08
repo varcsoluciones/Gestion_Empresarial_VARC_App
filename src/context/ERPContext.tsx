@@ -453,8 +453,121 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     } : p));
   };
 
+  // Core Reconciliation Engine:
+  // Reconstructs products' stockActual, variant stocks, costoPromedio, AND every movement's stockResultante chronologically
+  const computeReconciliation = (
+    allProducts: Product[],
+    allMovements: InventoryMovement[]
+  ): { reconciledProducts: Product[]; reconciledMovements: InventoryMovement[]; hasChanges: boolean } => {
+    const movementStockResultMap = new Map<string, number>();
+    let hasChanges = false;
+
+    const reconciledProducts = allProducts.map(product => {
+      const proMovements = allMovements
+        .filter(m => m.productoId === product.id)
+        .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+
+      if (proMovements.length === 0) {
+        return product;
+      }
+
+      let runningStock = 0;
+      let runningCost = 0;
+      const variantStocks: Record<string, number> = {};
+
+      if (product.variantes) {
+        product.variantes.forEach(v => {
+          variantStocks[v.id] = 0;
+        });
+      }
+
+      for (const m of proMovements) {
+        const qty = Number(m.cantidad) || 0;
+        const cost = Number(m.costoUnitario) || 0;
+
+        if (m.tipo === 'ENTRADA_COMPRA') {
+          const posQty = Math.abs(qty);
+          runningCost = calculateWeightedAverageCost(runningStock, runningCost, posQty, cost);
+          runningStock += posQty;
+          if (m.varianteId) {
+            variantStocks[m.varianteId] = (variantStocks[m.varianteId] || 0) + posQty;
+          }
+        } else if (m.tipo === 'SALIDA_VENTA') {
+          const outQty = Math.abs(qty);
+          runningStock = Math.max(0, runningStock - outQty);
+          if (m.varianteId) {
+            variantStocks[m.varianteId] = Math.max(0, (variantStocks[m.varianteId] || 0) - outQty);
+          }
+        } else if (m.tipo === 'AJUSTE_MANUAL') {
+          runningStock = Math.max(0, runningStock + qty);
+          if (m.varianteId) {
+            variantStocks[m.varianteId] = Math.max(0, (variantStocks[m.varianteId] || 0) + qty);
+          }
+        } else if (m.tipo === 'ANULACION_COMPRA') {
+          const cancQty = Math.abs(qty);
+          const currentVal = Math.max(0, runningStock * runningCost);
+          const cancelledVal = cancQty * cost;
+          const remainingVal = Math.max(0, currentVal - cancelledVal);
+          runningStock = Math.max(0, runningStock - cancQty);
+          runningCost = runningStock > 0 ? Number((remainingVal / runningStock).toFixed(2)) : 0;
+          if (m.varianteId) {
+            variantStocks[m.varianteId] = Math.max(0, (variantStocks[m.varianteId] || 0) - cancQty);
+          }
+        } else if (m.tipo === 'ANULACION_VENTA') {
+          const reenterQty = Math.abs(qty);
+          runningStock += reenterQty;
+          if (m.varianteId) {
+            variantStocks[m.varianteId] = (variantStocks[m.varianteId] || 0) + reenterQty;
+          }
+        }
+
+        const resultantForLog = (m.varianteId && variantStocks[m.varianteId] !== undefined)
+          ? variantStocks[m.varianteId]
+          : runningStock;
+
+        movementStockResultMap.set(m.id, resultantForLog);
+      }
+
+      let updatedVariants = product.variantes;
+      let finalStock = runningStock;
+
+      if (product.tieneVariantes && product.variantes && product.variantes.length > 0) {
+        updatedVariants = product.variantes.map(v => ({
+          ...v,
+          stockActual: variantStocks[v.id] ?? 0
+        }));
+        finalStock = updatedVariants.reduce((sum, v) => sum + (v.stockActual || 0), 0);
+      }
+
+      if (finalStock !== product.stockActual || runningCost !== product.costoPromedio) {
+        hasChanges = true;
+        return {
+          ...product,
+          stockActual: finalStock,
+          costoPromedio: runningCost,
+          variantes: updatedVariants
+        };
+      }
+
+      return product;
+    });
+
+    const reconciledMovements = allMovements.map(m => {
+      if (movementStockResultMap.has(m.id)) {
+        const correctResult = movementStockResultMap.get(m.id)!;
+        if (m.stockResultante !== correctResult) {
+          hasChanges = true;
+          return { ...m, stockResultante: correctResult };
+        }
+      }
+      return m;
+    });
+
+    return { reconciledProducts, reconciledMovements, hasChanges };
+  };
+
   // Self-healing & Retroactive Kardex Reconciliation on startup:
-  // Reconciles all products' stockActual, variant stocks, and weighted average cost directly from Kardex movements
+  // Reconciles all products' stockActual, variant stocks, weighted average cost AND all movements' stockResultante
   useEffect(() => {
     const movementsToAdd: InventoryMovement[] = [];
 
@@ -505,99 +618,13 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
     });
 
-    if (movementsToAdd.length > 0) {
-      setInventoryMovements(prev => [...movementsToAdd, ...prev]);
+    const baseMovements = movementsToAdd.length > 0 ? [...movementsToAdd, ...inventoryMovements] : inventoryMovements;
+    const { reconciledProducts, reconciledMovements, hasChanges } = computeReconciliation(products, baseMovements);
+
+    if (hasChanges || movementsToAdd.length > 0) {
+      setProducts(reconciledProducts);
+      setInventoryMovements(reconciledMovements);
     }
-
-    // 3. Retroactively reconcile all products from the complete Kardex movements history
-    const allMovements = movementsToAdd.length > 0 ? [...movementsToAdd, ...inventoryMovements] : inventoryMovements;
-
-    setProducts(prevProducts => {
-      let changed = false;
-      const updated = prevProducts.map(product => {
-        const proMovements = allMovements
-          .filter(m => m.productoId === product.id)
-          .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
-
-        if (proMovements.length === 0) return product;
-
-        let runningStock = 0;
-        let runningCost = 0;
-        const variantStocks: Record<string, number> = {};
-
-        if (product.variantes) {
-          product.variantes.forEach(v => {
-            variantStocks[v.id] = 0;
-          });
-        }
-
-        for (const m of proMovements) {
-          const qty = Number(m.cantidad) || 0;
-          const cost = Number(m.costoUnitario) || 0;
-
-          if (m.tipo === 'ENTRADA_COMPRA') {
-            const posQty = Math.abs(qty);
-            runningCost = calculateWeightedAverageCost(runningStock, runningCost, posQty, cost);
-            runningStock += posQty;
-            if (m.varianteId) {
-              variantStocks[m.varianteId] = (variantStocks[m.varianteId] || 0) + posQty;
-            }
-          } else if (m.tipo === 'SALIDA_VENTA') {
-            const outQty = Math.abs(qty);
-            runningStock = Math.max(0, runningStock - outQty);
-            if (m.varianteId) {
-              variantStocks[m.varianteId] = Math.max(0, (variantStocks[m.varianteId] || 0) - outQty);
-            }
-          } else if (m.tipo === 'AJUSTE_MANUAL') {
-            runningStock = Math.max(0, runningStock + qty);
-            if (m.varianteId) {
-              variantStocks[m.varianteId] = Math.max(0, (variantStocks[m.varianteId] || 0) + qty);
-            }
-          } else if (m.tipo === 'ANULACION_COMPRA') {
-            const cancQty = Math.abs(qty);
-            const currentVal = Math.max(0, runningStock * runningCost);
-            const cancelledVal = cancQty * cost;
-            const remainingVal = Math.max(0, currentVal - cancelledVal);
-            runningStock = Math.max(0, runningStock - cancQty);
-            runningCost = runningStock > 0 ? Number((remainingVal / runningStock).toFixed(2)) : 0;
-            if (m.varianteId) {
-              variantStocks[m.varianteId] = Math.max(0, (variantStocks[m.varianteId] || 0) - cancQty);
-            }
-          } else if (m.tipo === 'ANULACION_VENTA') {
-            const reenterQty = Math.abs(qty);
-            runningStock += reenterQty;
-            if (m.varianteId) {
-              variantStocks[m.varianteId] = (variantStocks[m.varianteId] || 0) + reenterQty;
-            }
-          }
-        }
-
-        let updatedVariants = product.variantes;
-        let finalStock = runningStock;
-
-        if (product.tieneVariantes && product.variantes && product.variantes.length > 0) {
-          updatedVariants = product.variantes.map(v => ({
-            ...v,
-            stockActual: variantStocks[v.id] ?? 0
-          }));
-          finalStock = updatedVariants.reduce((sum, v) => sum + (v.stockActual || 0), 0);
-        }
-
-        if (finalStock !== product.stockActual || runningCost !== product.costoPromedio) {
-          changed = true;
-          return {
-            ...product,
-            stockActual: finalStock,
-            costoPromedio: runningCost,
-            variantes: updatedVariants
-          };
-        }
-
-        return product;
-      });
-
-      return changed ? updated : prevProducts;
-    });
   }, []);
 
   const cancelPurchase = (purchaseId: string, motivo: string) => {
@@ -1194,84 +1221,9 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const recalculateInventoryFromKardex = () => {
-    setProducts(prevProducts => {
-      return prevProducts.map(product => {
-        const proMovements = inventoryMovements
-          .filter(m => m.productoId === product.id)
-          .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
-
-        if (proMovements.length === 0) return product;
-
-        let runningStock = 0;
-        let runningCost = 0;
-        const variantStocks: Record<string, number> = {};
-
-        if (product.variantes) {
-          product.variantes.forEach(v => {
-            variantStocks[v.id] = 0;
-          });
-        }
-
-        for (const m of proMovements) {
-          const qty = Number(m.cantidad) || 0;
-          const cost = Number(m.costoUnitario) || 0;
-
-          if (m.tipo === 'ENTRADA_COMPRA') {
-            const posQty = Math.abs(qty);
-            runningCost = calculateWeightedAverageCost(runningStock, runningCost, posQty, cost);
-            runningStock += posQty;
-            if (m.varianteId) {
-              variantStocks[m.varianteId] = (variantStocks[m.varianteId] || 0) + posQty;
-            }
-          } else if (m.tipo === 'SALIDA_VENTA') {
-            const outQty = Math.abs(qty);
-            runningStock = Math.max(0, runningStock - outQty);
-            if (m.varianteId) {
-              variantStocks[m.varianteId] = Math.max(0, (variantStocks[m.varianteId] || 0) - outQty);
-            }
-          } else if (m.tipo === 'AJUSTE_MANUAL') {
-            runningStock = Math.max(0, runningStock + qty);
-            if (m.varianteId) {
-              variantStocks[m.varianteId] = Math.max(0, (variantStocks[m.varianteId] || 0) + qty);
-            }
-          } else if (m.tipo === 'ANULACION_COMPRA') {
-            const cancQty = Math.abs(qty);
-            const currentVal = Math.max(0, runningStock * runningCost);
-            const cancelledVal = cancQty * cost;
-            const remainingVal = Math.max(0, currentVal - cancelledVal);
-            runningStock = Math.max(0, runningStock - cancQty);
-            runningCost = runningStock > 0 ? Number((remainingVal / runningStock).toFixed(2)) : 0;
-            if (m.varianteId) {
-              variantStocks[m.varianteId] = Math.max(0, (variantStocks[m.varianteId] || 0) - cancQty);
-            }
-          } else if (m.tipo === 'ANULACION_VENTA') {
-            const reenterQty = Math.abs(qty);
-            runningStock += reenterQty;
-            if (m.varianteId) {
-              variantStocks[m.varianteId] = (variantStocks[m.varianteId] || 0) + reenterQty;
-            }
-          }
-        }
-
-        let updatedVariants = product.variantes;
-        let finalStock = runningStock;
-
-        if (product.tieneVariantes && product.variantes && product.variantes.length > 0) {
-          updatedVariants = product.variantes.map(v => ({
-            ...v,
-            stockActual: variantStocks[v.id] ?? 0
-          }));
-          finalStock = updatedVariants.reduce((sum, v) => sum + (v.stockActual || 0), 0);
-        }
-
-        return {
-          ...product,
-          stockActual: finalStock,
-          costoPromedio: runningCost,
-          variantes: updatedVariants
-        };
-      });
-    });
+    const { reconciledProducts, reconciledMovements } = computeReconciliation(products, inventoryMovements);
+    setProducts(reconciledProducts);
+    setInventoryMovements(reconciledMovements);
   };
 
   // Actions: Contabilidad (Gastos y Activos Fijos)
