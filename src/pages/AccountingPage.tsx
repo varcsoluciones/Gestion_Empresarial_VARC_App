@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useERP } from '../context/ERPContext';
-import type { ExpenseType } from '../types/erp';
+import type { ExpenseType, OperatingExpense } from '../types/erp';
 import { formatCurrency, formatDate, getMonthKey } from '../utils/formatters';
 import { useTranslation } from '../i18n/useTranslation';
 import {
@@ -14,9 +14,9 @@ import {
   Layers,
   Sparkles,
   ShieldCheck,
-  Info,
   SlidersHorizontal,
-  DollarSign
+  DollarSign,
+  AlertTriangle
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
@@ -50,6 +50,9 @@ export const AccountingPage: React.FC = () => {
   const [expMonto, setExpMonto] = useState<number | ''>('');
   const [expDesc, setExpDesc] = useState('');
 
+  // Expense Cancellation / Reversal Warning Modal State
+  const [expenseToCancel, setExpenseToCancel] = useState<OperatingExpense | null>(null);
+
   // New Asset Modal State
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
   const [astNombre, setAstNombre] = useState('');
@@ -79,6 +82,13 @@ export const AccountingPage: React.FC = () => {
     setIsExpenseModalOpen(false);
     setExpMonto('');
     setExpDesc('');
+  };
+
+  const handleConfirmCancelExpense = () => {
+    if (expenseToCancel) {
+      deleteExpense(expenseToCancel.id);
+      setExpenseToCancel(null);
+    }
   };
 
   const handleSaveAsset = (e: React.FormEvent) => {
@@ -116,14 +126,51 @@ export const AccountingPage: React.FC = () => {
         </div>
 
         <div className="page-actions">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: 'var(--bg-surface)', padding: '0.35rem 0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              backgroundColor: 'var(--bg-surface)',
+              padding: '0.35rem 0.75rem',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--border-default)',
+              cursor: 'pointer',
+              userSelect: 'none'
+            }}
+            onClick={(e) => {
+              const input = e.currentTarget.querySelector('input');
+              if (input) {
+                if ('showPicker' in input && typeof (input as any).showPicker === 'function') {
+                  try {
+                    (input as any).showPicker();
+                  } catch {
+                    input.focus();
+                  }
+                } else {
+                  input.focus();
+                }
+              }
+            }}
+            title="Haz clic para seleccionar el periodo contable"
+          >
             <Calendar size={15} style={{ color: 'var(--text-muted)' }} />
             <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>Periodo:</span>
             <input
               type="month"
-              style={{ border: 'none', background: 'none', color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', fontSize: '0.85rem', fontWeight: 600, outline: 'none' }}
+              style={{
+                border: 'none',
+                background: 'none',
+                color: 'var(--text-primary)',
+                fontFamily: 'var(--font-sans)',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                outline: 'none',
+                cursor: 'pointer'
+              }}
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
             />
           </div>
 
@@ -248,67 +295,73 @@ export const AccountingPage: React.FC = () => {
                   <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>
                     {t.accounting.activeRuleTitle}
                   </h3>
-                  <p style={{ fontSize: '0.775rem', color: 'var(--text-muted)', margin: 0 }}>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
                     {t.accounting.activeRuleNote}
                   </p>
                 </div>
               </div>
 
-              {/* Active Criterion Status Pill (Informative, non-clickable) */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span className="badge badge-accent" style={{ fontSize: '0.825rem', padding: '0.4rem 0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <ShieldCheck size={14} />
+                <span className="badge badge-primary" style={{ padding: '0.35rem 0.75rem', fontSize: '0.825rem' }}>
+                  <ShieldCheck size={14} style={{ marginRight: '4px' }} />
                   {activeCriterio === 'costo_material' && t.accounting.ruleMaterialName}
                   {activeCriterio === 'valor_venta' && t.accounting.rulePriceName}
                   {activeCriterio === 'unidades_iguales' && t.accounting.ruleUnitsName}
-                  {' '}(Activo)
                 </span>
               </div>
             </div>
 
-            {/* Explanatory Banner */}
             <div style={{
-              padding: '0.85rem 1rem',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+              gap: '1rem',
+              backgroundColor: 'var(--bg-subtle)',
+              padding: '1rem',
               borderRadius: 'var(--radius-md)',
-              backgroundColor: 'var(--color-accent-subtle)',
-              border: '1px solid var(--color-accent)',
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '0.75rem',
-              fontSize: '0.825rem',
-              lineHeight: 1.45
+              border: '1px solid var(--border-default)',
+              fontSize: '0.85rem'
             }}>
-              <Info size={18} style={{ color: 'var(--color-accent)', flexShrink: 0, marginTop: '2px' }} />
               <div>
-                {activeCriterio === 'costo_material' && (
-                  <>
-                    <strong style={{ color: 'var(--color-accent)' }}>{t.accounting.ruleMaterialName}: </strong>
-                    {t.accounting.ruleMaterialExplanation} (Base inventario valuado: {formatCurrency(prorrateo.valorInventarioCostoTotal)} — Tasa de absorción: <strong>+{prorrateo.tasaAbsorcionPorcentaje}%</strong>).
-                  </>
-                )}
-                {activeCriterio === 'valor_venta' && (
-                  <>
-                    <strong style={{ color: 'var(--color-accent)' }}>{t.accounting.rulePriceName}: </strong>
-                    {t.accounting.rulePriceExplanation} (Tasa absorción s/ venta: <strong>+{prorrateo.tasaAbsorcionPorcentaje}%</strong>).
-                  </>
-                )}
-                {activeCriterio === 'unidades_iguales' && (
-                  <>
-                    <strong style={{ color: 'var(--color-warning)' }}>{t.accounting.ruleUnitsName}: </strong>
-                    {t.accounting.ruleUnitsExplanation} (Carga fija asignada: <strong>{formatCurrency(prorrateo.costoOperativoProrrateadoPorUnidad)}</strong> por unidad).
-                  </>
-                )}
+                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.775rem' }}>Base Contable del Mes</span>
+                <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
+                  {formatCurrency(prorrateo.baseTotalProrrateo)}
+                </span>
+                <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '2px' }}>
+                  {activeCriterio === 'costo_material' ? 'Valoración de inventario a costo de compra' : activeCriterio === 'valor_venta' ? 'Valoración total a precio venta' : 'Unidades en inventario'}
+                </span>
+              </div>
+
+              <div>
+                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.775rem' }}>{t.accounting.absorptionRate}</span>
+                <span style={{ fontWeight: 700, color: 'var(--color-accent)', fontSize: '0.95rem' }}>
+                  {activeCriterio === 'unidades_iguales'
+                    ? `${formatCurrency(prorrateo.costoOperativoProrrateadoPorUnidad)} / unidad`
+                    : `+${prorrateo.tasaAbsorcionPorcentaje}%`}
+                </span>
+                <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '2px' }}>
+                  Carga por cada peso o unidad de inventario
+                </span>
+              </div>
+
+              <div>
+                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.775rem' }}>Modificación de Criterio</span>
+                <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  Configuración institucional
+                </span>
+                <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '2px' }}>
+                  Para ajustar el criterio, dirígete a <strong style={{ color: 'var(--color-accent)' }}>Configuración &gt; Prorrateo</strong>.
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Real Cost Comparison Table */}
+          {/* Matrix Table */}
           <div className="card">
             <div className="card-header">
               <div>
-                <h2 className="card-title">Análisis de Costo Real con Absorción Operativa</h2>
+                <h2 className="card-title">Matriz de Costeo Total Absorbido por Producto</h2>
                 <p className="card-subtitle">
-                  Fórmula Activa: <strong>Costo Real = Costo de Compra + Gasto Operativo Absorbido ({activeCriterio === 'costo_material' ? `+${prorrateo.tasaAbsorcionPorcentaje}% del material` : activeCriterio === 'valor_venta' ? `+${prorrateo.tasaAbsorcionPorcentaje}% del PVP` : `${formatCurrency(prorrateo.costoOperativoProrrateadoPorUnidad)} fijo`})</strong>
+                  Comparativa de Costo de Compra Directo vs. Costo Real Final (absorbiendo {formatCurrency(prorrateo.gastoOperativoTotal)} de gastos)
                 </p>
               </div>
             </div>
@@ -317,35 +370,27 @@ export const AccountingPage: React.FC = () => {
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Código / SKU</th>
-                    <th>Producto & Existencias</th>
+                    <th>Código</th>
+                    <th>Producto</th>
                     <th style={{ textAlign: 'right' }}>Precio Venta</th>
-                    <th style={{ textAlign: 'right' }}>1. Costo Compra Directo</th>
+                    <th style={{ textAlign: 'right' }}>1. Costo Compra (Directo)</th>
                     <th style={{ textAlign: 'center' }}>% Absorción</th>
                     <th style={{ textAlign: 'right' }}>2. Gasto Operativo Absorbido</th>
-                    <th style={{ textAlign: 'right', backgroundColor: 'var(--bg-subtle)' }}>3. Costo Real Total</th>
-                    <th style={{ textAlign: 'center' }}>Margen Bruto</th>
-                    <th style={{ textAlign: 'center', backgroundColor: 'var(--bg-subtle)' }}>Margen Real</th>
+                    <th style={{ textAlign: 'right', fontWeight: 800 }}>3. Costo Real Total</th>
+                    <th style={{ textAlign: 'center' }}>Margen Bruto %</th>
+                    <th style={{ textAlign: 'center' }}>Margen Real %</th>
                   </tr>
                 </thead>
                 <tbody>
                   {products.map(p => {
-                    const costs = getProductRealCost(p.id, selectedMonth, activeCriterio);
-                    const grossMarginPercent = p.precioVenta > 0
-                      ? Number((((p.precioVenta - costs.costoCompra) / p.precioVenta) * 100).toFixed(1))
-                      : 0;
-
-                    const realMarginPercent = p.precioVenta > 0
-                      ? Number((((p.precioVenta - costs.costoReal) / p.precioVenta) * 100).toFixed(1))
-                      : 0;
+                    const costs = getProductRealCost(p.id, selectedMonth);
+                    const grossMarginPercent = p.precioVenta > 0 ? (((p.precioVenta - costs.costoCompra) / p.precioVenta) * 100).toFixed(1) : 0;
+                    const realMarginPercent = p.precioVenta > 0 ? (((p.precioVenta - costs.costoReal) / p.precioVenta) * 100).toFixed(1) : 0;
 
                     return (
                       <tr key={p.id}>
                         <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{p.codigo}</td>
-                        <td>
-                          <div style={{ fontWeight: 600 }}>{p.nombre}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Stock: {p.stockActual} {p.unidadMedida}</div>
-                        </td>
+                        <td style={{ fontWeight: 600 }}>{p.nombre}</td>
                         <td style={{ textAlign: 'right', fontWeight: 700 }}>
                           {formatCurrency(p.precioVenta)}
                         </td>
@@ -365,7 +410,7 @@ export const AccountingPage: React.FC = () => {
                           <span className="badge badge-success">{grossMarginPercent}%</span>
                         </td>
                         <td style={{ textAlign: 'center', backgroundColor: 'var(--bg-subtle)' }}>
-                          <span className={`badge ${realMarginPercent >= 30 ? 'badge-success' : realMarginPercent > 0 ? 'badge-warning' : 'badge-danger'}`}>
+                          <span className={`badge ${Number(realMarginPercent) >= 30 ? 'badge-success' : Number(realMarginPercent) > 0 ? 'badge-warning' : 'badge-danger'}`}>
                             {realMarginPercent}%
                           </span>
                         </td>
@@ -378,7 +423,6 @@ export const AccountingPage: React.FC = () => {
           </div>
         </div>
       )}
-
 
       {/* Tab 2: Expenses List Table */}
       {activeTab === 'expenses' && (
@@ -463,7 +507,7 @@ export const AccountingPage: React.FC = () => {
                               type="button"
                               className="btn-icon btn-sm"
                               style={{ color: 'var(--color-danger)' }}
-                              onClick={() => deleteExpense(exp.id)}
+                              onClick={() => setExpenseToCancel(exp)}
                               title="Anular gasto (Genera movimiento copia con signo contrario y sufijo A)"
                             >
                               <Trash2 size={14} />
@@ -480,13 +524,13 @@ export const AccountingPage: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 3: Fixed Assets & Depreciation */}
+      {/* Tab 3: Fixed Assets & Depreciation with Progress Bar */}
       {activeTab === 'assets' && (
         <div className="card">
           <div className="card-header">
             <div>
               <h2 className="card-title">Inventario de Activos Fijos & Depreciación Lineal</h2>
-              <p className="card-subtitle">Cálculo de alícuota mensual para absorción en gastos operativos</p>
+              <p className="card-subtitle">Cálculo de alícuota mensual y barra de avance de depreciación acumulada</p>
             </div>
             <button type="button" className="btn btn-primary btn-sm" onClick={() => setIsAssetModalOpen(true)}>
               <Plus size={16} />
@@ -504,6 +548,7 @@ export const AccountingPage: React.FC = () => {
                   <th>Adquisición</th>
                   <th style={{ textAlign: 'right' }}>Valor Adquisición</th>
                   <th style={{ textAlign: 'center' }}>Vida Útil</th>
+                  <th style={{ minWidth: '160px' }}>Avance Depreciado</th>
                   <th style={{ textAlign: 'right' }}>Depreciación Mensual</th>
                   <th style={{ textAlign: 'right' }}>Depr. Acumulada</th>
                   <th style={{ textAlign: 'right' }}>Valor en Libros</th>
@@ -511,40 +556,171 @@ export const AccountingPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {fixedAssets.map(ast => (
-                  <tr key={ast.id}>
-                    <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-accent)' }}>
-                      {ast.id}
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 600 }}>{ast.nombre}</div>
-                      {ast.notas && <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{ast.notas}</div>}
-                    </td>
-                    <td>{ast.categoriaActivo}</td>
-                    <td>{formatDate(ast.fechaAdquisicion)}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(ast.valorAdquisicion)}</td>
-                    <td style={{ textAlign: 'center' }}>{ast.vidaUtilMeses} meses</td>
-                    <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-accent)' }}>
-                      {formatCurrency(ast.depreciacionMensual)}/mes
-                    </td>
-                    <td style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>
-                      {formatCurrency(ast.depreciacionAcumulada)}
-                    </td>
-                    <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-success-text)' }}>
-                      {formatCurrency(ast.valorEnLibros)}
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      <Badge variant={ast.activoEstado === 'activo' ? 'success' : 'neutral'}>
-                        {ast.activoEstado.toUpperCase()}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
+                {fixedAssets.map(ast => {
+                  const elapsedMonths = Math.min(
+                    ast.vidaUtilMeses,
+                    ast.depreciacionMensual > 0
+                      ? Math.round(ast.depreciacionAcumulada / ast.depreciacionMensual)
+                      : 0
+                  );
+                  const percentDepreciated = Math.min(
+                    100,
+                    ast.valorAdquisicion > 0
+                      ? Math.round((ast.depreciacionAcumulada / ast.valorAdquisicion) * 100)
+                      : 0
+                  );
+
+                  return (
+                    <tr key={ast.id}>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-accent)' }}>
+                        {ast.id}
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: 600 }}>{ast.nombre}</div>
+                        {ast.notas && <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{ast.notas}</div>}
+                      </td>
+                      <td>{ast.categoriaActivo}</td>
+                      <td>{formatDate(ast.fechaAdquisicion)}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(ast.valorAdquisicion)}</td>
+                      <td style={{ textAlign: 'center' }}>{ast.vidaUtilMeses} meses</td>
+                      <td style={{ minWidth: '160px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', marginBottom: '4px' }}>
+                          <span style={{ fontWeight: 700, color: percentDepreciated >= 100 ? 'var(--color-success-text)' : 'var(--text-primary)' }}>
+                            {percentDepreciated}%
+                          </span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.725rem' }}>
+                            {elapsedMonths} de {ast.vidaUtilMeses} meses
+                          </span>
+                        </div>
+                        <div style={{
+                          width: '100%',
+                          height: '6px',
+                          backgroundColor: 'var(--bg-subtle)',
+                          borderRadius: '4px',
+                          overflow: 'hidden',
+                          border: '1px solid var(--border-default)'
+                        }}>
+                          <div style={{
+                            width: `${percentDepreciated}%`,
+                            height: '100%',
+                            backgroundColor: percentDepreciated >= 100 ? 'var(--color-success)' : percentDepreciated >= 75 ? 'var(--color-warning)' : 'var(--color-accent)',
+                            borderRadius: '4px',
+                            transition: 'width 0.3s ease'
+                          }} />
+                        </div>
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-accent)' }}>
+                        {formatCurrency(ast.depreciacionMensual)}/mes
+                      </td>
+                      <td style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>
+                        {formatCurrency(ast.depreciacionAcumulada)}
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-success-text)' }}>
+                        {formatCurrency(ast.valorEnLibros)}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <Badge variant={ast.activoEstado === 'activo' ? 'success' : 'neutral'}>
+                          {ast.activoEstado.toUpperCase()}
+                        </Badge>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
       )}
+
+      {/* Expense Reversal Confirmation Modal */}
+      <Modal
+        isOpen={!!expenseToCancel}
+        onClose={() => setExpenseToCancel(null)}
+        title="Confirmar Anulación de Gasto Operativo"
+        subtitle="Generación de partida contable compensatoria (contra-asiento)"
+        size="md"
+        footer={
+          <>
+            <button type="button" className="btn btn-secondary" onClick={() => setExpenseToCancel(null)}>
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="btn btn-danger"
+              onClick={handleConfirmCancelExpense}
+            >
+              Confirmar Anulación
+            </button>
+          </>
+        }
+      >
+        {expenseToCancel && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '0.75rem',
+              padding: '1rem',
+              backgroundColor: 'var(--color-warning-bg)',
+              border: '1px solid var(--color-warning)',
+              borderRadius: 'var(--radius-md)',
+              color: 'var(--color-warning-text)'
+            }}>
+              <AlertTriangle size={24} style={{ flexShrink: 0, marginTop: '2px' }} />
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.25rem' }}>
+                  ¿Deseas aplicar la anulación automática de este gasto?
+                </div>
+                <div style={{ fontSize: '0.85rem', lineHeight: 1.4 }}>
+                  Por normativa de auditoría y trazabilidad contable, este gasto no se eliminará físicamente. En su lugar, el sistema generará automáticamente un <strong>contra-movimiento con signo negativo</strong> para anular su impacto financiero en el periodo <strong>{expenseToCancel.periodoMes}</strong>.
+                </div>
+              </div>
+            </div>
+
+            <div style={{
+              backgroundColor: 'var(--bg-subtle)',
+              padding: '1rem',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--border-default)',
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '0.75rem',
+              fontSize: '0.875rem'
+            }}>
+              <div>
+                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem' }}>ID Contable Original</span>
+                <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--color-accent)' }}>
+                  {expenseToCancel.codigoContable || expenseToCancel.id}
+                </span>
+              </div>
+              <div>
+                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem' }}>ID Contramovimiento (Anulación)</span>
+                <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--color-danger)' }}>
+                  {expenseToCancel.codigoContable ? `${expenseToCancel.codigoContable}A` : `${expenseToCancel.id}-A`}
+                </span>
+              </div>
+              <div>
+                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem' }}>Monto a Compensar</span>
+                <span style={{ fontWeight: 700, color: 'var(--color-danger)' }}>
+                  -{formatCurrency(expenseToCancel.monto)}
+                </span>
+              </div>
+              <div>
+                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem' }}>Categoría / Tipo</span>
+                <span style={{ fontWeight: 600 }}>
+                  {expenseToCancel.categoria} ({expenseToCancel.tipo.toUpperCase()})
+                </span>
+              </div>
+              <div style={{ gridColumn: 'span 2' }}>
+                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem' }}>Concepto</span>
+                <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
+                  {expenseToCancel.descripcion}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* New Expense Modal */}
       <Modal
