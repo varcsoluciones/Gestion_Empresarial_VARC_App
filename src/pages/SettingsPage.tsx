@@ -8,7 +8,6 @@ import {
   Sun,
   Moon,
   Building,
-  RotateCcw,
   Save,
   Check,
   Download,
@@ -26,6 +25,7 @@ import {
 import { Modal } from '../components/common/Modal';
 import { formatDate } from '../utils/formatters';
 import { validateAndParseBackupJSON, type FullERPData } from '../utils/backupExportUtils';
+import { APP_NAME, APP_BRAND, APP_VERSION } from '../config/version';
 
 const accents: { key: AccentColor; name: string; hex: string; description: string }[] = [
   { key: 'blue', name: 'Azul Cupertino', hex: '#007aff', description: 'System Blue icónico y elegante' },
@@ -43,7 +43,6 @@ export const SettingsPage: React.FC = () => {
   const {
     settings,
     updateSettings,
-    resetToDemoData,
     exportBackupJSON,
     exportExcel,
     restoreERPData,
@@ -69,7 +68,6 @@ export const SettingsPage: React.FC = () => {
   });
 
   const [isSaved, setIsSaved] = useState(false);
-  const [resetConfirm, setResetConfirm] = useState(false);
 
   // Backup & Restore State
   const [importError, setImportError] = useState<string | null>(null);
@@ -109,11 +107,6 @@ export const SettingsPage: React.FC = () => {
       idioma: langCode
     }));
     updateSettings({ idioma: langCode });
-  };
-
-  const handleResetData = () => {
-    resetToDemoData();
-    setResetConfirm(false);
   };
 
   const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -775,52 +768,28 @@ export const SettingsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 4. Demo Data Reset */}
-        <div className="card" style={{ borderColor: 'var(--color-warning-border)' }}>
-          <div className="card-header">
-            <div>
-              <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-warning-text)' }}>
-                <RotateCcw size={18} />
-                Gestión de Datos & Reset de Demostración
-              </h2>
-              <p className="card-subtitle">Recarga el catálogo modelo de tienda de ropa para pruebas</p>
-            </div>
+        {/* System Version & Information Footer */}
+        <div style={{
+          marginTop: '0.5rem',
+          padding: '1.5rem',
+          borderRadius: 'var(--radius-lg)',
+          backgroundColor: 'var(--bg-subtle)',
+          border: '1px solid var(--border-default)',
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '0.35rem'
+        }}>
+          <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+            {APP_NAME} — {APP_BRAND} <span style={{ color: 'var(--color-accent)' }}>v{APP_VERSION}</span>
           </div>
-
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-            Si deseas reiniciar el sistema a su estado inicial de demostración (con las playeras, jeans, sudaderas, compras recibidas, facturas, gastos y activos fijos del caso de estudio), haz clic en el siguiente botón:
-          </p>
-
-          {!resetConfirm ? (
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => setResetConfirm(true)}
-            >
-              <RotateCcw size={15} />
-              Cargar Datos Iniciales de Demostración (Tienda de Ropa)
-            </button>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', backgroundColor: 'var(--color-danger-bg)', borderRadius: 'var(--radius-md)' }}>
-              <span style={{ fontSize: '0.85rem', color: 'var(--color-danger-text)', fontWeight: 600 }}>
-                ¿Confirmas restablecer todos los datos a la demostración inicial?
-              </span>
-              <button
-                type="button"
-                className="btn btn-danger btn-sm"
-                onClick={handleResetData}
-              >
-                Sí, Restablecer
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => setResetConfirm(false)}
-              >
-                Cancelar
-              </button>
-            </div>
-          )}
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+            Control integral de ventas, compras, inventario permanente con Kardex, contabilidad y prorrateo de costos.
+          </div>
+          <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+            Base de datos local limpia y preparada para operación | Versión de compilación: <strong>v{APP_VERSION}</strong>
+          </div>
         </div>
       </div>
 

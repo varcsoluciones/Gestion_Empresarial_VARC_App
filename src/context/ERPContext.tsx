@@ -104,10 +104,21 @@ export interface ERPContextType {
 
   // Ajustes y Configuración
   updateSettings: (newSettings: Partial<CompanySettings>) => void;
-  resetToDemoData: () => void;
 }
 
-const STORAGE_PREFIX = 'VARC_ERP_';
+const STORAGE_PREFIX = 'VARC_MODULAR_ERP_V1_';
+
+// Check and wipe legacy demo data if transitioning to clean blank workspace
+if (typeof window !== 'undefined' && localStorage.getItem('VARC_ERP_products') && !localStorage.getItem(STORAGE_PREFIX + 'initialized')) {
+  const legacyKeys = [
+    'VARC_ERP_settings', 'VARC_ERP_categories', 'VARC_ERP_clients',
+    'VARC_ERP_suppliers', 'VARC_ERP_products', 'VARC_ERP_purchases',
+    'VARC_ERP_quotes', 'VARC_ERP_invoices', 'VARC_ERP_movements',
+    'VARC_ERP_expenses', 'VARC_ERP_assets'
+  ];
+  legacyKeys.forEach(k => localStorage.removeItem(k));
+  localStorage.setItem(STORAGE_PREFIX + 'initialized', 'true');
+}
 
 const ERPContext = createContext<ERPContextType | undefined>(undefined);
 
@@ -1212,20 +1223,6 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setSettings(prev => ({ ...prev, ...newSettings }));
   };
 
-  const resetToDemoData = () => {
-    setSettings(initialSettings);
-    setCategories(initialCategories);
-    setClients(initialClients);
-    setSuppliers(initialSuppliers);
-    setProducts(initialProducts);
-    setPurchases(initialPurchases);
-    setQuotes(initialQuotes);
-    setInvoices(initialInvoices);
-    setInventoryMovements(initialInventoryMovements);
-    setExpenses(initialOperatingExpenses);
-    setFixedAssets(initialFixedAssets);
-  };
-
   return (
     <ERPContext.Provider
       value={{
@@ -1271,8 +1268,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         exportExcel,
         autoBackupToast,
         clearAutoBackupToast,
-        updateSettings,
-        resetToDemoData
+        updateSettings
       }}
     >
       {children}

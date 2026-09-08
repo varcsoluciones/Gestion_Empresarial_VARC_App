@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { useTranslation } from '../../i18n/useTranslation';
+import { APP_NAME, APP_BRAND, APP_VERSION } from '../../config/version';
 
 export type NavigationTab = 
   | 'dashboard' 
@@ -112,8 +113,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {settings.nombreEmpresa.charAt(0)}
               </div>
               <div className="brand-info">
-                <span className="brand-title">VARC ERP</span>
-                <span className="brand-subtitle">Gestión Pyme v1.0</span>
+                <span className="brand-title">{APP_NAME}</span>
+                <span className="brand-subtitle">{APP_BRAND} v{APP_VERSION}</span>
               </div>
             </div>
           )}
