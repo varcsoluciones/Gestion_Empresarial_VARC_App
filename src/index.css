@@ -124,11 +124,12 @@
 }
 [data-theme="dark"][data-accent="blue"],
 [data-theme="dark"][data-accent="sapphire"] {
-  --color-accent: #0a84ff;
-  --color-accent-hover: #007aff;
-  --color-accent-subtle: rgba(10, 132, 255, 0.16);
-  --color-accent-subtle-border: rgba(10, 132, 255, 0.35);
+  --color-accent: #007aff;
+  --color-accent-hover: #0a84ff;
+  --color-accent-subtle: rgba(0, 122, 255, 0.18);
+  --color-accent-subtle-border: rgba(0, 122, 255, 0.35);
   --color-accent-text: #64b5f6;
+  --color-accent-glow: rgba(0, 122, 255, 0.35);
 }
 
 /* 2. Azul Marino / Zafiro */
@@ -141,11 +142,12 @@
   --color-accent-glow: rgba(29, 78, 216, 0.35);
 }
 [data-theme="dark"][data-accent="navy"] {
-  --color-accent: #3b82f6;
+  --color-accent: #1d4ed8;
   --color-accent-hover: #2563eb;
-  --color-accent-subtle: rgba(59, 130, 246, 0.16);
-  --color-accent-subtle-border: rgba(59, 130, 246, 0.35);
+  --color-accent-subtle: rgba(29, 78, 216, 0.18);
+  --color-accent-subtle-border: rgba(29, 78, 216, 0.35);
   --color-accent-text: #93c5fd;
+  --color-accent-glow: rgba(29, 78, 216, 0.35);
 }
 
 /* 3. Cian Cielo */
@@ -158,11 +160,12 @@
   --color-accent-glow: rgba(2, 132, 199, 0.35);
 }
 [data-theme="dark"][data-accent="cyan"] {
-  --color-accent: #38bdf8;
+  --color-accent: #0284c7;
   --color-accent-hover: #0ea5e9;
-  --color-accent-subtle: rgba(56, 189, 248, 0.16);
-  --color-accent-subtle-border: rgba(56, 189, 248, 0.35);
-  --color-accent-text: #bae6fd;
+  --color-accent-subtle: rgba(2, 132, 199, 0.18);
+  --color-accent-subtle-border: rgba(2, 132, 199, 0.35);
+  --color-accent-text: #7dd3fc;
+  --color-accent-glow: rgba(2, 132, 199, 0.35);
 }
 
 /* 4. Turquesa Apple */
@@ -175,11 +178,12 @@
   --color-accent-glow: rgba(0, 199, 190, 0.35);
 }
 [data-theme="dark"][data-accent="teal"] {
-  --color-accent: #2dd4bf;
+  --color-accent: #00c7be;
   --color-accent-hover: #14b8a6;
-  --color-accent-subtle: rgba(45, 212, 191, 0.16);
-  --color-accent-subtle-border: rgba(45, 212, 191, 0.35);
-  --color-accent-text: #99f6e4;
+  --color-accent-subtle: rgba(0, 199, 190, 0.18);
+  --color-accent-subtle-border: rgba(0, 199, 190, 0.35);
+  --color-accent-text: #5eead4;
+  --color-accent-glow: rgba(0, 199, 190, 0.35);
 }
 
 /* 5. Verde Esmeralda */
@@ -194,11 +198,12 @@
 }
 [data-theme="dark"][data-accent="green"],
 [data-theme="dark"][data-accent="emerald"] {
-  --color-accent: #34d399;
-  --color-accent-hover: #10b981;
-  --color-accent-subtle: rgba(52, 211, 153, 0.16);
-  --color-accent-subtle-border: rgba(52, 211, 153, 0.35);
-  --color-accent-text: #a7f3d0;
+  --color-accent: #16a34a;
+  --color-accent-hover: #22c55e;
+  --color-accent-subtle: rgba(22, 163, 74, 0.18);
+  --color-accent-subtle-border: rgba(22, 163, 74, 0.35);
+  --color-accent-text: #86efac;
+  --color-accent-glow: rgba(22, 163, 74, 0.35);
 }
 
 /* 6. Verde Bosque / Pino */
@@ -211,11 +216,12 @@
   --color-accent-glow: rgba(4, 120, 87, 0.35);
 }
 [data-theme="dark"][data-accent="forest"] {
-  --color-accent: #10b981;
+  --color-accent: #047857;
   --color-accent-hover: #059669;
-  --color-accent-subtle: rgba(16, 185, 129, 0.16);
-  --color-accent-subtle-border: rgba(16, 185, 129, 0.35);
+  --color-accent-subtle: rgba(4, 120, 87, 0.18);
+  --color-accent-subtle-border: rgba(4, 120, 87, 0.35);
   --color-accent-text: #6ee7b7;
+  --color-accent-glow: rgba(4, 120, 87, 0.35);
 }
 
 /* 7. Amarillo Dorado */
@@ -230,11 +236,12 @@
 }
 [data-theme="dark"][data-accent="yellow"],
 [data-theme="dark"][data-accent="amarillo"] {
-  --color-accent: #facc15;
+  --color-accent: #ca8a04;
   --color-accent-hover: #eab308;
-  --color-accent-subtle: rgba(250, 204, 21, 0.16);
-  --color-accent-subtle-border: rgba(250, 204, 21, 0.35);
-  --color-accent-text: #fef08a;
+  --color-accent-subtle: rgba(202, 138, 4, 0.18);
+  --color-accent-subtle-border: rgba(202, 138, 4, 0.35);
+  --color-accent-text: #fde047;
+  --color-accent-glow: rgba(202, 138, 4, 0.35);
 }
 
 /* 8. Naranja Ámbar */
@@ -249,11 +256,12 @@
 }
 [data-theme="dark"][data-accent="orange"],
 [data-theme="dark"][data-accent="amber"] {
-  --color-accent: #fb923c;
+  --color-accent: #ea580c;
   --color-accent-hover: #f97316;
-  --color-accent-subtle: rgba(251, 146, 60, 0.16);
-  --color-accent-subtle-border: rgba(251, 146, 60, 0.35);
-  --color-accent-text: #fed7aa;
+  --color-accent-subtle: rgba(234, 88, 12, 0.18);
+  --color-accent-subtle-border: rgba(234, 88, 12, 0.35);
+  --color-accent-text: #fdba74;
+  --color-accent-glow: rgba(234, 88, 12, 0.35);
 }
 
 /* 9. Rojo Vino / Borgoña (Red-shifted Bordeaux) */
@@ -268,11 +276,12 @@
 }
 [data-theme="dark"][data-accent="wine"],
 [data-theme="dark"][data-accent="vino"] {
-  --color-accent: #fb7185;
-  --color-accent-hover: #f43f5e;
-  --color-accent-subtle: rgba(251, 113, 133, 0.16);
-  --color-accent-subtle-border: rgba(251, 113, 133, 0.35);
-  --color-accent-text: #ffe4e6;
+  --color-accent: #be123c;
+  --color-accent-hover: #e11d48;
+  --color-accent-subtle: rgba(190, 18, 60, 0.18);
+  --color-accent-subtle-border: rgba(190, 18, 60, 0.35);
+  --color-accent-text: #fda4af;
+  --color-accent-glow: rgba(190, 18, 60, 0.35);
 }
 
 /* 10. Café Moka / Espresso */
@@ -287,11 +296,12 @@
 }
 [data-theme="dark"][data-accent="coffee"],
 [data-theme="dark"][data-accent="cafe"] {
-  --color-accent: #c98a66;
-  --color-accent-hover: #b8734f;
-  --color-accent-subtle: rgba(201, 138, 102, 0.16);
-  --color-accent-subtle-border: rgba(201, 138, 102, 0.35);
-  --color-accent-text: #f5dfd3;
+  --color-accent: #6c4a38;
+  --color-accent-hover: #845b45;
+  --color-accent-subtle: rgba(108, 74, 56, 0.18);
+  --color-accent-subtle-border: rgba(108, 74, 56, 0.35);
+  --color-accent-text: #e2c2b3;
+  --color-accent-glow: rgba(108, 74, 56, 0.35);
 }
 
 /* 11. Rosa Fucsia */
@@ -306,11 +316,12 @@
 }
 [data-theme="dark"][data-accent="pink"],
 [data-theme="dark"][data-accent="rose"] {
-  --color-accent: #f472b6;
-  --color-accent-hover: #ec4899;
-  --color-accent-subtle: rgba(244, 114, 182, 0.16);
-  --color-accent-subtle-border: rgba(244, 114, 182, 0.35);
-  --color-accent-text: #fbcfe8;
+  --color-accent: #e11d48;
+  --color-accent-hover: #f43f5e;
+  --color-accent-subtle: rgba(225, 29, 72, 0.18);
+  --color-accent-subtle-border: rgba(225, 29, 72, 0.35);
+  --color-accent-text: #f9a8d4;
+  --color-accent-glow: rgba(225, 29, 72, 0.35);
 }
 
 /* 12. Púrpura Imperial */
@@ -323,11 +334,12 @@
   --color-accent-glow: rgba(124, 58, 237, 0.35);
 }
 [data-theme="dark"][data-accent="purple"] {
-  --color-accent: #a78bfa;
+  --color-accent: #7c3aed;
   --color-accent-hover: #8b5cf6;
-  --color-accent-subtle: rgba(167, 139, 250, 0.16);
-  --color-accent-subtle-border: rgba(167, 139, 250, 0.35);
-  --color-accent-text: #ede9fe;
+  --color-accent-subtle: rgba(124, 58, 237, 0.18);
+  --color-accent-subtle-border: rgba(124, 58, 237, 0.35);
+  --color-accent-text: #c4b5fd;
+  --color-accent-glow: rgba(124, 58, 237, 0.35);
 }
 
 /* 13. Índigo Neón */
@@ -340,11 +352,12 @@
   --color-accent-glow: rgba(79, 70, 229, 0.35);
 }
 [data-theme="dark"][data-accent="indigo"] {
-  --color-accent: #818cf8;
+  --color-accent: #4f46e5;
   --color-accent-hover: #6366f1;
-  --color-accent-subtle: rgba(129, 140, 248, 0.16);
-  --color-accent-subtle-border: rgba(129, 140, 248, 0.35);
-  --color-accent-text: #e0e7ff;
+  --color-accent-subtle: rgba(79, 70, 229, 0.18);
+  --color-accent-subtle-border: rgba(79, 70, 229, 0.35);
+  --color-accent-text: #a5b4fc;
+  --color-accent-glow: rgba(79, 70, 229, 0.35);
 }
 
 /* 14. Gris Grafito Espacial */
@@ -359,11 +372,12 @@
 }
 [data-theme="dark"][data-accent="graphite"],
 [data-theme="dark"][data-accent="slate"] {
-  --color-accent: #9ca3af;
+  --color-accent: #4b5563;
   --color-accent-hover: #6b7280;
-  --color-accent-subtle: rgba(156, 163, 175, 0.16);
-  --color-accent-subtle-border: rgba(156, 163, 175, 0.35);
-  --color-accent-text: #f3f4f6;
+  --color-accent-subtle: rgba(75, 85, 99, 0.18);
+  --color-accent-subtle-border: rgba(75, 85, 99, 0.35);
+  --color-accent-text: #cbd5e1;
+  --color-accent-glow: rgba(75, 85, 99, 0.35);
 }
 
 /* Base resets & styles */
