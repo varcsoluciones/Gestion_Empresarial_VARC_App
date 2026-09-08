@@ -20,6 +20,7 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
   const [telefono, setTelefono] = useState('');
   const [email, setEmail] = useState('');
   const [contactoNombre, setContactoNombre] = useState('');
+  const [direccion, setDireccion] = useState('');
   const [error, setError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -35,7 +36,7 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
       telefono: telefono.trim(),
       email: email.trim(),
       contactoNombre: contactoNombre.trim(),
-      direccion: ''
+      direccion: direccion.trim()
     });
 
     onSupplierCreated(newSupplier.id);
@@ -45,6 +46,7 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
     setTelefono('');
     setEmail('');
     setContactoNombre('');
+    setDireccion('');
     setError('');
   };
 
@@ -133,6 +135,17 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Dirección / Ubicación</label>
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Calle, Número, Colonia, Ciudad o C.P."
+            value={direccion}
+            onChange={(e) => setDireccion(e.target.value)}
+          />
         </div>
       </form>
     </Modal>

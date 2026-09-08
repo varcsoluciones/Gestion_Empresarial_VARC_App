@@ -1552,7 +1552,7 @@ body {
 
 .variant-line-builder {
   display: grid;
-  grid-template-columns: 1.5fr 1fr 1fr 1fr 40px;
+  grid-template-columns: 1.4fr 1.2fr 1.2fr 1fr 40px;
   gap: 0.5rem;
   align-items: center;
 }
