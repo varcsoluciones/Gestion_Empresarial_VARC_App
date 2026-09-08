@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useERP } from '../context/ERPContext';
 import type { Client, Supplier, Product, Category, PaymentTerm } from '../types/erp';
-import { formatCurrency, getNextProductSKU, generateDocNumber } from '../utils/formatters';
+import { formatCurrency, generateDocNumber } from '../utils/formatters';
 import {
   Users,
   Truck,
@@ -18,17 +18,10 @@ import {
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 import { ComboboxInline } from '../components/common/ComboboxInline';
+import { ProductFormModal } from '../components/products/ProductFormModal';
 import { ExcelExportButton } from '../components/common/ExcelExportButton';
 import { SortableTh } from '../components/common/SortableTh';
 import { useTableSort } from '../hooks/useTableSort';
-
-const unitOptions = [
-  { id: 'pza', label: 'Pieza (pza)' },
-  { id: 'par', label: 'Par' },
-  { id: 'kg', label: 'Kilogramo (kg)' },
-  { id: 'm', label: 'Metro (m)' },
-  { id: 'set', label: 'Set / Conjunto' }
-];
 
 const paymentTermOptions = [
   { id: 'contado', label: 'Contado (Inmediato)' },
@@ -51,9 +44,7 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
     addSupplier,
     updateSupplier,
     addCategory,
-    updateCategory,
-    addProduct,
-    updateProduct
+    updateCategory
   } = useERP();
 
   const [activeTab, setActiveTab] = useState<'clients' | 'suppliers' | 'categories' | 'products'>(initialTab || 'products');
@@ -87,17 +78,6 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  // Form states for Product
-  const [prodCodigo, setProdCodigo] = useState('');
-  const [prodNombre, setProdNombre] = useState('');
-  const [prodCatId, setProdCatId] = useState('');
-  const [prodUnidad, setProdUnidad] = useState('pza');
-  const [prodPrecio, setProdPrecio] = useState<number | ''>('');
-  const [prodStockMin, setProdStockMin] = useState<number | ''>(5);
-  const [prodTieneVariantes, setProdTieneVariantes] = useState(false);
-  const [prodVariantes, setProdVariantes] = useState<{ talla: string; color: string; sku: string; stockActual: number | '' }[]>([]);
-  const [prodDesc, setProdDesc] = useState('');
-
   // Form states for Client
   const [cliNombre, setCliNombre] = useState('');
   const [cliRFC, setCliRFC] = useState('');
@@ -126,102 +106,12 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
   // Product Modal Open/Edit handlers
   const handleOpenNewProduct = () => {
     setEditingProduct(null);
-    const nextSKU = getNextProductSKU(products);
-    setProdCodigo(nextSKU);
-    setProdNombre('');
-    setProdCatId(categories[0]?.id || '');
-    setProdUnidad('pza');
-    setProdPrecio('');
-    setProdStockMin(5);
-    setProdTieneVariantes(false);
-    setProdVariantes([
-      { talla: 'M', color: 'Negro', sku: `${nextSKU}-1`, stockActual: 0 },
-      { talla: 'L', color: 'Negro', sku: `${nextSKU}-2`, stockActual: 0 }
-    ]);
-    setProdDesc('');
     setIsProductModalOpen(true);
   };
 
   const handleEditProduct = (product: Product) => {
     setEditingProduct(product);
-    setProdCodigo(product.codigo);
-    setProdNombre(product.nombre);
-    setProdCatId(product.categoriaId);
-    setProdUnidad(product.unidadMedida);
-    setProdPrecio(product.precioVenta);
-    setProdStockMin(product.stockMinimo);
-    setProdTieneVariantes(product.tieneVariantes);
-    setProdVariantes(product.variantes ? product.variantes.map(v => ({
-      talla: v.talla,
-      color: v.color,
-      sku: v.sku,
-      stockActual: v.stockActual
-    })) : []);
-    setProdDesc(product.descripcion || '');
     setIsProductModalOpen(true);
-  };
-
-  const handleSaveProduct = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!prodNombre.trim() || !prodPrecio || Number(prodPrecio) <= 0) return;
-
-    const finalCode = prodCodigo.trim() ? prodCodigo.trim().toUpperCase() : getNextProductSKU(products);
-
-    if (editingProduct) {
-      updateProduct(editingProduct.id, {
-        codigo: finalCode,
-        nombre: prodNombre.trim(),
-        categoriaId: prodCatId,
-        unidadMedida: prodUnidad,
-        precioVenta: Number(prodPrecio),
-        stockMinimo: Number(prodStockMin) || 5,
-        tieneVariantes: prodTieneVariantes,
-        descripcion: prodDesc,
-        variantes: prodTieneVariantes ? prodVariantes.map((v, i) => ({
-          id: editingProduct.variantes?.[i]?.id || `var-${editingProduct.id}-${i + 1}`,
-          productoId: editingProduct.id,
-          sku: `${finalCode}-${i + 1}`,
-          talla: v.talla.trim() || `Talla ${i + 1}`,
-          color: v.color.trim() || 'Estándar',
-          stockActual: editingProduct.variantes?.[i]?.stockActual || 0
-        })) : undefined
-      });
-    } else {
-      addProduct({
-        codigo: finalCode,
-        nombre: prodNombre.trim(),
-        categoriaId: prodCatId,
-        unidadMedida: prodUnidad,
-        precioVenta: Number(prodPrecio),
-        costoInicial: 0,
-        stockInicial: 0,
-        stockMinimo: Number(prodStockMin) || 5,
-        tieneVariantes: prodTieneVariantes,
-        descripcion: prodDesc,
-        variantes: prodTieneVariantes ? prodVariantes.map((v, i) => ({
-          sku: `${finalCode}-${i + 1}`,
-          talla: v.talla.trim() || `Talla ${i + 1}`,
-          color: v.color.trim() || 'Estándar',
-          stockActual: 0,
-          id: '',
-          productoId: ''
-        })) : undefined
-      });
-    }
-    setIsProductModalOpen(false);
-  };
-
-  const handleAddVariantRow = () => {
-    const nextIdx = prodVariantes.length + 1;
-    const variantSKU = `${prodCodigo || 'SKU0001'}-${nextIdx}`;
-    setProdVariantes(prev => [
-      ...prev,
-      { talla: '', color: '', sku: variantSKU, stockActual: '' }
-    ]);
-  };
-
-  const handleRemoveVariantRow = (index: number) => {
-    setProdVariantes(prev => prev.filter((_, i) => i !== index));
   };
 
   // Client Modal Handlers
@@ -681,6 +571,10 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
                       </td>
                       <td>
                         <span className="badge badge-neutral">{category?.nombre || 'General'}</span>
+                        {p.subcategoriaId && (() => {
+                          const sub = category?.subcategorias?.find(s => s.id === p.subcategoriaId);
+                          return sub ? <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', marginTop: '2px' }}>📁 {sub.nombre}</div> : null;
+                        })()}
                       </td>
                       <td style={{ textAlign: 'right', fontWeight: 600 }}>
                         {formatCurrency(p.precioVenta)}
@@ -1139,222 +1033,14 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
               )}
             </tbody>
           </table>
+          {/* Product Modal */}
+          <ProductFormModal
+            isOpen={isProductModalOpen}
+            onClose={() => setIsProductModalOpen(false)}
+            productToEdit={editingProduct}
+          />
         </div>
       )}
-
-      {/* Product Create/Edit Modal */}
-      <Modal
-        isOpen={isProductModalOpen}
-        onClose={() => setIsProductModalOpen(false)}
-        title={editingProduct ? "Editar Producto" : "Crear Nuevo Producto"}
-        subtitle="Configura precios, costos, stock y variantes de producto"
-        size="lg"
-        footer={
-          <>
-            <button type="button" className="btn btn-secondary" onClick={() => setIsProductModalOpen(false)}>
-              Cancelar
-            </button>
-            <button type="submit" form="product-full-form" className="btn btn-primary">
-              Guardar Producto
-            </button>
-          </>
-        }
-      >
-        <form id="product-full-form" onSubmit={handleSaveProduct}>
-          <div className="form-row">
-            <div className="form-group" style={{ flex: '0 0 150px' }}>
-              <label className="form-label">Código / SKU *</label>
-              <input
-                type="text"
-                className="form-control"
-                value={prodCodigo}
-                onChange={(e) => setProdCodigo(e.target.value.toUpperCase())}
-                required
-              />
-            </div>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">Nombre del Producto *</label>
-              <input
-                type="text"
-                className="form-control"
-                value={prodNombre}
-                onChange={(e) => setProdNombre(e.target.value)}
-                placeholder="Ej. Sudadera Hoodie Fleece"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Categoría</label>
-              <ComboboxInline
-                options={categories.map(c => ({ id: c.id, label: c.nombre }))}
-                value={prodCatId}
-                onChange={setProdCatId}
-                allowCreateInline={true}
-                onCreateInline={(name) => {
-                  const newC = addCategory({ nombre: name });
-                  setProdCatId(newC.id);
-                }}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Unidad de Medida</label>
-              <ComboboxInline
-                options={unitOptions}
-                value={prodUnidad}
-                onChange={setProdUnidad}
-                hideSearch={true}
-              />
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Precio de Venta ({currencySymbol}) *</label>
-              <input
-                type="number"
-                className="form-control"
-                value={prodPrecio}
-                onChange={(e) => setProdPrecio(e.target.value === '' ? '' : Number(e.target.value))}
-                min={0.01}
-                step="any"
-                placeholder="0.00"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Alerta Stock Mínimo</label>
-              <input
-                type="number"
-                className="form-control"
-                value={prodStockMin}
-                onChange={(e) => setProdStockMin(e.target.value === '' ? '' : Number(e.target.value))}
-                min={1}
-                placeholder="5"
-              />
-            </div>
-          </div>
-
-          {/* Variants Toggle */}
-          <div style={{ margin: '1.25rem 0', padding: '1rem', backgroundColor: 'var(--bg-subtle)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: prodTieneVariantes ? '1rem' : 0 }}>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Manejo de Variantes</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Actívalo si este producto tiene diferentes variantes o presentaciones con control de stock independiente</div>
-              </div>
-              <input
-                type="checkbox"
-                id="toggle-variants"
-                checked={prodTieneVariantes}
-                onChange={(e) => setProdTieneVariantes(e.target.checked)}
-                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-              />
-            </div>
-
-            {prodTieneVariantes && (
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                  <div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                      Matriz de Atributos de Variantes
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      Define los atributos para cada presentación. El inventario se carga en la pestaña de Existencias o mediante Órdenes de Compra.
-                    </div>
-                  </div>
-                  <button type="button" className="btn btn-secondary btn-sm" onClick={handleAddVariantRow}>
-                    <Plus size={14} />
-                    + Agregar Variante
-                  </button>
-                </div>
-
-                {/* Variant Table Headers */}
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1.4fr 1.5fr 1.5fr 40px',
-                    gap: '0.5rem',
-                    padding: '0.45rem 0.6rem',
-                    backgroundColor: 'var(--bg-surface)',
-                    borderRadius: 'var(--radius-sm)',
-                    border: '1px solid var(--border-default)',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    color: 'var(--text-secondary)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.03em',
-                    marginBottom: '0.5rem',
-                    alignItems: 'center'
-                  }}
-                >
-                  <div>ID / SKU Variante</div>
-                  <div>Variable 1 (Talla / Medida)</div>
-                  <div>Variable 2 (Color / Tipo)</div>
-                  <div style={{ textAlign: 'center' }}>Acción</div>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {prodVariantes.map((v, idx) => {
-                    const variantSKU = `${prodCodigo || 'SKU0001'}-${idx + 1}`;
-                    return (
-                      <div key={idx} className="variant-line-builder" style={{ gridTemplateColumns: '1.4fr 1.5fr 1.5fr 40px' }}>
-                        <input
-                          type="text"
-                          className="form-control"
-                          value={variantSKU}
-                          readOnly
-                          title="ID de variante autogenerado no modificable"
-                          style={{
-                            backgroundColor: 'var(--bg-subtle)',
-                            fontFamily: 'var(--font-mono)',
-                            fontWeight: 700,
-                            color: 'var(--text-secondary)',
-                            cursor: 'not-allowed'
-                          }}
-                        />
-                        <input
-                          type="text"
-                          className="form-control"
-                          placeholder="Ej. S, M, L, 32, 500ml"
-                          value={v.talla}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setProdVariantes(prev => prev.map((item, i) => i === idx ? { ...item, talla: val } : item));
-                          }}
-                        />
-                        <input
-                          type="text"
-                          className="form-control"
-                          placeholder="Ej. Negro, Blanco, Azul, Mate"
-                          value={v.color}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setProdVariantes(prev => prev.map((item, i) => i === idx ? { ...item, color: val } : item));
-                          }}
-                        />
-                        <button
-                          type="button"
-                          className="btn-icon"
-                          style={{ color: 'var(--color-danger)' }}
-                          onClick={() => handleRemoveVariantRow(idx)}
-                          title="Eliminar variante"
-                          disabled={prodVariantes.length <= 1}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        </form>
-      </Modal>
 
       {/* Client Modal */}
       <Modal

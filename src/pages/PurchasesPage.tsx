@@ -9,7 +9,9 @@ import {
   XCircle,
   Eye,
   Trash2,
-  DollarSign
+  DollarSign,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
@@ -54,6 +56,13 @@ export const PurchasesPage: React.FC = () => {
 
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+
+  // Expandable payments breakdown state for Purchases (CxP)
+  const [expandedPurchasePayments, setExpandedPurchasePayments] = useState<Record<string, boolean>>({});
+
+  const toggleExpandPayments = (purchaseId: string) => {
+    setExpandedPurchasePayments(prev => ({ ...prev, [purchaseId]: !prev[purchaseId] }));
+  };
 
   // New Purchase Form State
   const [formProveedorId, setFormProveedorId] = useState('');
@@ -424,84 +433,205 @@ export const PurchasesPage: React.FC = () => {
               sortedPurchases.map(p => {
                 const prov = suppliers.find(s => s.id === p.proveedorId);
                 const hasPendingBalance = p.saldoPendiente > 0 && p.estado !== 'anulada';
+                const isExpanded = !!expandedPurchasePayments[p.id];
 
                 return (
-                  <tr key={p.id}>
-                    <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
-                      {p.numeroCompra}
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 600 }}>{prov?.nombre || 'Proveedor'}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{prov?.identificacionFiscal}</div>
-                    </td>
-                    <td style={{ fontSize: '0.825rem', color: 'var(--text-secondary)' }}>{formatDateTime(p.fecha)}</td>
-                    <td style={{ textAlign: 'center' }}>
-                      <span className="badge badge-neutral">{p.items.reduce((s, i) => s + i.cantidad, 0)} pzs</span>
-                    </td>
-                    <td style={{ textAlign: 'right', fontWeight: 700 }}>
-                      {formatCurrency(p.total)}
-                    </td>
-                    <td style={{ textAlign: 'right', fontWeight: 700, color: hasPendingBalance ? 'var(--color-danger-text)' : 'var(--color-success-text)' }}>
-                      {p.estado === 'anulada' ? '-' : formatCurrency(p.saldoPendiente)}
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      {p.estado === 'borrador' && <Badge variant="neutral">Borrador</Badge>}
-                      {p.estado === 'recibida' && <Badge variant="warning">Recibida (Saldo Pendiente)</Badge>}
-                      {p.estado === 'pagada' && <Badge variant="success">Pagada / Recibida</Badge>}
-                      {p.estado === 'anulada' && <Badge variant="danger">Anulada</Badge>}
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'flex-end' }}>
-                        {p.estado === 'borrador' && (
+                  <React.Fragment key={p.id}>
+                    <tr>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
+                        {p.numeroCompra}
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: 600 }}>{prov?.nombre || 'Proveedor'}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{prov?.identificacionFiscal}</div>
+                      </td>
+                      <td style={{ fontSize: '0.825rem', color: 'var(--text-secondary)' }}>{formatDateTime(p.fecha)}</td>
+                      <td style={{ textAlign: 'center' }}>
+                        <span className="badge badge-neutral">{p.items.reduce((s, i) => s + i.cantidad, 0)} pzs</span>
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: 700 }}>
+                        {formatCurrency(p.total)}
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: 700, color: hasPendingBalance ? 'var(--color-danger-text)' : 'var(--color-success-text)' }}>
+                        {p.estado === 'anulada' ? '-' : formatCurrency(p.saldoPendiente)}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        {p.estado === 'borrador' && <Badge variant="neutral">Borrador</Badge>}
+                        {p.estado === 'recibida' && <Badge variant="warning">Recibida (Saldo Pendiente)</Badge>}
+                        {p.estado === 'pagada' && <Badge variant="success">Pagada / Recibida</Badge>}
+                        {p.estado === 'anulada' && <Badge variant="danger">Anulada</Badge>}
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                          {/* Pagos / Abonos Toggle Button with Chevron */}
                           <button
                             type="button"
-                            className="btn btn-success btn-sm"
-                            onClick={() => receivePurchase(p.id)}
-                            title="Recibir mercancía y cargar a Inventario"
+                            className={`btn ${isExpanded ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+                            onClick={() => toggleExpandPayments(p.id)}
+                            title={isExpanded ? 'Ocultar historial de pagos' : 'Ver historial de pagos / abonos realizados'}
+                            style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
                           >
-                            <CheckCircle size={14} />
-                            Recibir Mercancía
+                            {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                            <span>Pagos ({p.pagos?.length || 0})</span>
                           </button>
-                        )}
 
-                        {(p.estado === 'recibida' || (p.estado === 'borrador' && p.saldoPendiente > 0)) && p.saldoPendiente > 0 && (
-                          <button
-                            type="button"
-                            className="btn btn-secondary btn-sm"
-                            onClick={() => handleOpenPayment(p)}
-                            title="Registrar pago a proveedor (CxP)"
-                          >
-                            <DollarSign size={14} />
-                            Pagar
-                          </button>
-                        )}
+                          {p.estado === 'borrador' && (
+                            <button
+                              type="button"
+                              className="btn btn-success btn-sm"
+                              onClick={() => receivePurchase(p.id)}
+                              title="Recibir mercancía y cargar a Inventario"
+                            >
+                              <CheckCircle size={14} />
+                              Recibir Mercancía
+                            </button>
+                          )}
 
-                        <button
-                          type="button"
-                          className="btn-icon btn-sm"
-                          onClick={() => {
-                            setSelectedPurchase(p);
-                            setIsDetailModalOpen(true);
-                          }}
-                          title="Ver detalle"
-                        >
-                          <Eye size={14} />
-                        </button>
+                          {(p.estado === 'recibida' || (p.estado === 'borrador' && p.saldoPendiente > 0)) && p.saldoPendiente > 0 && (
+                            <button
+                              type="button"
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => handleOpenPayment(p)}
+                              title="Registrar pago a proveedor (CxP)"
+                            >
+                              <DollarSign size={14} />
+                              Pagar
+                            </button>
+                          )}
 
-                        {p.estado !== 'anulada' && (
                           <button
                             type="button"
                             className="btn-icon btn-sm"
-                            style={{ color: 'var(--color-danger)' }}
-                            onClick={() => handleOpenCancel(p)}
-                            title="Anular compra (Nunca eliminar)"
+                            onClick={() => {
+                              setSelectedPurchase(p);
+                              setIsDetailModalOpen(true);
+                            }}
+                            title="Ver detalle"
                           >
-                            <XCircle size={14} />
+                            <Eye size={14} />
                           </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
+
+                          {p.estado !== 'anulada' && (
+                            <button
+                              type="button"
+                              className="btn-icon btn-sm"
+                              style={{ color: 'var(--color-danger)' }}
+                              onClick={() => handleOpenCancel(p)}
+                              title="Anular compra (Nunca eliminar)"
+                            >
+                              <XCircle size={14} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+
+                    {/* Expandable Payments Breakdown Row */}
+                    {isExpanded && (
+                      <tr style={{ backgroundColor: 'var(--bg-subtle)' }}>
+                        <td colSpan={8} style={{ padding: '0.75rem 1.25rem', borderBottom: '2px solid var(--border-default)' }}>
+                          <div style={{
+                            backgroundColor: 'var(--bg-surface)',
+                            borderRadius: 'var(--radius-md)',
+                            border: '1px solid var(--border-default)',
+                            padding: '1rem',
+                            boxShadow: 'var(--shadow-sm)'
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <DollarSign size={17} style={{ color: 'var(--color-primary)' }} />
+                                <strong style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                                  Historial de Pagos / Abonos Realizados (CxP) — Compra {p.numeroCompra}
+                                </strong>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>({prov?.nombre})</span>
+                              </div>
+
+                              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                <div style={{ fontSize: '0.8rem' }}>
+                                  <span style={{ color: 'var(--text-muted)' }}>Total Factura: </span>
+                                  <strong>{formatCurrency(p.total)}</strong>
+                                </div>
+                                <div style={{ fontSize: '0.8rem' }}>
+                                  <span style={{ color: 'var(--text-muted)' }}>Total Pagado: </span>
+                                  <strong style={{ color: 'var(--color-success-text)' }}>
+                                    {formatCurrency(p.pagos?.reduce((s, pay) => s + pay.monto, 0) || 0)}
+                                  </strong>
+                                </div>
+                                <div style={{ fontSize: '0.8rem' }}>
+                                  <span style={{ color: 'var(--text-muted)' }}>Saldo Pendiente: </span>
+                                  <strong style={{ color: p.saldoPendiente > 0 ? 'var(--color-danger-text)' : 'var(--color-success-text)' }}>
+                                    {formatCurrency(p.saldoPendiente)}
+                                  </strong>
+                                </div>
+
+                                {(p.estado === 'recibida' || (p.estado === 'borrador' && p.saldoPendiente > 0)) && p.saldoPendiente > 0 && (
+                                  <button
+                                    type="button"
+                                    className="btn btn-primary btn-sm"
+                                    onClick={() => handleOpenPayment(p)}
+                                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}
+                                  >
+                                    <Plus size={13} />
+                                    + Registrar Abono / Pago
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {p.pagos && p.pagos.length > 0 ? (
+                              <div style={{ overflowX: 'auto' }}>
+                                <table style={{ width: '100%', fontSize: '0.8rem', borderCollapse: 'collapse' }}>
+                                  <thead>
+                                    <tr style={{ backgroundColor: 'var(--bg-subtle)', textAlign: 'left', borderBottom: '1px solid var(--border-default)' }}>
+                                      <th style={{ padding: '0.4rem 0.6rem' }}>#</th>
+                                      <th style={{ padding: '0.4rem 0.6rem' }}>Fecha de Pago / Abono</th>
+                                      <th style={{ padding: '0.4rem 0.6rem' }}>Método de Pago</th>
+                                      <th style={{ padding: '0.4rem 0.6rem' }}>Referencia Bancaria / Folio</th>
+                                      <th style={{ padding: '0.4rem 0.6rem' }}>Notas / Concepto</th>
+                                      <th style={{ padding: '0.4rem 0.6rem', textAlign: 'right' }}>Monto Pagado</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {p.pagos.map((pay, pIdx) => (
+                                      <tr key={pay.id || pIdx} style={{ borderBottom: '1px solid var(--border-default)' }}>
+                                        <td style={{ padding: '0.4rem 0.6rem', fontWeight: 600, color: 'var(--text-muted)' }}>{pIdx + 1}</td>
+                                        <td style={{ padding: '0.4rem 0.6rem' }}>{formatDateTime(pay.fecha)}</td>
+                                        <td style={{ padding: '0.4rem 0.6rem' }}>
+                                          <Badge variant="neutral">
+                                            {pay.metodoPago.toUpperCase()}
+                                          </Badge>
+                                        </td>
+                                        <td style={{ padding: '0.4rem 0.6rem', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                                          {pay.referencia || '-'}
+                                        </td>
+                                        <td style={{ padding: '0.4rem 0.6rem', color: 'var(--text-secondary)' }}>
+                                          {pay.notas || 'Pago / Abono a proveedor'}
+                                        </td>
+                                        <td style={{ padding: '0.4rem 0.6rem', textAlign: 'right', fontWeight: 700, color: 'var(--color-primary-text, var(--color-accent))' }}>
+                                          +{formatCurrency(pay.monto)}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            ) : (
+                              <div style={{
+                                padding: '1rem',
+                                textAlign: 'center',
+                                color: 'var(--text-muted)',
+                                fontSize: '0.85rem',
+                                backgroundColor: 'var(--bg-subtle)',
+                                borderRadius: 'var(--radius-sm)'
+                              }}>
+                                No hay pagos ni abonos registrados para esta orden de compra aún.
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 );
               })
             )}

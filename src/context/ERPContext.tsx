@@ -299,6 +299,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       codigo: finalCode,
       nombre: data.nombre,
       categoriaId: data.categoriaId,
+      subcategoriaId: data.subcategoriaId,
       unidadMedida: data.unidadMedida || 'pza',
       precioVenta: data.precioVenta,
       costoPromedio: initialCost,
