@@ -156,7 +156,10 @@ export const translations = {
       autoBackupTitle: 'Respaldo Automático Mensual',
       autoBackupDesc: 'Al activarse, la herramienta genera y descarga automáticamente una copia mensual de la base de datos.',
       autoBackupStatusActive: 'Activo (1 vez al mes)',
-      autoBackupStatusInactive: 'Desactivado'
+      autoBackupStatusInactive: 'Desactivado',
+      resetTitle: 'Restablecer y Borrar Toda la Información',
+      resetDesc: 'Elimina de forma irreversible todos los registros cargados para comenzar en blanco desde cero.',
+      resetBtn: 'Restablecer y Borrar Todo'
     },
     // Sales
     sales: {
@@ -331,7 +334,10 @@ export const translations = {
       autoBackupTitle: 'Monthly Automatic Backup',
       autoBackupDesc: 'When enabled, the app automatically generates and downloads a monthly database backup.',
       autoBackupStatusActive: 'Active (Once a month)',
-      autoBackupStatusInactive: 'Disabled'
+      autoBackupStatusInactive: 'Disabled',
+      resetTitle: 'Reset & Erase All Database Information',
+      resetDesc: 'Permanently and irreversibly deletes all loaded records to start clean from scratch.',
+      resetBtn: 'Reset and Erase All Data'
     },
     // Sales
     sales: {
@@ -506,7 +512,10 @@ export const translations = {
       autoBackupTitle: 'Backup Automático Mensal',
       autoBackupDesc: 'Quando ativado, o aplicativo gera e baixa automaticamente uma cópia mensal do banco de dados.',
       autoBackupStatusActive: 'Ativo (1 vez por mês)',
-      autoBackupStatusInactive: 'Desativado'
+      autoBackupStatusInactive: 'Desativado',
+      resetTitle: 'Redefinir e Apagar Todas as Informações',
+      resetDesc: 'Exclui de forma irreversível todos os dados para começar do zero em branco.',
+      resetBtn: 'Redefinir e Apagar Tudo'
     },
     // Sales
     sales: {

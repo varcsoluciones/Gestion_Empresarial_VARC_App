@@ -101,6 +101,7 @@ export interface ERPContextType {
   // Gestión de Datos & Respaldos
   getFullERPData: () => FullERPData;
   restoreERPData: (data: FullERPData) => void;
+  resetAllERPData: () => void;
   exportBackupJSON: (isAuto?: boolean) => void;
   exportExcel: () => void;
   autoBackupToast: string | null;
@@ -1402,6 +1403,19 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (data.fixedAssets) setFixedAssets(data.fixedAssets);
   };
 
+  const resetAllERPData = () => {
+    setCategories([]);
+    setClients([]);
+    setSuppliers([]);
+    setProducts([]);
+    setPurchases([]);
+    setQuotes([]);
+    setInvoices([]);
+    setInventoryMovements([]);
+    setExpenses([]);
+    setFixedAssets([]);
+  };
+
   const exportBackupJSON = (isAuto = false) => {
     const fullData = getFullERPData();
     const timestamp = downloadJSONBackup(fullData, isAuto);
@@ -1507,6 +1521,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         getProductRealCost,
         getFullERPData,
         restoreERPData,
+        resetAllERPData,
         exportBackupJSON,
         exportExcel,
         autoBackupToast,

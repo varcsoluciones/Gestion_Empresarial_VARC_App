@@ -17,6 +17,8 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
+  Trash2,
   Database,
   DollarSign,
   Languages,
@@ -51,6 +53,17 @@ export const SettingsPage: React.FC = () => {
     exportBackupJSON,
     exportExcel,
     restoreERPData,
+    resetAllERPData,
+    products,
+    categories,
+    clients,
+    suppliers,
+    invoices,
+    purchases,
+    quotes,
+    inventoryMovements,
+    expenses,
+    fixedAssets,
     autoBackupToast,
     clearAutoBackupToast
   } = useERP();
@@ -80,6 +93,11 @@ export const SettingsPage: React.FC = () => {
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
   const [pendingRestoreData, setPendingRestoreData] = useState<FullERPData | null>(null);
   const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
+
+  // Reset Database State
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [isResetAcknowledged, setIsResetAcknowledged] = useState(false);
+  const [resetToastMessage, setResetToastMessage] = useState<string | null>(null);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,6 +161,19 @@ export const SettingsPage: React.FC = () => {
     setPendingRestoreData(null);
     setImportSuccess('¡Base de datos restaurada con éxito desde el archivo de respaldo!');
     setTimeout(() => setImportSuccess(null), 4000);
+  };
+
+  const handleOpenResetModal = () => {
+    setIsResetAcknowledged(false);
+    setIsResetModalOpen(true);
+  };
+
+  const handleConfirmReset = () => {
+    resetAllERPData();
+    setIsResetModalOpen(false);
+    setIsResetAcknowledged(false);
+    setResetToastMessage('¡Toda la información ha sido eliminada y la base de datos se ha restablecido desde cero!');
+    setTimeout(() => setResetToastMessage(null), 5000);
   };
 
   return (
@@ -606,6 +637,26 @@ export const SettingsPage: React.FC = () => {
             </div>
           )}
 
+          {resetToastMessage && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.85rem 1.15rem',
+              borderRadius: 'var(--radius-md)',
+              backgroundColor: 'var(--color-success-bg)',
+              border: '1px solid var(--color-success-border)',
+              color: 'var(--color-success-text)',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              marginBottom: '1.25rem',
+              animation: 'fadeIn 0.2s ease-in-out'
+            }}>
+              <CheckCircle2 size={18} />
+              <span>{resetToastMessage}</span>
+            </div>
+          )}
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             {/* 3.1 Export & Backup Actions Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
@@ -806,6 +857,54 @@ export const SettingsPage: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* 3.3 Danger Zone: Reset and Wipe all database */}
+            <div style={{
+              padding: '1.25rem 1.5rem',
+              borderRadius: 'var(--radius-lg)',
+              border: '1px solid var(--color-danger-border)',
+              backgroundColor: 'var(--bg-surface)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem',
+              marginTop: '0.25rem'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: 'var(--color-danger-bg)',
+                    color: 'var(--color-danger)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <Trash2 size={20} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--color-danger)' }}>
+                      Restablecer y Borrar Toda la Información
+                    </div>
+                    <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)' }}>
+                      Elimina de forma irreversible todos los registros cargados (catálogo, ventas, compras, kardex, clientes, gastos) para comenzar en blanco
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  onClick={handleOpenResetModal}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}
+                >
+                  <Trash2 size={15} />
+                  Restablecer y Borrar Todo
+                </button>
+              </div>
+            </div>
           </div>
         </div>
         )}
@@ -895,6 +994,151 @@ export const SettingsPage: React.FC = () => {
                 onClick={handleConfirmRestore}
               >
                 Sí, Reemplazar Datos
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Reset & Wipe Database Confirmation Modal */}
+      {isResetModalOpen && (
+        <Modal
+          isOpen={isResetModalOpen}
+          onClose={() => {
+            setIsResetModalOpen(false);
+            setIsResetAcknowledged(false);
+          }}
+          title="⚠️ Restablecer y Borrar Toda la Información"
+          size="lg"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {/* Critical Warning Alert */}
+            <div style={{
+              padding: '1rem 1.25rem',
+              borderRadius: 'var(--radius-md)',
+              backgroundColor: 'var(--color-danger-bg)',
+              border: '1px solid var(--color-danger-border)',
+              color: 'var(--color-danger-text)',
+              fontSize: '0.85rem',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '0.75rem',
+              lineHeight: 1.5
+            }}>
+              <AlertTriangle size={22} style={{ flexShrink: 0, color: 'var(--color-danger)' }} />
+              <div>
+                <strong style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
+                  ¡ADVERTENCIA CRÍTICA E IRREVERSIBLE!
+                </strong>
+                Esta acción eliminará de forma permanente <strong>toda la información cargada</strong> en el sistema. Todos los catálogos, productos, existencias, movimientos de Kardex, órdenes de compra, facturas, cotizaciones, clientes, proveedores, gastos y activos fijos serán borrados para que la aplicación comience completamente en blanco desde cero.
+              </div>
+            </div>
+
+            {/* Current Data Summary */}
+            <div style={{ backgroundColor: 'var(--bg-subtle)', padding: '1rem 1.25rem', borderRadius: 'var(--radius-md)', fontSize: '0.85rem' }}>
+              <div style={{ fontWeight: 700, marginBottom: '0.65rem', color: 'var(--text-primary)' }}>
+                Registros que serán eliminados permanentemente ({products.length + categories.length + invoices.length + quotes.length + purchases.length + inventoryMovements.length + clients.length + suppliers.length + expenses.length + fixedAssets.length} registros en total):
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '0.6rem' }}>
+                <div style={{ padding: '0.45rem 0.65rem', backgroundColor: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)' }}>
+                  📦 <strong>Productos y Categorías:</strong> {products.length} / {categories.length}
+                </div>
+                <div style={{ padding: '0.45rem 0.65rem', backgroundColor: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)' }}>
+                  📄 <strong>Facturas y Cotizaciones:</strong> {invoices.length} / {quotes.length}
+                </div>
+                <div style={{ padding: '0.45rem 0.65rem', backgroundColor: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)' }}>
+                  🛒 <strong>Órdenes de Compra:</strong> {purchases.length}
+                </div>
+                <div style={{ padding: '0.45rem 0.65rem', backgroundColor: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)' }}>
+                  📊 <strong>Movimientos Kardex:</strong> {inventoryMovements.length}
+                </div>
+                <div style={{ padding: '0.45rem 0.65rem', backgroundColor: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)' }}>
+                  👥 <strong>Clientes y Proveedores:</strong> {clients.length} / {suppliers.length}
+                </div>
+                <div style={{ padding: '0.45rem 0.65rem', backgroundColor: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)' }}>
+                  💰 <strong>Gastos y Activos Fijos:</strong> {expenses.length} / {fixedAssets.length}
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Preventive Backup recommendation */}
+            <div style={{
+              padding: '0.85rem 1.15rem',
+              borderRadius: 'var(--radius-md)',
+              backgroundColor: 'var(--color-info-bg)',
+              border: '1px solid var(--color-info-border)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '0.75rem'
+            }}>
+              <div style={{ fontSize: '0.825rem', color: 'var(--color-info)' }}>
+                💡 <strong>Consejo de seguridad:</strong> Te recomendamos descargar un archivo de respaldo JSON antes de continuar.
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => exportBackupJSON(false)}
+                style={{ fontSize: '0.775rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+              >
+                <Download size={13} />
+                Descargar Respaldo Preventivo
+              </button>
+            </div>
+
+            {/* Mandatory confirmation checkbox */}
+            <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              padding: '0.85rem 1rem',
+              borderRadius: 'var(--radius-md)',
+              backgroundColor: isResetAcknowledged ? 'var(--color-danger-bg)' : 'var(--bg-surface)',
+              border: isResetAcknowledged ? '1px solid var(--color-danger)' : '1px solid var(--border-default)',
+              cursor: 'pointer',
+              userSelect: 'none',
+              transition: 'all var(--transition-fast)'
+            }}>
+              <input
+                type="checkbox"
+                checked={isResetAcknowledged}
+                onChange={(e) => setIsResetAcknowledged(e.target.checked)}
+                style={{ width: '18px', height: '18px', accentColor: 'var(--color-danger)', cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: isResetAcknowledged ? 'var(--color-danger)' : 'var(--text-primary)' }}>
+                Entiendo que esta acción no se puede deshacer y confirmo que deseo borrar toda la información para empezar de cero.
+              </span>
+            </label>
+
+            {/* Modal Actions */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setIsResetModalOpen(false);
+                  setIsResetAcknowledged(false);
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={handleConfirmReset}
+                disabled={!isResetAcknowledged}
+                style={{
+                  opacity: isResetAcknowledged ? 1 : 0.45,
+                  cursor: isResetAcknowledged ? 'pointer' : 'not-allowed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  fontWeight: 700
+                }}
+              >
+                <Trash2 size={16} />
+                Confirmar y Restablecer de Cero
               </button>
             </div>
           </div>
