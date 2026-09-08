@@ -480,13 +480,23 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           if (itemsForThisProduct.length === 0) return product;
 
           let updatedStock = product.stockActual;
-          let updatedVariants = product.variantes ? [...product.variantes] : undefined;
+          let updatedCost = product.costoPromedio;
+          let updatedVariants = product.variantes ? product.variantes.map(v => ({ ...v })) : undefined;
+
+          // Compute total inventory value before cancellation
+          const currentTotalVal = Math.max(0, product.stockActual) * (product.costoPromedio || 0);
+          let totalCancelledVal = 0;
 
           for (const item of itemsForThisProduct) {
+            const itemCancelledVal = item.cantidad * item.costoUnitario;
+            totalCancelledVal += itemCancelledVal;
+
             if (product.tieneVariantes && item.varianteId && updatedVariants) {
+              let variantFound = false;
               updatedVariants = updatedVariants.map(v => {
                 if (v.id === item.varianteId) {
-                  const varNewStock = Math.max(0, v.stockActual - item.cantidad);
+                  variantFound = true;
+                  const varNewStock = Math.max(0, (v.stockActual || 0) - item.cantidad);
                   compensatoryMovements.push({
                     id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                     fecha: now,
@@ -504,6 +514,22 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 }
                 return v;
               });
+
+              if (!variantFound) {
+                updatedStock = Math.max(0, updatedStock - item.cantidad);
+                compensatoryMovements.push({
+                  id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+                  fecha: now,
+                  tipo: 'ANULACION_COMPRA',
+                  referenciaDoc: purchase.numeroCompra,
+                  productoId: product.id,
+                  cantidad: -item.cantidad,
+                  costoUnitario: item.costoUnitario,
+                  stockResultante: updatedStock,
+                  motivo: `Anulación de compra ${purchase.numeroCompra}: ${motivo}`,
+                  usuario: 'Administrador'
+                });
+              }
             } else {
               updatedStock = Math.max(0, updatedStock - item.cantidad);
               compensatoryMovements.push({
@@ -521,13 +547,22 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             }
           }
 
-          if (product.tieneVariantes && updatedVariants) {
-            updatedStock = updatedVariants.reduce((acc, v) => acc + v.stockActual, 0);
+          if (product.tieneVariantes && updatedVariants && updatedVariants.length > 0) {
+            updatedStock = updatedVariants.reduce((acc, v) => acc + (v.stockActual || 0), 0);
+          }
+
+          // Recalculate weighted average cost after reversing cancelled purchase
+          const remainingVal = Math.max(0, currentTotalVal - totalCancelledVal);
+          if (updatedStock > 0) {
+            updatedCost = Number((remainingVal / updatedStock).toFixed(2));
+          } else {
+            updatedCost = 0;
           }
 
           return {
             ...product,
             stockActual: updatedStock,
+            costoPromedio: updatedCost,
             variantes: updatedVariants
           };
         });
@@ -880,7 +915,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           if (itemsForThisProduct.length === 0) return product;
 
           let updatedStock = product.stockActual;
-          let updatedVariants = product.variantes ? [...product.variantes] : undefined;
+          let updatedVariants = product.variantes ? product.variantes.map(v => ({ ...v })) : undefined;
 
           for (const item of itemsForThisProduct) {
             if (product.tieneVariantes && item.varianteId && updatedVariants) {
