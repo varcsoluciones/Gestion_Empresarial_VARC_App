@@ -109,11 +109,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="sidebar-header">
           {!isCollapsed && (
             <div className="brand-logo">
-              <div className="brand-icon" style={{ padding: 0, overflow: 'hidden', background: 'transparent' }}>
+              <div className="brand-icon" style={{ padding: '2px', overflow: 'hidden', background: '#ffffff', border: '1px solid rgba(0,0,0,0.1)', boxShadow: '0 2px 6px rgba(0,0,0,0.08)' }}>
                 <img
                   src="/apple-touch-icon.png"
                   alt="Logo Gestor Modular"
-                  style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 'var(--radius-md)' }}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 'calc(var(--radius-md) - 2px)' }}
                 />
               </div>
               <div className="brand-info">
@@ -123,11 +123,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
           {isCollapsed && (
-            <div className="brand-icon" style={{ margin: '0 auto', padding: 0, overflow: 'hidden', background: 'transparent' }}>
+            <div className="brand-icon" style={{ margin: '0 auto', padding: '2px', overflow: 'hidden', background: '#ffffff', border: '1px solid rgba(0,0,0,0.1)', boxShadow: '0 2px 6px rgba(0,0,0,0.08)' }}>
               <img
                 src="/apple-touch-icon.png"
                 alt="Logo Gestor Modular"
-                style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 'var(--radius-md)' }}
+                style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 'calc(var(--radius-md) - 2px)' }}
               />
             </div>
           )}
