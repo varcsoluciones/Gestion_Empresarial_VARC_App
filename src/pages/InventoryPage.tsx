@@ -16,6 +16,8 @@ import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 import { ComboboxInline } from '../components/common/ComboboxInline';
 import { ExcelExportButton } from '../components/common/ExcelExportButton';
+import { SortableTh } from '../components/common/SortableTh';
+import { useTableSort } from '../hooks/useTableSort';
 
 interface InventoryPageProps {
   initialView?: 'kardex' | 'stock';
@@ -134,6 +136,43 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
     return matchesSearch && matchesProduct && matchesType && matchesMonth;
   });
 
+  const {
+    sortedItems: sortedMovements,
+    sortKey: kardexSortKey,
+    sortDirection: kardexSortDirection,
+    requestSort: requestKardexSort
+  } = useTableSort(filteredMovements, {
+    defaultKey: 'fecha',
+    defaultDirection: 'desc',
+    defaultIsNumeric: true,
+    customGetters: {
+      producto: (m) => products.find(p => p.id === m.productoId)?.nombre || '',
+    }
+  });
+
+  const filteredStockProducts = products.filter(p => {
+    const matchesSearch = p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.codigo.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesProduct = selectedProductFilter === 'all' || p.id === selectedProductFilter;
+    return matchesSearch && matchesProduct;
+  });
+
+  const {
+    sortedItems: sortedStockProducts,
+    sortKey: stockSortKey,
+    sortDirection: stockSortDirection,
+    requestSort: requestStockSort
+  } = useTableSort(filteredStockProducts, {
+    defaultKey: 'nombre',
+    defaultDirection: 'asc',
+    defaultIsNumeric: false,
+    customGetters: {
+      categoria: (p) => categories.find(c => c.id === p.categoriaId)?.nombre || '',
+      valorInventario: (p) => p.stockActual * p.costoPromedio,
+      estadoStock: (p) => (p.stockActual <= p.stockMinimo ? 'Bajo' : 'Normal')
+    }
+  });
+
   const selectedAdjProdObj = products.find(p => p.id === adjProdId);
 
   const getMovementTypeBadge = (tipo: MovementType) => {
@@ -178,27 +217,25 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
           </button>
           <button type="button" className="btn btn-primary btn-sm" onClick={() => handleOpenAdjustment()}>
             <SlidersHorizontal size={15} />
-            + Ajuste Manual de Stock
+            + Ajuste Manual (Auditoría)
           </button>
         </div>
       </div>
 
-      {/* Sync Toast Feedback */}
+      {/* Sync toast notification */}
       {syncToastMessage && (
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '0.65rem',
-            padding: '0.75rem 1rem',
+            gap: '0.75rem',
+            padding: '0.85rem 1.25rem',
+            marginBottom: '1.25rem',
             backgroundColor: 'var(--color-success-bg)',
+            color: 'var(--color-success-text)',
             border: '1px solid var(--color-success-border)',
             borderRadius: 'var(--radius-md)',
-            color: 'var(--color-success-text)',
-            fontSize: '0.85rem',
             fontWeight: 600,
-            marginBottom: '1.25rem',
-            boxShadow: 'var(--shadow-sm)',
             animation: 'fadeIn 0.2s ease-in-out'
           }}
         >
@@ -267,7 +304,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
           onClick={() => setActiveView('stock')}
         >
           <Boxes size={16} />
-          Existencias & Variantes por Producto ({products.length})
+          Existencias & Variantes por Producto ({filteredStockProducts.length})
         </button>
       </div>
 
@@ -342,25 +379,92 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
           <table className="table">
             <thead>
               <tr>
-                <th>Fecha / Hora</th>
-                <th>Tipo de Movimiento</th>
-                <th>Referencia</th>
-                <th>Producto / Variante</th>
-                <th style={{ textAlign: 'center' }}>Cantidad</th>
-                <th style={{ textAlign: 'right' }}>Costo Unit.</th>
-                <th style={{ textAlign: 'center' }}>Stock Resultante</th>
-                <th>Motivo / Detalle</th>
+                <SortableTh
+                  sortKey="fecha"
+                  currentSortKey={kardexSortKey}
+                  currentSortDirection={kardexSortDirection}
+                  onSort={requestKardexSort}
+                  isNumeric={true}
+                >
+                  Fecha / Hora
+                </SortableTh>
+                <SortableTh
+                  sortKey="tipo"
+                  currentSortKey={kardexSortKey}
+                  currentSortDirection={kardexSortDirection}
+                  onSort={requestKardexSort}
+                  isNumeric={false}
+                >
+                  Tipo de Movimiento
+                </SortableTh>
+                <SortableTh
+                  sortKey="referenciaDoc"
+                  currentSortKey={kardexSortKey}
+                  currentSortDirection={kardexSortDirection}
+                  onSort={requestKardexSort}
+                  isNumeric={false}
+                >
+                  Referencia
+                </SortableTh>
+                <SortableTh
+                  sortKey="producto"
+                  currentSortKey={kardexSortKey}
+                  currentSortDirection={kardexSortDirection}
+                  onSort={requestKardexSort}
+                  isNumeric={false}
+                >
+                  Producto / Variante
+                </SortableTh>
+                <SortableTh
+                  sortKey="cantidad"
+                  currentSortKey={kardexSortKey}
+                  currentSortDirection={kardexSortDirection}
+                  onSort={requestKardexSort}
+                  isNumeric={true}
+                  align="center"
+                >
+                  Cantidad
+                </SortableTh>
+                <SortableTh
+                  sortKey="costoUnitario"
+                  currentSortKey={kardexSortKey}
+                  currentSortDirection={kardexSortDirection}
+                  onSort={requestKardexSort}
+                  isNumeric={true}
+                  align="right"
+                >
+                  Costo Unit.
+                </SortableTh>
+                <SortableTh
+                  sortKey="stockResultante"
+                  currentSortKey={kardexSortKey}
+                  currentSortDirection={kardexSortDirection}
+                  onSort={requestKardexSort}
+                  isNumeric={true}
+                  align="center"
+                >
+                  Stock Resultante
+                </SortableTh>
+                <SortableTh
+                  sortKey="motivo"
+                  currentSortKey={kardexSortKey}
+                  currentSortDirection={kardexSortDirection}
+                  onSort={requestKardexSort}
+                  isNumeric={false}
+                >
+                  Motivo / Detalle
+                </SortableTh>
               </tr>
             </thead>
             <tbody>
-              {filteredMovements.length === 0 ? (
+              {sortedMovements.length === 0 ? (
                 <tr>
                   <td colSpan={8} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
                     No hay movimientos registrados con los filtros seleccionados.
                   </td>
                 </tr>
               ) : (
-                filteredMovements.map(m => {
+                sortedMovements.map(m => {
                   const prod = products.find(p => p.id === m.productoId);
                   const isPositive = m.cantidad > 0;
 
@@ -410,60 +514,137 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
           <table className="table">
             <thead>
               <tr>
-                <th>Código</th>
-                <th>Producto</th>
-                <th>Categoría</th>
-                <th style={{ textAlign: 'center' }}>Stock Total</th>
-                <th style={{ textAlign: 'center' }}>Mínimo</th>
-                <th style={{ textAlign: 'right' }}>Costo Promedio</th>
-                <th style={{ textAlign: 'right' }}>Valor en Inventario</th>
-                <th style={{ textAlign: 'center' }}>Estado</th>
+                <SortableTh
+                  sortKey="codigo"
+                  currentSortKey={stockSortKey}
+                  currentSortDirection={stockSortDirection}
+                  onSort={requestStockSort}
+                  isNumeric={false}
+                >
+                  Código
+                </SortableTh>
+                <SortableTh
+                  sortKey="nombre"
+                  currentSortKey={stockSortKey}
+                  currentSortDirection={stockSortDirection}
+                  onSort={requestStockSort}
+                  isNumeric={false}
+                >
+                  Producto
+                </SortableTh>
+                <SortableTh
+                  sortKey="categoria"
+                  currentSortKey={stockSortKey}
+                  currentSortDirection={stockSortDirection}
+                  onSort={requestStockSort}
+                  isNumeric={false}
+                >
+                  Categoría
+                </SortableTh>
+                <SortableTh
+                  sortKey="stockActual"
+                  currentSortKey={stockSortKey}
+                  currentSortDirection={stockSortDirection}
+                  onSort={requestStockSort}
+                  isNumeric={true}
+                  align="center"
+                >
+                  Stock Total
+                </SortableTh>
+                <SortableTh
+                  sortKey="stockMinimo"
+                  currentSortKey={stockSortKey}
+                  currentSortDirection={stockSortDirection}
+                  onSort={requestStockSort}
+                  isNumeric={true}
+                  align="center"
+                >
+                  Mínimo
+                </SortableTh>
+                <SortableTh
+                  sortKey="costoPromedio"
+                  currentSortKey={stockSortKey}
+                  currentSortDirection={stockSortDirection}
+                  onSort={requestStockSort}
+                  isNumeric={true}
+                  align="right"
+                >
+                  Costo Promedio
+                </SortableTh>
+                <SortableTh
+                  sortKey="valorInventario"
+                  currentSortKey={stockSortKey}
+                  currentSortDirection={stockSortDirection}
+                  onSort={requestStockSort}
+                  isNumeric={true}
+                  align="right"
+                >
+                  Valor en Inventario
+                </SortableTh>
+                <SortableTh
+                  sortKey="estadoStock"
+                  currentSortKey={stockSortKey}
+                  currentSortDirection={stockSortDirection}
+                  onSort={requestStockSort}
+                  isNumeric={false}
+                  align="center"
+                >
+                  Estado
+                </SortableTh>
                 <th style={{ textAlign: 'right' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {products.map(p => {
-                const cat = categories.find(c => c.id === p.categoriaId);
-                const isLow = p.stockActual <= p.stockMinimo;
-                const value = p.stockActual * p.costoPromedio;
+              {sortedStockProducts.length === 0 ? (
+                <tr>
+                  <td colSpan={9} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
+                    No se encontraron productos con los criterios seleccionados.
+                  </td>
+                </tr>
+              ) : (
+                sortedStockProducts.map(p => {
+                  const cat = categories.find(c => c.id === p.categoriaId);
+                  const isLow = p.stockActual <= p.stockMinimo;
+                  const value = p.stockActual * p.costoPromedio;
 
-                return (
-                  <tr key={p.id}>
-                    <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{p.codigo}</td>
-                    <td>
-                      <div style={{ fontWeight: 600 }}>{p.nombre}</div>
-                      {p.tieneVariantes && p.variantes && (
-                        <div style={{ fontSize: '0.75rem', color: 'var(--color-accent)' }}>
-                          {p.variantes.map(v => `${v.color}-${v.talla}: ${v.stockActual}`).join(' | ')}
-                        </div>
-                      )}
-                    </td>
-                    <td>{cat?.nombre}</td>
-                    <td style={{ textAlign: 'center', fontWeight: 700 }}>
-                      {p.stockActual} {p.unidadMedida}
-                    </td>
-                    <td style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
-                      {p.stockMinimo} {p.unidadMedida}
-                    </td>
-                    <td style={{ textAlign: 'right' }}>{formatCurrency(p.costoPromedio)}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatCurrency(value)}</td>
-                    <td style={{ textAlign: 'center' }}>
-                      <Badge variant={isLow ? 'danger' : 'success'}>
-                        {isLow ? 'Stock Bajo' : 'Normal'}
-                      </Badge>
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-sm"
-                        onClick={() => handleOpenAdjustment(p.id)}
-                      >
-                        Ajustar
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+                  return (
+                    <tr key={p.id}>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{p.codigo}</td>
+                      <td>
+                        <div style={{ fontWeight: 600 }}>{p.nombre}</div>
+                        {p.tieneVariantes && p.variantes && (
+                          <div style={{ fontSize: '0.75rem', color: 'var(--color-accent)' }}>
+                            {p.variantes.map(v => `${v.color}-${v.talla}: ${v.stockActual}`).join(' | ')}
+                          </div>
+                        )}
+                      </td>
+                      <td>{cat?.nombre}</td>
+                      <td style={{ textAlign: 'center', fontWeight: 700 }}>
+                        {p.stockActual} {p.unidadMedida}
+                      </td>
+                      <td style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
+                        {p.stockMinimo} {p.unidadMedida}
+                      </td>
+                      <td style={{ textAlign: 'right' }}>{formatCurrency(p.costoPromedio)}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatCurrency(value)}</td>
+                      <td style={{ textAlign: 'center' }}>
+                        <Badge variant={isLow ? 'danger' : 'success'}>
+                          {isLow ? 'Stock Bajo' : 'Normal'}
+                        </Badge>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => handleOpenAdjustment(p.id)}
+                        >
+                          Ajustar
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>

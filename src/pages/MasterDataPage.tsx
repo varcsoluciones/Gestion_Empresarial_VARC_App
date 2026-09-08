@@ -19,6 +19,8 @@ import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 import { ComboboxInline } from '../components/common/ComboboxInline';
 import { ExcelExportButton } from '../components/common/ExcelExportButton';
+import { SortableTh } from '../components/common/SortableTh';
+import { useTableSort } from '../hooks/useTableSort';
 
 const unitOptions = [
   { id: 'pza', label: 'Pieza (pza)' },
@@ -411,10 +413,36 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
     p.codigo.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const {
+    sortedItems: sortedProducts,
+    sortKey: prodSortKey,
+    sortDirection: prodSortDirection,
+    requestSort: requestProdSort
+  } = useTableSort(filteredProducts, {
+    defaultKey: 'nombre',
+    defaultDirection: 'asc',
+    defaultIsNumeric: false,
+    customGetters: {
+      categoria: (p) => categories.find(c => c.id === p.categoriaId)?.nombre || '',
+      variantesCount: (p) => p.variantes?.length || 0,
+    }
+  });
+
   const filteredClients = clients.filter(c =>
     c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.identificacionFiscal.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const {
+    sortedItems: sortedClients,
+    sortKey: clientSortKey,
+    sortDirection: clientSortDirection,
+    requestSort: requestClientSort
+  } = useTableSort(filteredClients, {
+    defaultKey: 'nombre',
+    defaultDirection: 'asc',
+    defaultIsNumeric: false
+  });
 
   const filteredSuppliers = suppliers.filter(s =>
     s.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -422,10 +450,36 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
     (s.direccion && s.direccion.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  const {
+    sortedItems: sortedSuppliers,
+    sortKey: supplierSortKey,
+    sortDirection: supplierSortDirection,
+    requestSort: requestSupplierSort
+  } = useTableSort(filteredSuppliers, {
+    defaultKey: 'nombre',
+    defaultDirection: 'asc',
+    defaultIsNumeric: false
+  });
+
   const filteredCategories = categories.filter(cat =>
     cat.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (cat.descripcion && cat.descripcion.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  const {
+    sortedItems: sortedCategories,
+    sortKey: catSortKey,
+    sortDirection: catSortDirection,
+    requestSort: requestCatSort
+  } = useTableSort(filteredCategories, {
+    defaultKey: 'nombre',
+    defaultDirection: 'asc',
+    defaultIsNumeric: false,
+    customGetters: {
+      subcategoriasCount: (cat) => cat.subcategorias?.length || 0,
+      productosCount: (cat) => products.filter(p => p.categoriaId === cat.id).length
+    }
+  });
 
   return (
     <div className="page-content">
@@ -522,19 +576,88 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
             <thead>
               <tr>
                 <th style={{ width: '40px' }}></th>
-                <th>Código / SKU</th>
-                <th>Nombre del Producto</th>
-                <th>Categoría</th>
-                <th style={{ textAlign: 'right' }}>Precio Venta</th>
-                <th style={{ textAlign: 'right' }}>Costo Promedio</th>
-                <th style={{ textAlign: 'center' }}>Stock Actual</th>
-                <th style={{ textAlign: 'center' }}>Mínimo</th>
-                <th style={{ textAlign: 'center' }}>Variantes</th>
+                <SortableTh
+                  sortKey="codigo"
+                  currentSortKey={prodSortKey}
+                  currentSortDirection={prodSortDirection}
+                  onSort={requestProdSort}
+                  isNumeric={false}
+                >
+                  Código / SKU
+                </SortableTh>
+                <SortableTh
+                  sortKey="nombre"
+                  currentSortKey={prodSortKey}
+                  currentSortDirection={prodSortDirection}
+                  onSort={requestProdSort}
+                  isNumeric={false}
+                >
+                  Nombre del Producto
+                </SortableTh>
+                <SortableTh
+                  sortKey="categoria"
+                  currentSortKey={prodSortKey}
+                  currentSortDirection={prodSortDirection}
+                  onSort={requestProdSort}
+                  isNumeric={false}
+                >
+                  Categoría
+                </SortableTh>
+                <SortableTh
+                  sortKey="precioVenta"
+                  currentSortKey={prodSortKey}
+                  currentSortDirection={prodSortDirection}
+                  onSort={requestProdSort}
+                  isNumeric={true}
+                  align="right"
+                >
+                  Precio Venta
+                </SortableTh>
+                <SortableTh
+                  sortKey="costoPromedio"
+                  currentSortKey={prodSortKey}
+                  currentSortDirection={prodSortDirection}
+                  onSort={requestProdSort}
+                  isNumeric={true}
+                  align="right"
+                >
+                  Costo Promedio
+                </SortableTh>
+                <SortableTh
+                  sortKey="stockActual"
+                  currentSortKey={prodSortKey}
+                  currentSortDirection={prodSortDirection}
+                  onSort={requestProdSort}
+                  isNumeric={true}
+                  align="center"
+                >
+                  Stock Actual
+                </SortableTh>
+                <SortableTh
+                  sortKey="stockMinimo"
+                  currentSortKey={prodSortKey}
+                  currentSortDirection={prodSortDirection}
+                  onSort={requestProdSort}
+                  isNumeric={true}
+                  align="center"
+                >
+                  Mínimo
+                </SortableTh>
+                <SortableTh
+                  sortKey="variantesCount"
+                  currentSortKey={prodSortKey}
+                  currentSortDirection={prodSortDirection}
+                  onSort={requestProdSort}
+                  isNumeric={true}
+                  align="center"
+                >
+                  Variantes
+                </SortableTh>
                 <th style={{ textAlign: 'right' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {filteredProducts.map(p => {
+              {sortedProducts.map(p => {
                 const category = categories.find(c => c.id === p.categoriaId);
                 const isExpanded = expandedProductIds[p.id];
                 const hasLowStock = p.stockActual <= p.stockMinimo;
@@ -655,18 +778,77 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
           <table className="table">
             <thead>
               <tr>
-                <th>Nombre / Razón Social</th>
-                <th>RFC / ID Fiscal</th>
-                <th>Contacto</th>
-                <th>Dirección</th>
-                <th style={{ textAlign: 'center' }}>Condición</th>
-                <th style={{ textAlign: 'right' }}>Límite Crédito</th>
-                <th style={{ textAlign: 'center' }}>Días Crédito</th>
+                <SortableTh
+                  sortKey="nombre"
+                  currentSortKey={clientSortKey}
+                  currentSortDirection={clientSortDirection}
+                  onSort={requestClientSort}
+                  isNumeric={false}
+                >
+                  Nombre / Razón Social
+                </SortableTh>
+                <SortableTh
+                  sortKey="identificacionFiscal"
+                  currentSortKey={clientSortKey}
+                  currentSortDirection={clientSortDirection}
+                  onSort={requestClientSort}
+                  isNumeric={false}
+                >
+                  RFC / ID Fiscal
+                </SortableTh>
+                <SortableTh
+                  sortKey="telefono"
+                  currentSortKey={clientSortKey}
+                  currentSortDirection={clientSortDirection}
+                  onSort={requestClientSort}
+                  isNumeric={false}
+                >
+                  Contacto
+                </SortableTh>
+                <SortableTh
+                  sortKey="direccion"
+                  currentSortKey={clientSortKey}
+                  currentSortDirection={clientSortDirection}
+                  onSort={requestClientSort}
+                  isNumeric={false}
+                >
+                  Dirección
+                </SortableTh>
+                <SortableTh
+                  sortKey="tipoPago"
+                  currentSortKey={clientSortKey}
+                  currentSortDirection={clientSortDirection}
+                  onSort={requestClientSort}
+                  isNumeric={false}
+                  align="center"
+                >
+                  Condición
+                </SortableTh>
+                <SortableTh
+                  sortKey="limiteCredito"
+                  currentSortKey={clientSortKey}
+                  currentSortDirection={clientSortDirection}
+                  onSort={requestClientSort}
+                  isNumeric={true}
+                  align="right"
+                >
+                  Límite Crédito
+                </SortableTh>
+                <SortableTh
+                  sortKey="diasCredito"
+                  currentSortKey={clientSortKey}
+                  currentSortDirection={clientSortDirection}
+                  onSort={requestClientSort}
+                  isNumeric={true}
+                  align="center"
+                >
+                  Días Crédito
+                </SortableTh>
                 <th style={{ textAlign: 'right' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {filteredClients.map(c => (
+              {sortedClients.map(c => (
                 <tr key={c.id}>
                   <td style={{ fontWeight: 600 }}>{c.nombre}</td>
                   <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.825rem' }}>{c.identificacionFiscal}</td>
@@ -709,16 +891,56 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
           <table className="table">
             <thead>
               <tr>
-                <th>Proveedor / Empresa</th>
-                <th>RFC / ID Fiscal</th>
-                <th>Contacto Principal</th>
-                <th>Teléfono / Email</th>
-                <th>Dirección</th>
+                <SortableTh
+                  sortKey="nombre"
+                  currentSortKey={supplierSortKey}
+                  currentSortDirection={supplierSortDirection}
+                  onSort={requestSupplierSort}
+                  isNumeric={false}
+                >
+                  Proveedor / Empresa
+                </SortableTh>
+                <SortableTh
+                  sortKey="identificacionFiscal"
+                  currentSortKey={supplierSortKey}
+                  currentSortDirection={supplierSortDirection}
+                  onSort={requestSupplierSort}
+                  isNumeric={false}
+                >
+                  RFC / ID Fiscal
+                </SortableTh>
+                <SortableTh
+                  sortKey="contactoNombre"
+                  currentSortKey={supplierSortKey}
+                  currentSortDirection={supplierSortDirection}
+                  onSort={requestSupplierSort}
+                  isNumeric={false}
+                >
+                  Contacto Principal
+                </SortableTh>
+                <SortableTh
+                  sortKey="telefono"
+                  currentSortKey={supplierSortKey}
+                  currentSortDirection={supplierSortDirection}
+                  onSort={requestSupplierSort}
+                  isNumeric={false}
+                >
+                  Teléfono / Email
+                </SortableTh>
+                <SortableTh
+                  sortKey="direccion"
+                  currentSortKey={supplierSortKey}
+                  currentSortDirection={supplierSortDirection}
+                  onSort={requestSupplierSort}
+                  isNumeric={false}
+                >
+                  Dirección
+                </SortableTh>
                 <th style={{ textAlign: 'right' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {filteredSuppliers.map(s => (
+              {sortedSuppliers.map(s => (
                 <tr key={s.id}>
                   <td style={{ fontWeight: 600 }}>{s.nombre}</td>
                   <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.825rem' }}>{s.identificacionFiscal}</td>
@@ -752,23 +974,68 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
             <thead>
               <tr>
                 <th style={{ width: '40px' }}></th>
-                <th style={{ width: '90px' }}>ID</th>
-                <th>Nombre de la Categoría</th>
-                <th>Descripción / Notas</th>
-                <th style={{ textAlign: 'center', width: '160px' }}>Subcategorías</th>
-                <th style={{ textAlign: 'center', width: '160px' }}>Productos Asociados</th>
+                <SortableTh
+                  sortKey="id"
+                  currentSortKey={catSortKey}
+                  currentSortDirection={catSortDirection}
+                  onSort={requestCatSort}
+                  isNumeric={false}
+                  style={{ width: '90px' }}
+                >
+                  ID
+                </SortableTh>
+                <SortableTh
+                  sortKey="nombre"
+                  currentSortKey={catSortKey}
+                  currentSortDirection={catSortDirection}
+                  onSort={requestCatSort}
+                  isNumeric={false}
+                >
+                  Nombre de la Categoría
+                </SortableTh>
+                <SortableTh
+                  sortKey="descripcion"
+                  currentSortKey={catSortKey}
+                  currentSortDirection={catSortDirection}
+                  onSort={requestCatSort}
+                  isNumeric={false}
+                >
+                  Descripción / Notas
+                </SortableTh>
+                <SortableTh
+                  sortKey="subcategoriasCount"
+                  currentSortKey={catSortKey}
+                  currentSortDirection={catSortDirection}
+                  onSort={requestCatSort}
+                  isNumeric={true}
+                  align="center"
+                  style={{ width: '160px' }}
+                >
+                  Subcategorías
+                </SortableTh>
+                <SortableTh
+                  sortKey="productosCount"
+                  currentSortKey={catSortKey}
+                  currentSortDirection={catSortDirection}
+                  onSort={requestCatSort}
+                  isNumeric={true}
+                  align="center"
+                  style={{ width: '160px' }}
+                >
+                  Productos Asociados
+                </SortableTh>
                 <th style={{ textAlign: 'right', width: '90px' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {filteredCategories.length === 0 ? (
+              {sortedCategories.length === 0 ? (
                 <tr>
                   <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                     No se encontraron categorías registradas.
                   </td>
                 </tr>
               ) : (
-                filteredCategories.map(cat => {
+                sortedCategories.map(cat => {
                   const count = products.filter(p => p.categoriaId === cat.id).length;
                   const hasSubs = !!(cat.subcategorias && cat.subcategorias.length > 0);
                   const isExpanded = expandedCategoryIds[cat.id];

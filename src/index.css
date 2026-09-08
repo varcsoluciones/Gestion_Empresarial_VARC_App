@@ -1205,6 +1205,26 @@ body {
   border-bottom: none;
 }
 
+.table th.sortable-th {
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.table th.sortable-th:hover {
+  background-color: var(--bg-surface-hover);
+  color: var(--color-accent);
+}
+
+.table th.sortable-th:hover .sort-indicator {
+  opacity: 0.8 !important;
+}
+
+.table th.sortable-th.is-sorted {
+  background-color: var(--bg-surface-hover);
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
 /* Draggable Table Column Resizer */
 .table-col-resizer {
   position: absolute;

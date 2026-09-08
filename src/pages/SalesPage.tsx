@@ -26,6 +26,8 @@ import { QuickCreateCustomerModal } from '../components/quick-create/QuickCreate
 import { QuickCreateProductModal } from '../components/quick-create/QuickCreateProductModal';
 import { DocumentPrintView } from '../components/print/DocumentPrintView';
 import { ExcelExportButton } from '../components/common/ExcelExportButton';
+import { SortableTh } from '../components/common/SortableTh';
+import { useTableSort } from '../hooks/useTableSort';
 
 interface DeficitItem {
   code: string;
@@ -477,6 +479,20 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
     return matchesSearch && matchesStatus && matchesMonth;
   });
 
+  const {
+    sortedItems: sortedInvoices,
+    sortKey: invSortKey,
+    sortDirection: invSortDirection,
+    requestSort: requestInvSort
+  } = useTableSort(filteredInvoices, {
+    defaultKey: 'fechaEmision',
+    defaultDirection: 'desc',
+    defaultIsNumeric: true,
+    customGetters: {
+      cliente: (inv) => clients.find(c => c.id === inv.clienteId)?.nombre || '',
+    }
+  });
+
   const filteredQuotes = quotes.filter(q => {
     const cli = clients.find(c => c.id === q.clienteId);
     const matchesSearch = q.numeroCotizacion.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -484,6 +500,21 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
     const matchesStatus = statusFilter === 'all' || q.estado === statusFilter;
     const matchesMonth = monthFilter === 'all' || (q.fechaEmision && q.fechaEmision.startsWith(monthFilter));
     return matchesSearch && matchesStatus && matchesMonth;
+  });
+
+  const {
+    sortedItems: sortedQuotes,
+    sortKey: quoteSortKey,
+    sortDirection: quoteSortDirection,
+    requestSort: requestQuoteSort
+  } = useTableSort(filteredQuotes, {
+    defaultKey: 'fechaEmision',
+    defaultDirection: 'desc',
+    defaultIsNumeric: true,
+    customGetters: {
+      cliente: (q) => clients.find(c => c.id === q.clienteId)?.nombre || '',
+      itemsCount: (q) => q.items.reduce((s, i) => s + i.cantidad, 0),
+    }
   });
 
   const selectedProdObj = products.find(p => p.id === selectedProdForLine);
@@ -602,25 +633,85 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
           <table className="table">
             <thead>
               <tr>
-                <th>Folio Factura</th>
-                <th>Cliente</th>
-                <th>Emisión / Vencimiento</th>
-                <th style={{ textAlign: 'center' }}>Condición</th>
-                <th style={{ textAlign: 'right' }}>Total</th>
-                <th style={{ textAlign: 'right' }}>Saldo Pendiente (CxC)</th>
-                <th style={{ textAlign: 'center' }}>Estado</th>
+                <SortableTh
+                  sortKey="numeroFactura"
+                  currentSortKey={invSortKey}
+                  currentSortDirection={invSortDirection}
+                  onSort={requestInvSort}
+                  isNumeric={false}
+                >
+                  Folio Factura
+                </SortableTh>
+                <SortableTh
+                  sortKey="cliente"
+                  currentSortKey={invSortKey}
+                  currentSortDirection={invSortDirection}
+                  onSort={requestInvSort}
+                  isNumeric={false}
+                >
+                  Cliente
+                </SortableTh>
+                <SortableTh
+                  sortKey="fechaEmision"
+                  currentSortKey={invSortKey}
+                  currentSortDirection={invSortDirection}
+                  onSort={requestInvSort}
+                  isNumeric={true}
+                >
+                  Emisión / Vencimiento
+                </SortableTh>
+                <SortableTh
+                  sortKey="tipoPago"
+                  currentSortKey={invSortKey}
+                  currentSortDirection={invSortDirection}
+                  onSort={requestInvSort}
+                  isNumeric={false}
+                  align="center"
+                >
+                  Condición
+                </SortableTh>
+                <SortableTh
+                  sortKey="total"
+                  currentSortKey={invSortKey}
+                  currentSortDirection={invSortDirection}
+                  onSort={requestInvSort}
+                  isNumeric={true}
+                  align="right"
+                >
+                  Total
+                </SortableTh>
+                <SortableTh
+                  sortKey="saldoPendiente"
+                  currentSortKey={invSortKey}
+                  currentSortDirection={invSortDirection}
+                  onSort={requestInvSort}
+                  isNumeric={true}
+                  align="right"
+                >
+                  Saldo Pendiente (CxC)
+                </SortableTh>
+                <SortableTh
+                  sortKey="estado"
+                  currentSortKey={invSortKey}
+                  currentSortDirection={invSortDirection}
+                  onSort={requestInvSort}
+                  isNumeric={false}
+                  align="center"
+                >
+                  Estado
+                </SortableTh>
                 <th style={{ textAlign: 'right' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {filteredInvoices.length === 0 ? (
+              {sortedInvoices.length === 0 ? (
                 <tr>
                   <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                     No hay facturas registradas con estos criterios.
                   </td>
                 </tr>
               ) : (
-                filteredInvoices.map(inv => {
+                sortedInvoices.map(inv => {
                   const client = clients.find(c => c.id === inv.clienteId);
                   const hasPendingBalance = inv.saldoPendiente > 0 && inv.estado !== 'anulada';
                   const isExpanded = !!expandedInvoicePayments[inv.id];
@@ -838,25 +929,84 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
           <table className="table">
             <thead>
               <tr>
-                <th>Folio Cotización</th>
-                <th>Cliente</th>
-                <th>Fecha Emisión</th>
-                <th>Vencimiento</th>
-                <th style={{ textAlign: 'center' }}>Ítems</th>
-                <th style={{ textAlign: 'right' }}>Total</th>
-                <th style={{ textAlign: 'center' }}>Estado</th>
+                <SortableTh
+                  sortKey="numeroCotizacion"
+                  currentSortKey={quoteSortKey}
+                  currentSortDirection={quoteSortDirection}
+                  onSort={requestQuoteSort}
+                  isNumeric={false}
+                >
+                  Folio Cotización
+                </SortableTh>
+                <SortableTh
+                  sortKey="cliente"
+                  currentSortKey={quoteSortKey}
+                  currentSortDirection={quoteSortDirection}
+                  onSort={requestQuoteSort}
+                  isNumeric={false}
+                >
+                  Cliente
+                </SortableTh>
+                <SortableTh
+                  sortKey="fechaEmision"
+                  currentSortKey={quoteSortKey}
+                  currentSortDirection={quoteSortDirection}
+                  onSort={requestQuoteSort}
+                  isNumeric={true}
+                >
+                  Fecha Emisión
+                </SortableTh>
+                <SortableTh
+                  sortKey="fechaVencimiento"
+                  currentSortKey={quoteSortKey}
+                  currentSortDirection={quoteSortDirection}
+                  onSort={requestQuoteSort}
+                  isNumeric={true}
+                >
+                  Vencimiento
+                </SortableTh>
+                <SortableTh
+                  sortKey="itemsCount"
+                  currentSortKey={quoteSortKey}
+                  currentSortDirection={quoteSortDirection}
+                  onSort={requestQuoteSort}
+                  isNumeric={true}
+                  align="center"
+                >
+                  Ítems
+                </SortableTh>
+                <SortableTh
+                  sortKey="total"
+                  currentSortKey={quoteSortKey}
+                  currentSortDirection={quoteSortDirection}
+                  onSort={requestQuoteSort}
+                  isNumeric={true}
+                  align="right"
+                >
+                  Total
+                </SortableTh>
+                <SortableTh
+                  sortKey="estado"
+                  currentSortKey={quoteSortKey}
+                  currentSortDirection={quoteSortDirection}
+                  onSort={requestQuoteSort}
+                  isNumeric={false}
+                  align="center"
+                >
+                  Estado
+                </SortableTh>
                 <th style={{ textAlign: 'right' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {filteredQuotes.length === 0 ? (
+              {sortedQuotes.length === 0 ? (
                 <tr>
                   <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                     No hay cotizaciones registradas.
                   </td>
                 </tr>
               ) : (
-                filteredQuotes.map(q => {
+                sortedQuotes.map(q => {
                   const client = clients.find(c => c.id === q.clienteId);
 
                   return (

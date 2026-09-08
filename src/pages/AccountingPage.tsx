@@ -23,6 +23,8 @@ import {
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 import { ExcelExportButton } from '../components/common/ExcelExportButton';
+import { SortableTh } from '../components/common/SortableTh';
+import { useTableSort } from '../hooks/useTableSort';
 
 interface AccountingPageProps {
   initialTab?: 'prorrateo' | 'expenses' | 'assets';
@@ -128,6 +130,57 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
 
   // Filtered queries
   const filteredExpenses = expenses.filter(e => e.periodoMes === selectedMonth);
+
+  const {
+    sortedItems: sortedExpenses,
+    sortKey: expSortKey,
+    sortDirection: expSortDirection,
+    requestSort: requestExpSort
+  } = useTableSort(filteredExpenses, {
+    defaultKey: 'fecha',
+    defaultDirection: 'desc',
+    defaultIsNumeric: true,
+  });
+
+  const {
+    sortedItems: sortedFixedAssets,
+    sortKey: assetSortKey,
+    sortDirection: assetSortDirection,
+    requestSort: requestAssetSort
+  } = useTableSort(fixedAssets, {
+    defaultKey: 'fechaAdquisicion',
+    defaultDirection: 'desc',
+    defaultIsNumeric: true,
+    customGetters: {
+      valorEnLibros: (a) => a.valorAdquisicion - a.depreciacionAcumulada,
+      avancePercent: (a) => a.valorAdquisicion > 0 ? (a.depreciacionAcumulada / a.valorAdquisicion) * 100 : 0
+    }
+  });
+
+  const {
+    sortedItems: sortedProrrateoProducts,
+    sortKey: proSortKey,
+    sortDirection: proSortDirection,
+    requestSort: requestProSort
+  } = useTableSort(products, {
+    defaultKey: 'nombre',
+    defaultDirection: 'asc',
+    defaultIsNumeric: false,
+    customGetters: {
+      costoCompra: (p) => getProductRealCost(p.id, selectedMonth).costoCompra,
+      tasaAbsorcion: (p) => getProductRealCost(p.id, selectedMonth).tasaAbsorcionPorcentaje,
+      gastoOperativo: (p) => getProductRealCost(p.id, selectedMonth).costoOperativoProrrateado,
+      costoReal: (p) => getProductRealCost(p.id, selectedMonth).costoReal,
+      margenBruto: (p) => {
+        const costs = getProductRealCost(p.id, selectedMonth);
+        return p.precioVenta > 0 ? ((p.precioVenta - costs.costoCompra) / p.precioVenta) * 100 : 0;
+      },
+      margenReal: (p) => {
+        const costs = getProductRealCost(p.id, selectedMonth);
+        return p.precioVenta > 0 ? ((p.precioVenta - costs.costoReal) / p.precioVenta) * 100 : 0;
+      }
+    }
+  });
 
   return (
     <div className="page-content">
@@ -430,19 +483,99 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Código</th>
-                    <th>Producto</th>
-                    <th style={{ textAlign: 'right' }}>Precio Venta</th>
-                    <th style={{ textAlign: 'right' }}>1. Costo Compra (Directo)</th>
-                    <th style={{ textAlign: 'center' }}>% Absorción</th>
-                    <th style={{ textAlign: 'right' }}>2. Gasto Operativo Absorbido</th>
-                    <th style={{ textAlign: 'right', fontWeight: 800 }}>3. Costo Real Total</th>
-                    <th style={{ textAlign: 'center' }}>Margen Bruto %</th>
-                    <th style={{ textAlign: 'center' }}>Margen Real %</th>
+                    <SortableTh
+                      sortKey="codigo"
+                      currentSortKey={proSortKey}
+                      currentSortDirection={proSortDirection}
+                      onSort={requestProSort}
+                      isNumeric={false}
+                    >
+                      Código
+                    </SortableTh>
+                    <SortableTh
+                      sortKey="nombre"
+                      currentSortKey={proSortKey}
+                      currentSortDirection={proSortDirection}
+                      onSort={requestProSort}
+                      isNumeric={false}
+                    >
+                      Producto
+                    </SortableTh>
+                    <SortableTh
+                      sortKey="precioVenta"
+                      currentSortKey={proSortKey}
+                      currentSortDirection={proSortDirection}
+                      onSort={requestProSort}
+                      isNumeric={true}
+                      align="right"
+                    >
+                      Precio Venta
+                    </SortableTh>
+                    <SortableTh
+                      sortKey="costoCompra"
+                      currentSortKey={proSortKey}
+                      currentSortDirection={proSortDirection}
+                      onSort={requestProSort}
+                      isNumeric={true}
+                      align="right"
+                    >
+                      1. Costo Compra (Directo)
+                    </SortableTh>
+                    <SortableTh
+                      sortKey="tasaAbsorcion"
+                      currentSortKey={proSortKey}
+                      currentSortDirection={proSortDirection}
+                      onSort={requestProSort}
+                      isNumeric={true}
+                      align="center"
+                    >
+                      % Absorción
+                    </SortableTh>
+                    <SortableTh
+                      sortKey="gastoOperativo"
+                      currentSortKey={proSortKey}
+                      currentSortDirection={proSortDirection}
+                      onSort={requestProSort}
+                      isNumeric={true}
+                      align="right"
+                    >
+                      2. Gasto Operativo Absorbido
+                    </SortableTh>
+                    <SortableTh
+                      sortKey="costoReal"
+                      currentSortKey={proSortKey}
+                      currentSortDirection={proSortDirection}
+                      onSort={requestProSort}
+                      isNumeric={true}
+                      align="right"
+                      style={{ fontWeight: 800 }}
+                    >
+                      3. Costo Real Total
+                    </SortableTh>
+                    <SortableTh
+                      sortKey="margenBruto"
+                      currentSortKey={proSortKey}
+                      currentSortDirection={proSortDirection}
+                      onSort={requestProSort}
+                      isNumeric={true}
+                      align="center"
+                    >
+                      Margen Bruto %
+                    </SortableTh>
+                    <SortableTh
+                      sortKey="margenReal"
+                      currentSortKey={proSortKey}
+                      currentSortDirection={proSortDirection}
+                      onSort={requestProSort}
+                      isNumeric={true}
+                      align="center"
+                    >
+                      Margen Real %
+                    </SortableTh>
                   </tr>
                 </thead>
                 <tbody>
-                  {products.map(p => {
+                  {sortedProrrateoProducts.map(p => {
                     const costs = getProductRealCost(p.id, selectedMonth);
                     const grossMarginPercent = p.precioVenta > 0 ? (((p.precioVenta - costs.costoCompra) / p.precioVenta) * 100).toFixed(1) : 0;
                     const realMarginPercent = p.precioVenta > 0 ? (((p.precioVenta - costs.costoReal) / p.precioVenta) * 100).toFixed(1) : 0;
@@ -505,24 +638,74 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
             <table className="table">
               <thead>
                 <tr>
-                  <th>Fecha</th>
-                  <th>ID Contable</th>
-                  <th>Categoría</th>
-                  <th style={{ textAlign: 'center' }}>Tipo</th>
-                  <th>Descripción</th>
-                  <th style={{ textAlign: 'right' }}>Monto ({settings.monedaSimbolo || '$'})</th>
+                  <SortableTh
+                    sortKey="fecha"
+                    currentSortKey={expSortKey}
+                    currentSortDirection={expSortDirection}
+                    onSort={requestExpSort}
+                    isNumeric={true}
+                  >
+                    Fecha
+                  </SortableTh>
+                  <SortableTh
+                    sortKey="codigoContable"
+                    currentSortKey={expSortKey}
+                    currentSortDirection={expSortDirection}
+                    onSort={requestExpSort}
+                    isNumeric={false}
+                  >
+                    ID Contable
+                  </SortableTh>
+                  <SortableTh
+                    sortKey="categoria"
+                    currentSortKey={expSortKey}
+                    currentSortDirection={expSortDirection}
+                    onSort={requestExpSort}
+                    isNumeric={false}
+                  >
+                    Categoría
+                  </SortableTh>
+                  <SortableTh
+                    sortKey="tipo"
+                    currentSortKey={expSortKey}
+                    currentSortDirection={expSortDirection}
+                    onSort={requestExpSort}
+                    isNumeric={false}
+                    align="center"
+                  >
+                    Tipo
+                  </SortableTh>
+                  <SortableTh
+                    sortKey="descripcion"
+                    currentSortKey={expSortKey}
+                    currentSortDirection={expSortDirection}
+                    onSort={requestExpSort}
+                    isNumeric={false}
+                  >
+                    Descripción
+                  </SortableTh>
+                  <SortableTh
+                    sortKey="monto"
+                    currentSortKey={expSortKey}
+                    currentSortDirection={expSortDirection}
+                    onSort={requestExpSort}
+                    isNumeric={true}
+                    align="right"
+                  >
+                    Monto ({settings.monedaSimbolo || '$'})
+                  </SortableTh>
                   <th style={{ textAlign: 'right' }}>Estado / Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredExpenses.length === 0 ? (
+                {sortedExpenses.length === 0 ? (
                   <tr>
                     <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                       No hay gastos registrados en el periodo {selectedMonth}.
                     </td>
                   </tr>
                 ) : (
-                  filteredExpenses.map(exp => {
+                  sortedExpenses.map(exp => {
                     const isReversal = !!exp.esAnulacionDe || exp.monto < 0;
                     const isCancelled = exp.anulado;
 
@@ -608,21 +791,107 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
             <table className="table">
               <thead>
                 <tr>
-                  <th>ID Activo</th>
-                  <th>Activo / Nombre</th>
-                  <th>Categoría</th>
-                  <th>Adquisición</th>
-                  <th style={{ textAlign: 'right' }}>Valor Adquisición</th>
-                  <th style={{ textAlign: 'center' }}>Vida Útil</th>
-                  <th style={{ minWidth: '160px' }}>Avance Depreciado</th>
-                  <th style={{ textAlign: 'right' }}>Depreciación Mensual</th>
-                  <th style={{ textAlign: 'right' }}>Depr. Acumulada</th>
-                  <th style={{ textAlign: 'right' }}>Valor en Libros</th>
+                  <SortableTh
+                    sortKey="id"
+                    currentSortKey={assetSortKey}
+                    currentSortDirection={assetSortDirection}
+                    onSort={requestAssetSort}
+                    isNumeric={false}
+                  >
+                    ID Activo
+                  </SortableTh>
+                  <SortableTh
+                    sortKey="nombre"
+                    currentSortKey={assetSortKey}
+                    currentSortDirection={assetSortDirection}
+                    onSort={requestAssetSort}
+                    isNumeric={false}
+                  >
+                    Activo / Nombre
+                  </SortableTh>
+                  <SortableTh
+                    sortKey="categoriaActivo"
+                    currentSortKey={assetSortKey}
+                    currentSortDirection={assetSortDirection}
+                    onSort={requestAssetSort}
+                    isNumeric={false}
+                  >
+                    Categoría
+                  </SortableTh>
+                  <SortableTh
+                    sortKey="fechaAdquisicion"
+                    currentSortKey={assetSortKey}
+                    currentSortDirection={assetSortDirection}
+                    onSort={requestAssetSort}
+                    isNumeric={true}
+                  >
+                    Adquisición
+                  </SortableTh>
+                  <SortableTh
+                    sortKey="valorAdquisicion"
+                    currentSortKey={assetSortKey}
+                    currentSortDirection={assetSortDirection}
+                    onSort={requestAssetSort}
+                    isNumeric={true}
+                    align="right"
+                  >
+                    Valor Adquisición
+                  </SortableTh>
+                  <SortableTh
+                    sortKey="vidaUtilMeses"
+                    currentSortKey={assetSortKey}
+                    currentSortDirection={assetSortDirection}
+                    onSort={requestAssetSort}
+                    isNumeric={true}
+                    align="center"
+                  >
+                    Vida Útil
+                  </SortableTh>
+                  <SortableTh
+                    sortKey="avancePercent"
+                    currentSortKey={assetSortKey}
+                    currentSortDirection={assetSortDirection}
+                    onSort={requestAssetSort}
+                    isNumeric={true}
+                    style={{ minWidth: '160px' }}
+                  >
+                    Avance Depreciado
+                  </SortableTh>
+                  <SortableTh
+                    sortKey="depreciacionMensual"
+                    currentSortKey={assetSortKey}
+                    currentSortDirection={assetSortDirection}
+                    onSort={requestAssetSort}
+                    isNumeric={true}
+                    align="right"
+                  >
+                    Depreciación Mensual
+                  </SortableTh>
+                  <SortableTh
+                    sortKey="depreciacionAcumulada"
+                    currentSortKey={assetSortKey}
+                    currentSortDirection={assetSortDirection}
+                    onSort={requestAssetSort}
+                    isNumeric={true}
+                    align="right"
+                  >
+                    Depr. Acumulada
+                  </SortableTh>
+                  <SortableTh
+                    sortKey="valorEnLibros"
+                    currentSortKey={assetSortKey}
+                    currentSortDirection={assetSortDirection}
+                    onSort={requestAssetSort}
+                    isNumeric={true}
+                    align="right"
+                  >
+                    Valor en Libros
+                  </SortableTh>
                   <th style={{ textAlign: 'center' }}>Estado</th>
                 </tr>
               </thead>
               <tbody>
-                {fixedAssets.map(ast => {
+                {sortedFixedAssets.map(ast => {
                   const elapsedMonths = Math.min(
                     ast.vidaUtilMeses,
                     ast.depreciacionMensual > 0

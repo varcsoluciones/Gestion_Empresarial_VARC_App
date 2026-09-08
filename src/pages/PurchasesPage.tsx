@@ -17,6 +17,8 @@ import { ComboboxInline } from '../components/common/ComboboxInline';
 import { QuickCreateSupplierModal } from '../components/quick-create/QuickCreateSupplierModal';
 import { QuickCreateProductModal } from '../components/quick-create/QuickCreateProductModal';
 import { ExcelExportButton } from '../components/common/ExcelExportButton';
+import { SortableTh } from '../components/common/SortableTh';
+import { useTableSort } from '../hooks/useTableSort';
 
 export const PurchasesPage: React.FC = () => {
   const {
@@ -238,6 +240,21 @@ export const PurchasesPage: React.FC = () => {
     return matchesSearch && matchesStatus && matchesSupplier && matchesMonth;
   });
 
+  const {
+    sortedItems: sortedPurchases,
+    sortKey,
+    sortDirection,
+    requestSort
+  } = useTableSort(filteredPurchases, {
+    defaultKey: 'fecha',
+    defaultDirection: 'desc',
+    defaultIsNumeric: true,
+    customGetters: {
+      proveedor: (p) => suppliers.find(s => s.id === p.proveedorId)?.nombre || '',
+      itemsCount: (p) => p.items.reduce((s, i) => s + i.cantidad, 0),
+    }
+  });
+
   const selectedProdObj = products.find(p => p.id === selectedProdForLine);
 
   return (
@@ -322,25 +339,85 @@ export const PurchasesPage: React.FC = () => {
         <table className="table">
           <thead>
             <tr>
-              <th>Folio Compra</th>
-              <th>Proveedor</th>
-              <th>Fecha</th>
-              <th style={{ textAlign: 'center' }}>Ítems</th>
-              <th style={{ textAlign: 'right' }}>Total</th>
-              <th style={{ textAlign: 'right' }}>Saldo Pendiente (CxP)</th>
-              <th style={{ textAlign: 'center' }}>Estado</th>
+              <SortableTh
+                sortKey="numeroCompra"
+                currentSortKey={sortKey}
+                currentSortDirection={sortDirection}
+                onSort={requestSort}
+                isNumeric={false}
+              >
+                Folio Compra
+              </SortableTh>
+              <SortableTh
+                sortKey="proveedor"
+                currentSortKey={sortKey}
+                currentSortDirection={sortDirection}
+                onSort={requestSort}
+                isNumeric={false}
+              >
+                Proveedor
+              </SortableTh>
+              <SortableTh
+                sortKey="fecha"
+                currentSortKey={sortKey}
+                currentSortDirection={sortDirection}
+                onSort={requestSort}
+                isNumeric={true}
+              >
+                Fecha
+              </SortableTh>
+              <SortableTh
+                sortKey="itemsCount"
+                currentSortKey={sortKey}
+                currentSortDirection={sortDirection}
+                onSort={requestSort}
+                isNumeric={true}
+                align="center"
+              >
+                Ítems
+              </SortableTh>
+              <SortableTh
+                sortKey="total"
+                currentSortKey={sortKey}
+                currentSortDirection={sortDirection}
+                onSort={requestSort}
+                isNumeric={true}
+                align="right"
+              >
+                Total
+              </SortableTh>
+              <SortableTh
+                sortKey="saldoPendiente"
+                currentSortKey={sortKey}
+                currentSortDirection={sortDirection}
+                onSort={requestSort}
+                isNumeric={true}
+                align="right"
+              >
+                Saldo Pendiente (CxP)
+              </SortableTh>
+              <SortableTh
+                sortKey="estado"
+                currentSortKey={sortKey}
+                currentSortDirection={sortDirection}
+                onSort={requestSort}
+                isNumeric={false}
+                align="center"
+              >
+                Estado
+              </SortableTh>
               <th style={{ textAlign: 'right' }}>Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {filteredPurchases.length === 0 ? (
+            {sortedPurchases.length === 0 ? (
               <tr>
                 <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                   No se encontraron órdenes de compra registradas.
                 </td>
               </tr>
             ) : (
-              filteredPurchases.map(p => {
+              sortedPurchases.map(p => {
                 const prov = suppliers.find(s => s.id === p.proveedorId);
                 const hasPendingBalance = p.saldoPendiente > 0 && p.estado !== 'anulada';
 
