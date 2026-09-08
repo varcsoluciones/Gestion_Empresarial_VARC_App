@@ -8,14 +8,14 @@ import {
   Boxes,
   ArrowUpRight,
   CreditCard,
-  PlusCircle,
   Calculator,
   CheckCircle,
   ShieldAlert,
   Sparkles,
   Calendar,
   AlertCircle,
-  DollarSign
+  DollarSign,
+  BarChart3
 } from 'lucide-react';
 import { ExcelExportButton } from '../components/common/ExcelExportButton';
 import type { NavigationTab } from '../components/layout/Sidebar';
@@ -157,9 +157,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
             <Calculator size={15} />
             Prorrateo & Costos
           </button>
-          <button type="button" className="btn btn-primary btn-sm" onClick={() => onNavigate('sales')}>
-            <PlusCircle size={15} />
-            + Nueva Factura
+          <button type="button" className="btn btn-primary btn-sm" onClick={() => onNavigate('reports')}>
+            <BarChart3 size={15} />
+            Reportes Financieros
           </button>
         </div>
       </div>
