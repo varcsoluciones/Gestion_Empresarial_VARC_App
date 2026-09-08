@@ -271,12 +271,15 @@ export interface FixedAsset {
   notas?: string;
 }
 
+export type AppLanguage = 'es' | 'en' | 'pt';
+
 // 6. Configuración General & Respaldos
 export interface CompanySettings {
   nombreEmpresa: string;
   identificacionFiscal: string;
-  moneda: string; // $, USD, MXN, EUR, etc.
-  monedaSimbolo: string;
+  moneda: string; // USD, MXN, BRL, COP, CLP, PEN, ARS, etc.
+  monedaSimbolo: string; // $, R$, S/, ₡, etc.
+  idioma: AppLanguage; // es | en | pt
   tasaImpuestoDefecto: number; // e.g. 16
   criterioProrrateoDefecto: ProrrateoCriterion; // 'costo_material' | 'valor_venta' | 'unidades_iguales'
   direccion: string;

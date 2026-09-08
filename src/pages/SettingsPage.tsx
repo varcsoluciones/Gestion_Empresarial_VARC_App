@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useERP } from '../context/ERPContext';
-import type { AccentColor, ThemeMode } from '../types/erp';
+import type { AccentColor, ThemeMode, AppLanguage } from '../types/erp';
+import { useTranslation } from '../i18n/useTranslation';
+import { AMERICAS_CURRENCIES, APP_LANGUAGES } from '../i18n/translations';
 import {
   Palette,
   Sun,
@@ -16,7 +18,10 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  Database
+  Database,
+  DollarSign,
+  Languages,
+  SlidersHorizontal
 } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
 import { formatDate } from '../utils/formatters';
@@ -44,11 +49,14 @@ export const SettingsPage: React.FC = () => {
     clearAutoBackupToast
   } = useERP();
 
+  const { t, lang } = useTranslation();
+
   const [formData, setFormData] = useState({
     nombreEmpresa: settings.nombreEmpresa,
     identificacionFiscal: settings.identificacionFiscal,
     moneda: settings.moneda,
     monedaSimbolo: settings.monedaSimbolo,
+    idioma: settings.idioma || 'es',
     tasaImpuestoDefecto: settings.tasaImpuestoDefecto,
     criterioProrrateoDefecto: settings.criterioProrrateoDefecto || 'costo_material',
     direccion: settings.direccion,
@@ -80,6 +88,25 @@ export const SettingsPage: React.FC = () => {
 
   const handleAccentChange = (accent: AccentColor) => {
     updateSettings({ colorAcento: accent });
+  };
+
+  const handleCurrencySelect = (code: string) => {
+    const selected = AMERICAS_CURRENCIES.find(c => c.code === code);
+    if (selected) {
+      setFormData(prev => ({
+        ...prev,
+        moneda: selected.code,
+        monedaSimbolo: selected.symbol
+      }));
+    }
+  };
+
+  const handleLanguageSelect = (langCode: AppLanguage) => {
+    setFormData(prev => ({
+      ...prev,
+      idioma: langCode
+    }));
+    updateSettings({ idioma: langCode });
   };
 
   const handleResetData = () => {
@@ -121,9 +148,9 @@ export const SettingsPage: React.FC = () => {
     <div className="page-content" style={{ maxWidth: '1000px' }}>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Configuración del Sistema</h1>
+          <h1 className="page-title">{t.settings.title}</h1>
           <p className="page-description">
-            Personaliza la identidad visual, datos fiscales, gestión de copias de seguridad y respaldos automáticos.
+            {t.settings.subtitle}
           </p>
         </div>
       </div>
@@ -134,15 +161,15 @@ export const SettingsPage: React.FC = () => {
           <div className="card-header">
             <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Palette size={18} style={{ color: 'var(--color-accent)' }} />
-              Apariencia & Personalización Visual (Estilo Apple)
+              {t.settings.themeAndAccent}
             </h2>
-            <p className="card-subtitle">Selector de modo y paleta de acentos del sistema</p>
+            <p className="card-subtitle">{t.settings.colorPaletteTitle}</p>
           </div>
 
           {/* Theme Selector */}
           <div style={{ marginBottom: '1.5rem' }}>
             <label className="form-label" style={{ marginBottom: '0.75rem' }}>
-              Modo de Interfaz
+              {t.settings.themeModeTitle}
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
               <div
@@ -165,7 +192,7 @@ export const SettingsPage: React.FC = () => {
                   <Sun size={20} />
                 </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Modo Claro</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{t.settings.themeLight}</div>
                   <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Fondo blanco limpio con máximo contraste</div>
                 </div>
                 {settings.tema === 'light' && <Check size={18} style={{ marginLeft: 'auto', color: 'var(--color-accent)' }} />}
@@ -191,7 +218,7 @@ export const SettingsPage: React.FC = () => {
                   <Moon size={20} />
                 </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Modo Oscuro</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{t.settings.themeDark}</div>
                   <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Paleta profunda ideal para trabajo nocturno</div>
                 </div>
                 {settings.tema === 'dark' && <Check size={18} style={{ marginLeft: 'auto', color: 'var(--color-accent)' }} />}
@@ -202,7 +229,7 @@ export const SettingsPage: React.FC = () => {
           {/* Accent Color Palette */}
           <div>
             <label className="form-label" style={{ marginBottom: '0.75rem' }}>
-              Color de Acento del Sistema (Paleta Apple)
+              {t.settings.colorPaletteTitle}
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '0.85rem' }}>
               {accents.map((acc) => {
@@ -257,9 +284,9 @@ export const SettingsPage: React.FC = () => {
           <div className="card-header">
             <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Building size={18} style={{ color: 'var(--color-accent)' }} />
-              Datos Generales de la Empresa
+              {t.settings.companyProfile}
             </h2>
-            <p className="card-subtitle">Información fiscal, contable y comercial impresa en documentos</p>
+            <p className="card-subtitle">Información fiscal, comercial, moneda e idioma del sistema</p>
           </div>
 
           {/* Section 1: Identificación Fiscal */}
@@ -270,7 +297,7 @@ export const SettingsPage: React.FC = () => {
             <div className="form-grid-2">
               <div className="form-group">
                 <label className="form-label">
-                  Nombre Comercial / Razón Social <span className="form-label-required">*</span>
+                  {t.settings.companyName} <span className="form-label-required">*</span>
                 </label>
                 <input
                   type="text"
@@ -283,7 +310,7 @@ export const SettingsPage: React.FC = () => {
 
               <div className="form-group">
                 <label className="form-label">
-                  RFC / Identificación Fiscal <span className="form-label-required">*</span>
+                  {t.settings.taxId} <span className="form-label-required">*</span>
                 </label>
                 <input
                   type="text"
@@ -296,36 +323,63 @@ export const SettingsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Section 2: Parámetros Monetarios & Contabilidad */}
+          {/* Section 2: Parámetros Monetarios, Idioma & Regla de Prorrateo */}
           <div className="form-section-divider">
             <h3 className="form-section-title">
-              Parámetros Monetarios & Regla de Costeo
+              Moneda, Idioma & Regla de Prorrateo Contable
             </h3>
             <div className="form-grid-2">
+              {/* Dropdown 1: Moneda de América */}
               <div className="form-group">
-                <label className="form-label">Moneda Principal</label>
-                <input
-                  type="text"
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <DollarSign size={15} style={{ color: 'var(--color-accent)' }} />
+                  {t.settings.currencyLabel} <span className="form-label-required">*</span>
+                </label>
+                <select
                   className="form-control"
                   value={formData.moneda}
-                  onChange={(e) => setFormData({ ...formData, moneda: e.target.value })}
-                  placeholder="MXN, USD, EUR..."
-                />
+                  onChange={(e) => handleCurrencySelect(e.target.value)}
+                  style={{ fontWeight: 600 }}
+                >
+                  {AMERICAS_CURRENCIES.map((curr) => (
+                    <option key={curr.code} value={curr.code}>
+                      {curr.name[lang] || curr.name.es}
+                    </option>
+                  ))}
+                </select>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                  {t.settings.currencyHelp} (Símbolo activo: <strong>{formData.monedaSimbolo}</strong>)
+                </span>
               </div>
 
+              {/* Dropdown 2: Idioma de la Aplicación (Español, Inglés, Portugués) */}
               <div className="form-group">
-                <label className="form-label">Símbolo de Moneda</label>
-                <input
-                  type="text"
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Languages size={15} style={{ color: 'var(--color-accent)' }} />
+                  {t.settings.languageLabel} <span className="form-label-required">*</span>
+                </label>
+                <select
                   className="form-control"
-                  value={formData.monedaSimbolo}
-                  onChange={(e) => setFormData({ ...formData, monedaSimbolo: e.target.value })}
-                  placeholder="$, €, £..."
-                />
+                  value={formData.idioma}
+                  onChange={(e) => handleLanguageSelect(e.target.value as AppLanguage)}
+                  style={{ fontWeight: 600 }}
+                >
+                  {APP_LANGUAGES.map((langOpt) => (
+                    <option key={langOpt.code} value={langOpt.code}>
+                      {langOpt.flag} {langOpt.name}
+                    </option>
+                  ))}
+                </select>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                  {t.settings.languageHelp}
+                </span>
               </div>
 
+              {/* Tasa Impuesto */}
               <div className="form-group">
-                <label className="form-label">Tasa de Impuesto / IVA Defecto (%)</label>
+                <label className="form-label">
+                  {t.settings.defaultTax}
+                </label>
                 <input
                   type="number"
                   className="form-control"
@@ -336,17 +390,27 @@ export const SettingsPage: React.FC = () => {
                 />
               </div>
 
+              {/* Regla de Prorrateo Contable Institucional */}
               <div className="form-group">
-                <label className="form-label">Base de Prorrateo Contable por Defecto</label>
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <SlidersHorizontal size={15} style={{ color: 'var(--color-accent)' }} />
+                  {t.settings.prorrateoSection}
+                </label>
                 <select
                   className="form-control"
                   value={formData.criterioProrrateoDefecto}
                   onChange={(e) => setFormData({ ...formData, criterioProrrateoDefecto: e.target.value as any })}
+                  style={{ fontWeight: 600 }}
                 >
-                  <option value="costo_material">💎 Costo de Material Directo (Recomendado)</option>
-                  <option value="valor_venta">🏷️ Precio de Venta (Capacidad de Ingresos)</option>
-                  <option value="unidades_iguales">⚖️ Unidades Físicas Iguales (Lineal)</option>
+                  <option value="costo_material">💎 {t.settings.ruleMaterialTitle}</option>
+                  <option value="valor_venta">🏷️ {t.settings.rulePriceTitle}</option>
+                  <option value="unidades_iguales">⚖️ {t.settings.ruleUnitsTitle}</option>
                 </select>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                  {formData.criterioProrrateoDefecto === 'costo_material' && t.settings.ruleMaterialDesc}
+                  {formData.criterioProrrateoDefecto === 'valor_venta' && t.settings.rulePriceDesc}
+                  {formData.criterioProrrateoDefecto === 'unidades_iguales' && t.settings.ruleUnitsDesc}
+                </span>
               </div>
             </div>
           </div>
@@ -354,11 +418,11 @@ export const SettingsPage: React.FC = () => {
           {/* Section 3: Ubicación y Contacto */}
           <div className="form-section-divider">
             <h3 className="form-section-title">
-              Ubicación & Contacto Comercial
+              {t.settings.contactAddress}
             </h3>
             <div className="form-grid-3">
               <div className="form-group col-span-full">
-                <label className="form-label">Dirección Fiscal / Ubicación Física</label>
+                <label className="form-label">{t.settings.address}</label>
                 <input
                   type="text"
                   className="form-control"
@@ -368,7 +432,7 @@ export const SettingsPage: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Teléfono de Atención</label>
+                <label className="form-label">{t.settings.phone}</label>
                 <input
                   type="tel"
                   className="form-control"
@@ -378,7 +442,7 @@ export const SettingsPage: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Correo Electrónico</label>
+                <label className="form-label">{t.settings.email}</label>
                 <input
                   type="email"
                   className="form-control"
@@ -388,7 +452,7 @@ export const SettingsPage: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Sitio Web</label>
+                <label className="form-label">{t.settings.website}</label>
                 <input
                   type="text"
                   className="form-control"
@@ -402,7 +466,7 @@ export const SettingsPage: React.FC = () => {
           {/* Section 4: Documentos */}
           <div style={{ marginBottom: '1.5rem' }}>
             <h3 className="form-section-title">
-              Pie de Página en Facturas & Cotizaciones
+              {t.settings.invoiceFooter}
             </h3>
             <div className="form-group">
               <label className="form-label">Leyenda / Términos Comerciales Impresos</label>
@@ -418,7 +482,7 @@ export const SettingsPage: React.FC = () => {
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <button type="submit" className="btn btn-primary btn-lg" style={{ minWidth: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
               {isSaved ? <Check size={18} /> : <Save size={18} />}
-              {isSaved ? '¡Configuración Guardada!' : 'Guardar Cambios'}
+              {isSaved ? t.settings.savedSuccess : t.common.save}
             </button>
           </div>
         </form>
@@ -429,7 +493,7 @@ export const SettingsPage: React.FC = () => {
             <div>
               <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Database size={18} style={{ color: 'var(--color-accent)' }} />
-                Gestión de Datos, Respaldos & Exportación
+                {t.settings.dataManagement}
               </h2>
               <p className="card-subtitle">
                 Exporta tus datos a JSON o Excel (.xlsx), restaura copias de seguridad y configura el respaldo mensual automático

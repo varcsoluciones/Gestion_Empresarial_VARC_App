@@ -17,6 +17,7 @@ export const initialSettings: CompanySettings = {
   identificacionFiscal: 'VARC-890412-A89',
   moneda: 'MXN',
   monedaSimbolo: '$',
+  idioma: 'es',
   tasaImpuestoDefecto: 16,
   criterioProrrateoDefecto: 'costo_material',
   direccion: 'Av. Insurgentes Sur 1450, Col. del Valle, CDMX',

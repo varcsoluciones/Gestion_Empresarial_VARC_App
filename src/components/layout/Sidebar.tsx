@@ -12,6 +12,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
+import { useTranslation } from '../../i18n/useTranslation';
 
 export type NavigationTab = 
   | 'dashboard' 
@@ -37,6 +38,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleCollapse
 }) => {
   const { settings, products, invoices, purchases } = useERP();
+  const { t } = useTranslation();
 
   // Calculate badge alerts
   const lowStockCount = products.filter(p => p.stockActual <= p.stockMinimo).length;
@@ -46,45 +48,45 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navItems: { id: NavigationTab; label: string; icon: React.ReactNode; badge?: number }[] = [
     {
       id: 'dashboard',
-      label: 'Dashboard',
+      label: t.nav.dashboard,
       icon: <LayoutDashboard size={19} />
     },
     {
       id: 'master-data',
-      label: 'Datos Maestros',
+      label: t.nav.masterData,
       icon: <Database size={19} />
     },
     {
       id: 'purchases',
-      label: 'Compras & CxP',
+      label: t.nav.purchases,
       icon: <ShoppingBag size={19} />,
       badge: pendingPurchasesCount > 0 ? pendingPurchasesCount : undefined
     },
     {
       id: 'inventory',
-      label: 'Inventarios',
+      label: t.nav.inventory,
       icon: <Boxes size={19} />,
       badge: lowStockCount > 0 ? lowStockCount : undefined
     },
     {
       id: 'sales',
-      label: 'Ventas & CxC',
+      label: t.nav.sales,
       icon: <TrendingUp size={19} />,
       badge: pendingInvoicesCount > 0 ? pendingInvoicesCount : undefined
     },
     {
       id: 'accounting',
-      label: 'Contabilidad',
+      label: t.nav.accounting,
       icon: <Calculator size={19} />
     },
     {
       id: 'reports',
-      label: 'Reportes Financieros',
+      label: t.nav.reports,
       icon: <BarChart3 size={19} />
     },
     {
       id: 'settings',
-      label: 'Configuración',
+      label: t.nav.settings,
       icon: <Settings size={19} />
     }
   ];

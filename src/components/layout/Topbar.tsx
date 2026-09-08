@@ -1,6 +1,7 @@
 import React from 'react';
 import { Sun, Moon, TrendingUp, ShoppingBag } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
+import { useTranslation } from '../../i18n/useTranslation';
 import type { NavigationTab } from './Sidebar';
 import type { AccentColor } from '../../types/erp';
 
@@ -10,17 +11,6 @@ interface TopbarProps {
   onOpenQuickSale?: () => void;
   onOpenQuickPurchase?: () => void;
 }
-
-const tabTitles: Record<NavigationTab, { title: string; category: string }> = {
-  dashboard: { title: 'Dashboard Ejecutivo', category: 'General' },
-  'master-data': { title: 'Datos Maestros', category: 'Administración' },
-  purchases: { title: 'Compras & Cuentas por Pagar (CxP)', category: 'Operaciones' },
-  inventory: { title: 'Control de Inventarios & Kardex', category: 'Almacén' },
-  sales: { title: 'Ventas, Cotizaciones & CxC', category: 'Comercial' },
-  accounting: { title: 'Contabilidad & Costos Prorrateados', category: 'Finanzas' },
-  reports: { title: 'Reportes Financieros & P&L', category: 'Analítica' },
-  settings: { title: 'Configuraciones del Sistema', category: 'Ajustes' }
-};
 
 const accentColors: { key: AccentColor; name: string; color: string }[] = [
   { key: 'blue', name: 'Azul Cupertino', color: '#007aff' },
@@ -37,6 +27,19 @@ export const Topbar: React.FC<TopbarProps> = ({
   onNavigate
 }) => {
   const { settings, updateSettings } = useERP();
+  const { t } = useTranslation();
+
+  const tabTitles: Record<NavigationTab, { title: string; category: string }> = {
+    dashboard: { title: t.nav.dashboard, category: 'General' },
+    'master-data': { title: t.nav.masterData, category: 'Admin' },
+    purchases: { title: t.nav.purchases, category: 'Operations' },
+    inventory: { title: t.nav.inventory, category: 'Warehouse' },
+    sales: { title: t.nav.sales, category: 'Commercial' },
+    accounting: { title: t.nav.accounting, category: 'Finance' },
+    reports: { title: t.nav.reports, category: 'Analytics' },
+    settings: { title: t.nav.settings, category: 'Settings' }
+  };
+
   const info = tabTitles[currentTab] || { title: 'ERP', category: 'General' };
 
   const toggleTheme = () => {

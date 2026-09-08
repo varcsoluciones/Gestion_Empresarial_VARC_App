@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useERP } from '../context/ERPContext';
-import type { ExpenseType, ProrrateoCriterion } from '../types/erp';
+import type { ExpenseType } from '../types/erp';
 import { formatCurrency, formatDate, getMonthKey } from '../utils/formatters';
+import { useTranslation } from '../i18n/useTranslation';
 import {
   Calculator,
   Plus,
@@ -12,10 +13,10 @@ import {
   Calendar,
   Layers,
   Sparkles,
-  DollarSign,
   ShieldCheck,
   Info,
-  SlidersHorizontal
+  SlidersHorizontal,
+  DollarSign
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
@@ -33,11 +34,13 @@ export const AccountingPage: React.FC = () => {
     getProductRealCost
   } = useERP();
 
+  const { t } = useTranslation();
+
   const [selectedMonth, setSelectedMonth] = useState(getMonthKey());
   const [activeTab, setActiveTab] = useState<'prorrateo' | 'expenses' | 'assets'>('prorrateo');
-  const [selectedCriterio, setSelectedCriterio] = useState<ProrrateoCriterion>(
-    settings.criterioProrrateoDefecto || 'costo_material'
-  );
+  
+  // Prorrateo is strictly informative using the company default established in settings:
+  const activeCriterio = settings.criterioProrrateoDefecto || 'costo_material';
 
   // New Expense Modal State
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
@@ -56,8 +59,8 @@ export const AccountingPage: React.FC = () => {
   const [astVidaMeses, setAstVidaMeses] = useState<number | ''>(36);
   const [astNotas, setAstNotas] = useState('');
 
-  // Monthly Prorrateo Calculation with selected criterion
-  const prorrateo = getProrrateoMensual(selectedMonth, selectedCriterio);
+  // Monthly Prorrateo Calculation with company criterion
+  const prorrateo = getProrrateoMensual(selectedMonth, activeCriterio);
 
   // Handlers
   const handleSaveExpense = (e: React.FormEvent) => {
@@ -99,17 +102,19 @@ export const AccountingPage: React.FC = () => {
     setAstNotas('');
   };
 
-  const filteredExpenses = expenses.filter(e => e.periodoMes === selectedMonth || e.fecha.startsWith(selectedMonth));
+  // Filtered queries
+  const filteredExpenses = expenses.filter(e => e.periodoMes === selectedMonth);
 
   return (
     <div className="page-content">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Contabilidad de Costos & Prorrateo Operativo</h1>
+          <h1 className="page-title">{t.accounting.title}</h1>
           <p className="page-description">
-            Control de gastos operativos fijos/variables, depreciación lineal de activos y absorción de costos a producto.
+            {t.accounting.subtitle}
           </p>
         </div>
+
         <div className="page-actions">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: 'var(--bg-surface)', padding: '0.35rem 0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)' }}>
             <Calendar size={15} style={{ color: 'var(--text-muted)' }} />
@@ -125,14 +130,14 @@ export const AccountingPage: React.FC = () => {
           {activeTab === 'expenses' && (
             <button type="button" className="btn btn-primary btn-sm" onClick={() => setIsExpenseModalOpen(true)}>
               <Plus size={16} />
-              + Registrar Gasto
+              {t.accounting.addExpense}
             </button>
           )}
 
           {activeTab === 'assets' && (
             <button type="button" className="btn btn-primary btn-sm" onClick={() => setIsAssetModalOpen(true)}>
               <Plus size={16} />
-              + Registrar Activo Fijo
+              {t.accounting.addAsset}
             </button>
           )}
         </div>
@@ -146,7 +151,7 @@ export const AccountingPage: React.FC = () => {
           onClick={() => setActiveTab('prorrateo')}
         >
           <Layers size={16} />
-          Prorrateo de Costo Real (Productos)
+          {t.accounting.tabProrrateo}
         </button>
         <button
           type="button"
@@ -154,7 +159,7 @@ export const AccountingPage: React.FC = () => {
           onClick={() => setActiveTab('expenses')}
         >
           <DollarSign size={16} />
-          Gastos Fijos & Variables ({filteredExpenses.length})
+          {t.accounting.tabExpenses} ({filteredExpenses.length})
         </button>
         <button
           type="button"
@@ -162,7 +167,7 @@ export const AccountingPage: React.FC = () => {
           onClick={() => setActiveTab('assets')}
         >
           <HardDrive size={16} />
-          Activos Fijos & Depreciación ({fixedAssets.length})
+          {t.accounting.tabAssets} ({fixedAssets.length})
         </button>
       </div>
 
@@ -170,7 +175,7 @@ export const AccountingPage: React.FC = () => {
       <div className="grid-4" style={{ marginBottom: '1.75rem' }}>
         <div className="stat-card">
           <div className="stat-header">
-            <span>Gastos Fijos del Mes</span>
+            <span>{t.accounting.fixedExpensesMonth}</span>
             <div className="stat-icon" style={{ backgroundColor: 'var(--color-accent-subtle)', color: 'var(--color-accent)' }}>
               <Calculator size={18} />
             </div>
@@ -183,7 +188,7 @@ export const AccountingPage: React.FC = () => {
 
         <div className="stat-card">
           <div className="stat-header">
-            <span>Gastos Variables</span>
+            <span>{t.accounting.variableExpensesMonth}</span>
             <div className="stat-icon" style={{ backgroundColor: 'var(--color-warning-bg)', color: 'var(--color-warning)' }}>
               <PieChart size={18} />
             </div>
@@ -196,7 +201,7 @@ export const AccountingPage: React.FC = () => {
 
         <div className="stat-card">
           <div className="stat-header">
-            <span>Depreciación Mensual Activos</span>
+            <span>{t.accounting.depreciationMonth}</span>
             <div className="stat-icon" style={{ backgroundColor: 'var(--color-info-bg)', color: 'var(--color-info)' }}>
               <TrendingDown size={18} />
             </div>
@@ -209,7 +214,7 @@ export const AccountingPage: React.FC = () => {
 
         <div className="stat-card" style={{ borderColor: 'var(--color-accent)', boxShadow: '0 4px 12px var(--color-accent-glow)' }}>
           <div className="stat-header">
-            <span style={{ color: 'var(--color-accent)', fontWeight: 700 }}>Gasto Operativo Total</span>
+            <span style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{t.accounting.totalOperatingExpense}</span>
             <div className="stat-icon" style={{ backgroundColor: 'var(--color-accent)', color: 'white' }}>
               <Sparkles size={18} />
             </div>
@@ -217,13 +222,13 @@ export const AccountingPage: React.FC = () => {
           <div className="stat-value" style={{ color: 'var(--color-accent)' }}>{formatCurrency(prorrateo.gastoOperativoTotal)}</div>
           <div className="stat-footer">
             <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
-              {selectedCriterio === 'costo_material' && (
-                <>Tasa Absorción: <strong>+{prorrateo.tasaAbsorcionPorcentaje}% s/ costo</strong></>
+              {activeCriterio === 'costo_material' && (
+                <>{t.accounting.absorptionRate}: <strong>+{prorrateo.tasaAbsorcionPorcentaje}% s/ costo</strong></>
               )}
-              {selectedCriterio === 'valor_venta' && (
-                <>Tasa Absorción: <strong>+{prorrateo.tasaAbsorcionPorcentaje}% s/ venta</strong></>
+              {activeCriterio === 'valor_venta' && (
+                <>{t.accounting.absorptionRate}: <strong>+{prorrateo.tasaAbsorcionPorcentaje}% s/ venta</strong></>
               )}
-              {selectedCriterio === 'unidades_iguales' && (
+              {activeCriterio === 'unidades_iguales' && (
                 <>Carga fija: <strong>{formatCurrency(prorrateo.costoOperativoProrrateadoPorUnidad)} / pza</strong></>
               )}
             </span>
@@ -234,89 +239,30 @@ export const AccountingPage: React.FC = () => {
       {/* Tab 1: Prorrateo & Real Cost Comparison Table */}
       {activeTab === 'prorrateo' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {/* Rule Selector Controls */}
+          {/* Rule Information Banner (Read-only / Institutional) */}
           <div className="card" style={{ padding: '1.25rem', backgroundColor: 'var(--bg-surface)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                 <SlidersHorizontal size={18} style={{ color: 'var(--color-accent)' }} />
                 <div>
-                  <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>Base / Regla de Prorrateo Contable</h3>
+                  <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>
+                    {t.accounting.activeRuleTitle}
+                  </h3>
                   <p style={{ fontSize: '0.775rem', color: 'var(--text-muted)', margin: 0 }}>
-                    Selecciona cómo distribuir los gastos operativos y depreciación entre los productos
+                    {t.accounting.activeRuleNote}
                   </p>
                 </div>
               </div>
 
-              {/* Criterion Selector Pills */}
-              <div style={{ display: 'flex', gap: '0.5rem', backgroundColor: 'var(--bg-subtle)', padding: '0.25rem', borderRadius: 'var(--radius-lg)' }}>
-                <button
-                  type="button"
-                  onClick={() => setSelectedCriterio('costo_material')}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    padding: '0.45rem 0.85rem',
-                    borderRadius: 'var(--radius-md)',
-                    border: 'none',
-                    fontSize: '0.825rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    backgroundColor: selectedCriterio === 'costo_material' ? 'var(--color-accent)' : 'transparent',
-                    color: selectedCriterio === 'costo_material' ? '#ffffff' : 'var(--text-secondary)',
-                    boxShadow: selectedCriterio === 'costo_material' ? '0 2px 8px var(--color-accent-glow)' : 'none'
-                  }}
-                >
+              {/* Active Criterion Status Pill (Informative, non-clickable) */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span className="badge badge-accent" style={{ fontSize: '0.825rem', padding: '0.4rem 0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                   <ShieldCheck size={14} />
-                  Costo de Material Directo (Recomendado)
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setSelectedCriterio('valor_venta')}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    padding: '0.45rem 0.85rem',
-                    borderRadius: 'var(--radius-md)',
-                    border: 'none',
-                    fontSize: '0.825rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    backgroundColor: selectedCriterio === 'valor_venta' ? 'var(--color-accent)' : 'transparent',
-                    color: selectedCriterio === 'valor_venta' ? '#ffffff' : 'var(--text-secondary)',
-                    boxShadow: selectedCriterio === 'valor_venta' ? '0 2px 8px var(--color-accent-glow)' : 'none'
-                  }}
-                >
-                  <PieChart size={14} />
-                  Precio de Venta
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setSelectedCriterio('unidades_iguales')}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    padding: '0.45rem 0.85rem',
-                    borderRadius: 'var(--radius-md)',
-                    border: 'none',
-                    fontSize: '0.825rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    backgroundColor: selectedCriterio === 'unidades_iguales' ? 'var(--color-accent)' : 'transparent',
-                    color: selectedCriterio === 'unidades_iguales' ? '#ffffff' : 'var(--text-secondary)',
-                    boxShadow: selectedCriterio === 'unidades_iguales' ? '0 2px 8px var(--color-accent-glow)' : 'none'
-                  }}
-                >
-                  <Layers size={14} />
-                  Por Unidades Iguales
-                </button>
+                  {activeCriterio === 'costo_material' && t.accounting.ruleMaterialName}
+                  {activeCriterio === 'valor_venta' && t.accounting.rulePriceName}
+                  {activeCriterio === 'unidades_iguales' && t.accounting.ruleUnitsName}
+                  {' '}(Activo)
+                </span>
               </div>
             </div>
 
@@ -324,8 +270,8 @@ export const AccountingPage: React.FC = () => {
             <div style={{
               padding: '0.85rem 1rem',
               borderRadius: 'var(--radius-md)',
-              backgroundColor: selectedCriterio === 'costo_material' ? 'var(--color-accent-subtle)' : 'var(--bg-subtle)',
-              border: '1px solid ' + (selectedCriterio === 'costo_material' ? 'var(--color-accent)' : 'var(--border-default)'),
+              backgroundColor: 'var(--color-accent-subtle)',
+              border: '1px solid var(--color-accent)',
               display: 'flex',
               alignItems: 'flex-start',
               gap: '0.75rem',
@@ -334,23 +280,22 @@ export const AccountingPage: React.FC = () => {
             }}>
               <Info size={18} style={{ color: 'var(--color-accent)', flexShrink: 0, marginTop: '2px' }} />
               <div>
-                {selectedCriterio === 'costo_material' && (
+                {activeCriterio === 'costo_material' && (
                   <>
-                    <strong style={{ color: 'var(--color-accent)' }}>Criterio Contable Basado en Material Directo: </strong>
-                    Los gastos operativos totales ({formatCurrency(prorrateo.gastoOperativoTotal)}) se distribuyen como una tasa del <strong>+{prorrateo.tasaAbsorcionPorcentaje}%</strong> sobre el costo de compra de cada producto (Base inventario valuado: {formatCurrency(prorrateo.valorInventarioCostoTotal)}). 
-                    <em> Esto evita castigar productos terminados de bajo costo (ej. calcetines o accesorios), manteniendo márgenes reales y proporcionales.</em>
+                    <strong style={{ color: 'var(--color-accent)' }}>{t.accounting.ruleMaterialName}: </strong>
+                    {t.accounting.ruleMaterialExplanation} (Base inventario valuado: {formatCurrency(prorrateo.valorInventarioCostoTotal)} — Tasa de absorción: <strong>+{prorrateo.tasaAbsorcionPorcentaje}%</strong>).
                   </>
                 )}
-                {selectedCriterio === 'valor_venta' && (
+                {activeCriterio === 'valor_venta' && (
                   <>
-                    <strong style={{ color: 'var(--color-accent)' }}>Criterio Basado en Precio de Venta: </strong>
-                    Cada producto absorbe gastos proporcionalmente a su capacidad de generación de ingresos ({prorrateo.tasaAbsorcionPorcentaje}% sobre su precio de lista).
+                    <strong style={{ color: 'var(--color-accent)' }}>{t.accounting.rulePriceName}: </strong>
+                    {t.accounting.rulePriceExplanation} (Tasa absorción s/ venta: <strong>+{prorrateo.tasaAbsorcionPorcentaje}%</strong>).
                   </>
                 )}
-                {selectedCriterio === 'unidades_iguales' && (
+                {activeCriterio === 'unidades_iguales' && (
                   <>
-                    <strong style={{ color: 'var(--color-warning)' }}>Criterio Lineal por Unidades: </strong>
-                    Se asignan {formatCurrency(prorrateo.costoOperativoProrrateadoPorUnidad)} fijos a cada prenda sin importar su precio de costo o venta.
+                    <strong style={{ color: 'var(--color-warning)' }}>{t.accounting.ruleUnitsName}: </strong>
+                    {t.accounting.ruleUnitsExplanation} (Carga fija asignada: <strong>{formatCurrency(prorrateo.costoOperativoProrrateadoPorUnidad)}</strong> por unidad).
                   </>
                 )}
               </div>
@@ -363,7 +308,7 @@ export const AccountingPage: React.FC = () => {
               <div>
                 <h2 className="card-title">Análisis de Costo Real con Absorción Operativa</h2>
                 <p className="card-subtitle">
-                  Fórmula Activa: <strong>Costo Real = Costo de Compra + Gasto Operativo Absorbido ({selectedCriterio === 'costo_material' ? `+${prorrateo.tasaAbsorcionPorcentaje}% del material` : selectedCriterio === 'valor_venta' ? `+${prorrateo.tasaAbsorcionPorcentaje}% del PVP` : `${formatCurrency(prorrateo.costoOperativoProrrateadoPorUnidad)} fijo`})</strong>
+                  Fórmula Activa: <strong>Costo Real = Costo de Compra + Gasto Operativo Absorbido ({activeCriterio === 'costo_material' ? `+${prorrateo.tasaAbsorcionPorcentaje}% del material` : activeCriterio === 'valor_venta' ? `+${prorrateo.tasaAbsorcionPorcentaje}% del PVP` : `${formatCurrency(prorrateo.costoOperativoProrrateadoPorUnidad)} fijo`})</strong>
                 </p>
               </div>
             </div>
@@ -385,7 +330,7 @@ export const AccountingPage: React.FC = () => {
                 </thead>
                 <tbody>
                   {products.map(p => {
-                    const costs = getProductRealCost(p.id, selectedMonth, selectedCriterio);
+                    const costs = getProductRealCost(p.id, selectedMonth, activeCriterio);
                     const grossMarginPercent = p.precioVenta > 0
                       ? Number((((p.precioVenta - costs.costoCompra) / p.precioVenta) * 100).toFixed(1))
                       : 0;
@@ -408,7 +353,7 @@ export const AccountingPage: React.FC = () => {
                           {formatCurrency(costs.costoCompra)}
                         </td>
                         <td style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                          {selectedCriterio === 'costo_material' ? `+${costs.tasaAbsorcionPorcentaje}%` : selectedCriterio === 'valor_venta' ? `+${costs.tasaAbsorcionPorcentaje}% PVP` : 'Fijo'}
+                          {activeCriterio === 'costo_material' ? `+${costs.tasaAbsorcionPorcentaje}%` : activeCriterio === 'valor_venta' ? `+${costs.tasaAbsorcionPorcentaje}% PVP` : 'Fijo'}
                         </td>
                         <td style={{ textAlign: 'right', color: 'var(--color-warning-text)', fontWeight: 600 }}>
                           +{formatCurrency(costs.costoOperativoProrrateado)}
