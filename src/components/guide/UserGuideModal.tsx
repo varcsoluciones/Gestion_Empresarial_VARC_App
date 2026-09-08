@@ -746,7 +746,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
                     1. Temas & Colores de Acento
                   </h4>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    Modo Claro y Oscuro con 9 colores de acento inspirados en Apple (Azul, Púrpura, Verde, Amarillo, Vino, Naranja, Rosa, Turquesa y Grafito).
+                    Modo Claro y Oscuro con 14 colores de acento corporativos (Azul Cupertino, Azul Marino, Cian, Turquesa, Verde Esmeralda, Verde Bosque, Amarillo Dorado, Naranja, Rojo Vino, Café Moka, Rosa, Púrpura, Índigo y Grafito).
                   </p>
                 </div>
 

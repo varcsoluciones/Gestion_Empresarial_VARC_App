@@ -13,26 +13,31 @@ export type MovementType =
 
 export type ExpenseType = 'fijo' | 'variable';
 export type PaymentMethod = 'transferencia' | 'efectivo' | 'tarjeta' | 'cheque';
-
 export type ThemeMode = 'light' | 'dark';
+
 export type AccentColor = 
   | 'blue' 
-  | 'purple' 
+  | 'navy'
+  | 'cyan'
+  | 'teal'
   | 'green' 
+  | 'forest'
+  | 'yellow'
   | 'orange' 
+  | 'wine'
+  | 'coffee'
   | 'pink' 
-  | 'teal' 
-  | 'graphite' 
+  | 'purple' 
   | 'indigo' 
+  | 'graphite'
   | 'emerald' 
   | 'sapphire' 
   | 'rose' 
   | 'amber' 
   | 'slate'
-  | 'yellow'
   | 'amarillo'
-  | 'wine'
-  | 'vino';
+  | 'vino'
+  | 'cafe';
 
 // 1. Datos Maestros
 export interface Client {

@@ -29,14 +29,19 @@ import { APP_NAME, APP_BRAND, APP_VERSION } from '../config/version';
 
 const accents: { key: AccentColor; name: string; hex: string; description: string }[] = [
   { key: 'blue', name: 'Azul Cupertino', hex: '#007aff', description: 'System Blue icónico y elegante' },
-  { key: 'purple', name: 'Púrpura Apple', hex: '#5856d6', description: 'System Purple moderno y distintivo' },
-  { key: 'green', name: 'Verde Apple', hex: '#34c759', description: 'System Green financiero y fresco' },
-  { key: 'yellow', name: 'Amarillo Dorado', hex: '#eab308', description: 'System Yellow cálido, brillante y enérgico' },
-  { key: 'orange', name: 'Naranja Apple', hex: '#ff9500', description: 'System Orange dinámico y proactivo' },
-  { key: 'pink', name: 'Rosa Apple', hex: '#ff2d55', description: 'System Pink vibrante y sofisticado' },
-  { key: 'wine', name: 'Color Vino / Borgoña', hex: '#881337', description: 'Vino tinto / Borgoña profundo y premium' },
-  { key: 'teal', name: 'Turquesa Apple', hex: '#00c7be', description: 'System Teal balanceado y limpio' },
-  { key: 'graphite', name: 'Gris Espacial', hex: '#636366', description: 'Space Gray minimalista y corporativo' }
+  { key: 'navy', name: 'Azul Marino / Zafiro', hex: '#1d4ed8', description: 'Azul formal, corporativo y de alta confianza' },
+  { key: 'cyan', name: 'Cian Cielo', hex: '#0284c7', description: 'Fresco, moderno y de alta legibilidad' },
+  { key: 'teal', name: 'Turquesa Apple', hex: '#00c7be', description: 'Balanceado, sobrio y limpio' },
+  { key: 'green', name: 'Verde Esmeralda', hex: '#16a34a', description: 'Positivo, financiero y rentable' },
+  { key: 'forest', name: 'Verde Bosque / Pino', hex: '#047857', description: 'Sobrio, ejecutivo y natural' },
+  { key: 'yellow', name: 'Amarillo Dorado', hex: '#ca8a04', description: 'Cálido, brillante y enérgico' },
+  { key: 'orange', name: 'Naranja Ámbar', hex: '#ea580c', description: 'Dinámico, proactivo y comercial' },
+  { key: 'wine', name: 'Rojo Vino / Borgoña', hex: '#be123c', description: 'Rojo vino refinado, intenso y vibrante' },
+  { key: 'coffee', name: 'Café Moka / Espresso', hex: '#6c4a38', description: 'Café tostado cálido, acogedor y artesanal' },
+  { key: 'pink', name: 'Rosa Fucsia', hex: '#e11d48', description: 'Sofisticado, llamativo y creativo' },
+  { key: 'purple', name: 'Púrpura Imperial', hex: '#7c3aed', description: 'Elegante, distintivo y tecnológico' },
+  { key: 'indigo', name: 'Índigo Neón', hex: '#4f46e5', description: 'Profundo, moderno y de alto impacto' },
+  { key: 'graphite', name: 'Gris Grafito Espacial', hex: '#4b5563', description: 'Space Gray minimalista, neutro y prémium' }
 ];
 
 export const SettingsPage: React.FC = () => {
@@ -230,12 +235,12 @@ export const SettingsPage: React.FC = () => {
               {accents.map((acc) => {
                 const isSelected = settings.colorAcento === acc.key || 
                   (acc.key === 'blue' && settings.colorAcento === 'sapphire') ||
-                  (acc.key === 'purple' && settings.colorAcento === 'indigo') ||
                   (acc.key === 'green' && settings.colorAcento === 'emerald') ||
                   (acc.key === 'yellow' && settings.colorAcento === 'amarillo') ||
                   (acc.key === 'orange' && settings.colorAcento === 'amber') ||
                   (acc.key === 'pink' && settings.colorAcento === 'rose') ||
                   (acc.key === 'wine' && settings.colorAcento === 'vino') ||
+                  (acc.key === 'coffee' && (settings.colorAcento as any) === 'cafe') ||
                   (acc.key === 'graphite' && settings.colorAcento === 'slate');
 
                 return (

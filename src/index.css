@@ -111,7 +111,8 @@
   --color-info-text: #38bdf8;
 }
 
-/* Apple System Accent Color Variations */
+/* Apple System Accent Color Variations (14 Curated Corporate Themes) */
+/* 1. Azul Cupertino */
 [data-accent="blue"],
 [data-accent="sapphire"] {
   --color-accent: #007aff;
@@ -130,78 +131,41 @@
   --color-accent-text: #64b5f6;
 }
 
-[data-accent="purple"],
-[data-accent="indigo"] {
-  --color-accent: #5856d6;
-  --color-accent-hover: #4745b8;
-  --color-accent-subtle: rgba(88, 86, 214, 0.08);
-  --color-accent-subtle-border: rgba(88, 86, 214, 0.25);
-  --color-accent-text: #3c3aa3;
-  --color-accent-glow: rgba(88, 86, 214, 0.35);
+/* 2. Azul Marino / Zafiro */
+[data-accent="navy"] {
+  --color-accent: #1d4ed8;
+  --color-accent-hover: #1e40af;
+  --color-accent-subtle: rgba(29, 78, 216, 0.08);
+  --color-accent-subtle-border: rgba(29, 78, 216, 0.25);
+  --color-accent-text: #172554;
+  --color-accent-glow: rgba(29, 78, 216, 0.35);
 }
-[data-theme="dark"][data-accent="purple"],
-[data-theme="dark"][data-accent="indigo"] {
-  --color-accent: #5e5ce6;
-  --color-accent-hover: #5856d6;
-  --color-accent-subtle: rgba(94, 92, 230, 0.16);
-  --color-accent-subtle-border: rgba(94, 92, 230, 0.35);
-  --color-accent-text: #a5b4fc;
-}
-
-[data-accent="green"],
-[data-accent="emerald"] {
-  --color-accent: #34c759;
-  --color-accent-hover: #28a745;
-  --color-accent-subtle: rgba(52, 199, 89, 0.08);
-  --color-accent-subtle-border: rgba(52, 199, 89, 0.25);
-  --color-accent-text: #1e7e34;
-  --color-accent-glow: rgba(52, 199, 89, 0.35);
-}
-[data-theme="dark"][data-accent="green"],
-[data-theme="dark"][data-accent="emerald"] {
-  --color-accent: #30d158;
-  --color-accent-hover: #34c759;
-  --color-accent-subtle: rgba(48, 209, 88, 0.16);
-  --color-accent-subtle-border: rgba(48, 209, 88, 0.35);
-  --color-accent-text: #6ee7b7;
+[data-theme="dark"][data-accent="navy"] {
+  --color-accent: #3b82f6;
+  --color-accent-hover: #2563eb;
+  --color-accent-subtle: rgba(59, 130, 246, 0.16);
+  --color-accent-subtle-border: rgba(59, 130, 246, 0.35);
+  --color-accent-text: #93c5fd;
 }
 
-[data-accent="orange"],
-[data-accent="amber"] {
-  --color-accent: #ff9500;
-  --color-accent-hover: #e08500;
-  --color-accent-subtle: rgba(255, 149, 0, 0.08);
-  --color-accent-subtle-border: rgba(255, 149, 0, 0.25);
-  --color-accent-text: #b36b00;
-  --color-accent-glow: rgba(255, 149, 0, 0.35);
+/* 3. Cian Cielo */
+[data-accent="cyan"] {
+  --color-accent: #0284c7;
+  --color-accent-hover: #0369a1;
+  --color-accent-subtle: rgba(2, 132, 199, 0.08);
+  --color-accent-subtle-border: rgba(2, 132, 199, 0.25);
+  --color-accent-text: #075985;
+  --color-accent-glow: rgba(2, 132, 199, 0.35);
 }
-[data-theme="dark"][data-accent="orange"],
-[data-theme="dark"][data-accent="amber"] {
-  --color-accent: #ff9f0a;
-  --color-accent-hover: #ff9500;
-  --color-accent-subtle: rgba(255, 159, 10, 0.16);
-  --color-accent-subtle-border: rgba(255, 159, 10, 0.35);
-  --color-accent-text: #ffd166;
-}
-
-[data-accent="pink"],
-[data-accent="rose"] {
-  --color-accent: #ff2d55;
-  --color-accent-hover: #e02449;
-  --color-accent-subtle: rgba(255, 45, 85, 0.08);
-  --color-accent-subtle-border: rgba(255, 45, 85, 0.25);
-  --color-accent-text: #b81434;
-  --color-accent-glow: rgba(255, 45, 85, 0.35);
-}
-[data-theme="dark"][data-accent="pink"],
-[data-theme="dark"][data-accent="rose"] {
-  --color-accent: #ff375f;
-  --color-accent-hover: #ff2d55;
-  --color-accent-subtle: rgba(255, 55, 95, 0.16);
-  --color-accent-subtle-border: rgba(255, 55, 95, 0.35);
-  --color-accent-text: #fda4af;
+[data-theme="dark"][data-accent="cyan"] {
+  --color-accent: #38bdf8;
+  --color-accent-hover: #0ea5e9;
+  --color-accent-subtle: rgba(56, 189, 248, 0.16);
+  --color-accent-subtle-border: rgba(56, 189, 248, 0.35);
+  --color-accent-text: #bae6fd;
 }
 
+/* 4. Turquesa Apple */
 [data-accent="teal"] {
   --color-accent: #00c7be;
   --color-accent-hover: #00aba3;
@@ -211,39 +175,58 @@
   --color-accent-glow: rgba(0, 199, 190, 0.35);
 }
 [data-theme="dark"][data-accent="teal"] {
-  --color-accent: #63e6e2;
-  --color-accent-hover: #00c7be;
-  --color-accent-subtle: rgba(99, 230, 226, 0.16);
-  --color-accent-subtle-border: rgba(99, 230, 226, 0.35);
+  --color-accent: #2dd4bf;
+  --color-accent-hover: #14b8a6;
+  --color-accent-subtle: rgba(45, 212, 191, 0.16);
+  --color-accent-subtle-border: rgba(45, 212, 191, 0.35);
   --color-accent-text: #99f6e4;
 }
 
-[data-accent="graphite"],
-[data-accent="slate"] {
-  --color-accent: #636366;
-  --color-accent-hover: #48484a;
-  --color-accent-subtle: rgba(99, 99, 102, 0.08);
-  --color-accent-subtle-border: rgba(99, 99, 102, 0.25);
-  --color-accent-text: #2c2c2e;
-  --color-accent-glow: rgba(99, 99, 102, 0.35);
+/* 5. Verde Esmeralda */
+[data-accent="green"],
+[data-accent="emerald"] {
+  --color-accent: #16a34a;
+  --color-accent-hover: #15803d;
+  --color-accent-subtle: rgba(22, 163, 74, 0.08);
+  --color-accent-subtle-border: rgba(22, 163, 74, 0.25);
+  --color-accent-text: #14532d;
+  --color-accent-glow: rgba(22, 163, 74, 0.35);
 }
-[data-theme="dark"][data-accent="graphite"],
-[data-theme="dark"][data-accent="slate"] {
-  --color-accent: #98989d;
-  --color-accent-hover: #8e8e93;
-  --color-accent-subtle: rgba(152, 152, 157, 0.16);
-  --color-accent-subtle-border: rgba(152, 152, 157, 0.35);
-  --color-accent-text: #e2e8f0;
+[data-theme="dark"][data-accent="green"],
+[data-theme="dark"][data-accent="emerald"] {
+  --color-accent: #34d399;
+  --color-accent-hover: #10b981;
+  --color-accent-subtle: rgba(52, 211, 153, 0.16);
+  --color-accent-subtle-border: rgba(52, 211, 153, 0.35);
+  --color-accent-text: #a7f3d0;
 }
 
+/* 6. Verde Bosque / Pino */
+[data-accent="forest"] {
+  --color-accent: #047857;
+  --color-accent-hover: #065f46;
+  --color-accent-subtle: rgba(4, 120, 87, 0.08);
+  --color-accent-subtle-border: rgba(4, 120, 87, 0.25);
+  --color-accent-text: #064e3b;
+  --color-accent-glow: rgba(4, 120, 87, 0.35);
+}
+[data-theme="dark"][data-accent="forest"] {
+  --color-accent: #10b981;
+  --color-accent-hover: #059669;
+  --color-accent-subtle: rgba(16, 185, 129, 0.16);
+  --color-accent-subtle-border: rgba(16, 185, 129, 0.35);
+  --color-accent-text: #6ee7b7;
+}
+
+/* 7. Amarillo Dorado */
 [data-accent="yellow"],
 [data-accent="amarillo"] {
-  --color-accent: #eab308;
-  --color-accent-hover: #ca8a04;
-  --color-accent-subtle: rgba(234, 179, 8, 0.12);
-  --color-accent-subtle-border: rgba(234, 179, 8, 0.35);
-  --color-accent-text: #854d0e;
-  --color-accent-glow: rgba(234, 179, 8, 0.35);
+  --color-accent: #ca8a04;
+  --color-accent-hover: #a16207;
+  --color-accent-subtle: rgba(202, 138, 4, 0.1);
+  --color-accent-subtle-border: rgba(202, 138, 4, 0.3);
+  --color-accent-text: #713f12;
+  --color-accent-glow: rgba(202, 138, 4, 0.35);
 }
 [data-theme="dark"][data-accent="yellow"],
 [data-theme="dark"][data-accent="amarillo"] {
@@ -254,14 +237,34 @@
   --color-accent-text: #fef08a;
 }
 
+/* 8. Naranja Ámbar */
+[data-accent="orange"],
+[data-accent="amber"] {
+  --color-accent: #ea580c;
+  --color-accent-hover: #c2410c;
+  --color-accent-subtle: rgba(234, 88, 12, 0.08);
+  --color-accent-subtle-border: rgba(234, 88, 12, 0.25);
+  --color-accent-text: #7c2d12;
+  --color-accent-glow: rgba(234, 88, 12, 0.35);
+}
+[data-theme="dark"][data-accent="orange"],
+[data-theme="dark"][data-accent="amber"] {
+  --color-accent: #fb923c;
+  --color-accent-hover: #f97316;
+  --color-accent-subtle: rgba(251, 146, 60, 0.16);
+  --color-accent-subtle-border: rgba(251, 146, 60, 0.35);
+  --color-accent-text: #fed7aa;
+}
+
+/* 9. Rojo Vino / Borgoña (Red-shifted Bordeaux) */
 [data-accent="wine"],
 [data-accent="vino"] {
-  --color-accent: #881337;
-  --color-accent-hover: #700f2b;
-  --color-accent-subtle: rgba(136, 19, 55, 0.08);
-  --color-accent-subtle-border: rgba(136, 19, 55, 0.25);
+  --color-accent: #be123c;
+  --color-accent-hover: #9f1239;
+  --color-accent-subtle: rgba(190, 18, 60, 0.08);
+  --color-accent-subtle-border: rgba(190, 18, 60, 0.25);
   --color-accent-text: #881337;
-  --color-accent-glow: rgba(136, 19, 55, 0.35);
+  --color-accent-glow: rgba(190, 18, 60, 0.35);
 }
 [data-theme="dark"][data-accent="wine"],
 [data-theme="dark"][data-accent="vino"] {
@@ -270,6 +273,97 @@
   --color-accent-subtle: rgba(251, 113, 133, 0.16);
   --color-accent-subtle-border: rgba(251, 113, 133, 0.35);
   --color-accent-text: #ffe4e6;
+}
+
+/* 10. Café Moka / Espresso */
+[data-accent="coffee"],
+[data-accent="cafe"] {
+  --color-accent: #6c4a38;
+  --color-accent-hover: #54392b;
+  --color-accent-subtle: rgba(108, 74, 56, 0.08);
+  --color-accent-subtle-border: rgba(108, 74, 56, 0.25);
+  --color-accent-text: #3c2415;
+  --color-accent-glow: rgba(108, 74, 56, 0.35);
+}
+[data-theme="dark"][data-accent="coffee"],
+[data-theme="dark"][data-accent="cafe"] {
+  --color-accent: #c98a66;
+  --color-accent-hover: #b8734f;
+  --color-accent-subtle: rgba(201, 138, 102, 0.16);
+  --color-accent-subtle-border: rgba(201, 138, 102, 0.35);
+  --color-accent-text: #f5dfd3;
+}
+
+/* 11. Rosa Fucsia */
+[data-accent="pink"],
+[data-accent="rose"] {
+  --color-accent: #e11d48;
+  --color-accent-hover: #be123c;
+  --color-accent-subtle: rgba(225, 29, 72, 0.08);
+  --color-accent-subtle-border: rgba(225, 29, 72, 0.25);
+  --color-accent-text: #9f1239;
+  --color-accent-glow: rgba(225, 29, 72, 0.35);
+}
+[data-theme="dark"][data-accent="pink"],
+[data-theme="dark"][data-accent="rose"] {
+  --color-accent: #f472b6;
+  --color-accent-hover: #ec4899;
+  --color-accent-subtle: rgba(244, 114, 182, 0.16);
+  --color-accent-subtle-border: rgba(244, 114, 182, 0.35);
+  --color-accent-text: #fbcfe8;
+}
+
+/* 12. Púrpura Imperial */
+[data-accent="purple"] {
+  --color-accent: #7c3aed;
+  --color-accent-hover: #6d28d9;
+  --color-accent-subtle: rgba(124, 58, 237, 0.08);
+  --color-accent-subtle-border: rgba(124, 58, 237, 0.25);
+  --color-accent-text: #5b21b6;
+  --color-accent-glow: rgba(124, 58, 237, 0.35);
+}
+[data-theme="dark"][data-accent="purple"] {
+  --color-accent: #a78bfa;
+  --color-accent-hover: #8b5cf6;
+  --color-accent-subtle: rgba(167, 139, 250, 0.16);
+  --color-accent-subtle-border: rgba(167, 139, 250, 0.35);
+  --color-accent-text: #ede9fe;
+}
+
+/* 13. Índigo Neón */
+[data-accent="indigo"] {
+  --color-accent: #4f46e5;
+  --color-accent-hover: #4338ca;
+  --color-accent-subtle: rgba(79, 70, 229, 0.08);
+  --color-accent-subtle-border: rgba(79, 70, 229, 0.25);
+  --color-accent-text: #3730a3;
+  --color-accent-glow: rgba(79, 70, 229, 0.35);
+}
+[data-theme="dark"][data-accent="indigo"] {
+  --color-accent: #818cf8;
+  --color-accent-hover: #6366f1;
+  --color-accent-subtle: rgba(129, 140, 248, 0.16);
+  --color-accent-subtle-border: rgba(129, 140, 248, 0.35);
+  --color-accent-text: #e0e7ff;
+}
+
+/* 14. Gris Grafito Espacial */
+[data-accent="graphite"],
+[data-accent="slate"] {
+  --color-accent: #4b5563;
+  --color-accent-hover: #374151;
+  --color-accent-subtle: rgba(75, 85, 99, 0.08);
+  --color-accent-subtle-border: rgba(75, 85, 99, 0.25);
+  --color-accent-text: #1f2937;
+  --color-accent-glow: rgba(75, 85, 99, 0.35);
+}
+[data-theme="dark"][data-accent="graphite"],
+[data-theme="dark"][data-accent="slate"] {
+  --color-accent: #9ca3af;
+  --color-accent-hover: #6b7280;
+  --color-accent-subtle: rgba(156, 163, 175, 0.16);
+  --color-accent-subtle-border: rgba(156, 163, 175, 0.35);
+  --color-accent-text: #f3f4f6;
 }
 
 /* Base resets & styles */
