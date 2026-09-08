@@ -147,7 +147,7 @@ export const SettingsPage: React.FC = () => {
   };
 
   return (
-    <div className="page-content" style={{ maxWidth: '1000px' }}>
+    <div className="page-content">
       <div className="page-header">
         <div>
           <h1 className="page-title">{t.settings.title}</h1>

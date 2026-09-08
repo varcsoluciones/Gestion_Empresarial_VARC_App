@@ -60,7 +60,9 @@ const AppContent: React.FC = () => {
           onNavigate={setCurrentTab}
           onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         />
-        {renderActivePage()}
+        <div className="app-page-body">
+          {renderActivePage()}
+        </div>
       </div>
     </div>
   );

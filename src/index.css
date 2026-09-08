@@ -435,7 +435,8 @@ body {
   flex-direction: column;
   min-width: 0;
   height: 100vh;
-  overflow-y: auto;
+  overflow: hidden;
+  width: 100%;
 }
 
 .app-topbar {
@@ -446,11 +447,25 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  position: sticky;
-  top: 0;
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
   z-index: 30;
   backdrop-filter: blur(8px);
 }
+
+.app-page-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+}
+
 
 .topbar-left {
   display: flex;
@@ -1334,7 +1349,7 @@ body {
     overflow: visible !important;
     padding: 0 !important;
   }
-  .app-main {
+  .app-main, .app-page-body {
     height: auto !important;
     overflow: visible !important;
     padding: 0 !important;
@@ -1423,7 +1438,7 @@ body {
     overflow-x: hidden;
     max-width: 100vw;
   }
-  .app-main {
+  .app-main, .app-page-body {
     max-width: 100vw;
     overflow-x: hidden;
   }
