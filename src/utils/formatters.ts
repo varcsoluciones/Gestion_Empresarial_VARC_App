@@ -1,10 +1,26 @@
+let runtimeCurrencySymbol: string | null = null;
+
+export function setActiveCurrencySymbol(symbol: string): void {
+  if (typeof symbol === 'string' && symbol.trim()) {
+    runtimeCurrencySymbol = symbol.trim();
+  }
+}
+
 export function getActiveCurrencySymbol(): string {
+  if (runtimeCurrencySymbol) {
+    return runtimeCurrencySymbol;
+  }
   try {
-    const saved = localStorage.getItem('erp_settings');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed && typeof parsed.monedaSimbolo === 'string' && parsed.monedaSimbolo.trim()) {
-        return parsed.monedaSimbolo.trim();
+    const keys = ['VARC_MODULAR_ERP_V1_settings', 'VARC_ERP_settings', 'erp_settings'];
+    for (const key of keys) {
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed.monedaSimbolo === 'string' && parsed.monedaSimbolo.trim()) {
+          const sym = parsed.monedaSimbolo.trim();
+          runtimeCurrencySymbol = sym;
+          return sym;
+        }
       }
     }
   } catch {}

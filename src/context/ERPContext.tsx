@@ -32,7 +32,7 @@ import {
   initialOperatingExpenses,
   initialFixedAssets
 } from '../data/seedData';
-import { calculateWeightedAverageCost, generateDocNumber, getMonthKey, getNextProductSKU, formatCurrency } from '../utils/formatters';
+import { calculateWeightedAverageCost, generateDocNumber, getMonthKey, getNextProductSKU, formatCurrency, setActiveCurrencySymbol } from '../utils/formatters';
 import {
   downloadJSONBackup,
   downloadExcelWorkbook,
@@ -187,6 +187,9 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     localStorage.setItem(STORAGE_PREFIX + 'settings', JSON.stringify(settings));
     document.documentElement.setAttribute('data-theme', settings.tema);
     document.documentElement.setAttribute('data-accent', settings.colorAcento);
+    if (settings.monedaSimbolo) {
+      setActiveCurrencySymbol(settings.monedaSimbolo);
+    }
   }, [settings]);
 
   useEffect(() => { localStorage.setItem(STORAGE_PREFIX + 'categories', JSON.stringify(categories)); }, [categories]);
@@ -1245,8 +1248,15 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [settings.respaldoAutomaticoActivo, settings.ultimoRespaldoPeriodo]);
 
   const updateSettings = (newSettings: Partial<CompanySettings>) => {
+    if (newSettings.monedaSimbolo) {
+      setActiveCurrencySymbol(newSettings.monedaSimbolo);
+    }
     setSettings(prev => ({ ...prev, ...newSettings }));
   };
+
+  if (settings.monedaSimbolo) {
+    setActiveCurrencySymbol(settings.monedaSimbolo);
+  }
 
   return (
     <ERPContext.Provider
