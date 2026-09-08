@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sun, Moon, TrendingUp, ShoppingBag, Settings } from 'lucide-react';
+import { Sun, Moon, TrendingUp, ShoppingBag, Settings, Menu } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { NavigationTab } from './Sidebar';
@@ -7,13 +7,15 @@ import type { NavigationTab } from './Sidebar';
 interface TopbarProps {
   currentTab: NavigationTab;
   onNavigate: (tab: NavigationTab) => void;
+  onToggleMobileMenu?: () => void;
   onOpenQuickSale?: () => void;
   onOpenQuickPurchase?: () => void;
 }
 
 export const Topbar: React.FC<TopbarProps> = ({
   currentTab,
-  onNavigate
+  onNavigate,
+  onToggleMobileMenu
 }) => {
   const { settings, updateSettings } = useERP();
   const { t } = useTranslation();
@@ -39,6 +41,17 @@ export const Topbar: React.FC<TopbarProps> = ({
   return (
     <header className="app-topbar no-print">
       <div className="topbar-left">
+        {onToggleMobileMenu && (
+          <button
+            type="button"
+            className="btn-icon mobile-menu-btn"
+            onClick={onToggleMobileMenu}
+            title="Abrir menú"
+            aria-label="Abrir menú de navegación"
+          >
+            <Menu size={20} />
+          </button>
+        )}
         <div className="page-breadcrumb">
           <span>{info.category}</span>
           <span>/</span>

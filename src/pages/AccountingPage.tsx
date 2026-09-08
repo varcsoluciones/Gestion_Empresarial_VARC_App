@@ -691,7 +691,7 @@ export const AccountingPage: React.FC = () => {
               borderRadius: 'var(--radius-md)',
               border: '1px solid var(--border-default)',
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
               gap: '0.75rem',
               fontSize: '0.875rem'
             }}>

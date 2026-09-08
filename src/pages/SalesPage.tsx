@@ -989,7 +989,7 @@ export const SalesPage: React.FC = () => {
               Agregar Producto a la Factura
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr 1fr auto', gap: '0.75rem', alignItems: 'flex-end' }}>
+            <div className="line-item-builder">
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Producto</label>
                 <ComboboxInline
@@ -1154,7 +1154,7 @@ export const SalesPage: React.FC = () => {
           </div>
 
           {/* Totals & Notes */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1.5rem', alignItems: 'flex-start' }}>
+          <div className="modal-totals-grid">
             <div className="form-group">
               <label className="form-label">Notas al pie / Comentarios de Factura</label>
               <textarea
@@ -1269,7 +1269,7 @@ export const SalesPage: React.FC = () => {
               Agregar Producto a la Cotización
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr 1fr auto', gap: '0.75rem', alignItems: 'flex-end' }}>
+            <div className="line-item-builder">
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Producto</label>
                 <ComboboxInline
@@ -1688,7 +1688,7 @@ export const SalesPage: React.FC = () => {
             </div>
 
             {/* Document summary grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.25rem' }}>
+            <div className="responsive-split-grid">
               <div style={{
                 padding: '1.15rem',
                 backgroundColor: 'var(--bg-subtle)',

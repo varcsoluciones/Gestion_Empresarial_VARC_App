@@ -29,13 +29,17 @@ interface SidebarProps {
   onTabChange: (tab: NavigationTab) => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  isOpenMobile?: boolean;
+  onCloseMobile?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   currentTab,
   onTabChange,
   isCollapsed,
-  onToggleCollapse
+  onToggleCollapse,
+  isOpenMobile,
+  onCloseMobile
 }) => {
   const { settings, products, invoices, purchases } = useERP();
   const { t } = useTranslation();
@@ -92,55 +96,66 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   return (
-    <aside className={`app-sidebar ${isCollapsed ? 'collapsed' : ''}`}>
-      <div className="sidebar-header">
-        {!isCollapsed && (
-          <div className="brand-logo">
-            <div className="brand-icon">
+    <>
+      {isOpenMobile && (
+        <div
+          className="sidebar-backdrop"
+          onClick={onCloseMobile}
+          aria-hidden="true"
+        />
+      )}
+      <aside className={`app-sidebar ${isCollapsed ? 'collapsed' : ''} ${isOpenMobile ? 'open' : ''}`}>
+        <div className="sidebar-header">
+          {!isCollapsed && (
+            <div className="brand-logo">
+              <div className="brand-icon">
+                {settings.nombreEmpresa.charAt(0)}
+              </div>
+              <div className="brand-info">
+                <span className="brand-title">VARC ERP</span>
+                <span className="brand-subtitle">Gestión Pyme v1.0</span>
+              </div>
+            </div>
+          )}
+          {isCollapsed && (
+            <div className="brand-icon" style={{ margin: '0 auto' }}>
               {settings.nombreEmpresa.charAt(0)}
             </div>
-            <div className="brand-info">
-              <span className="brand-title">VARC ERP</span>
-              <span className="brand-subtitle">Gestión Pyme v1.0</span>
-            </div>
-          </div>
-        )}
-        {isCollapsed && (
-          <div className="brand-icon" style={{ margin: '0 auto' }}>
-            {settings.nombreEmpresa.charAt(0)}
-          </div>
-        )}
-      </div>
+          )}
+        </div>
 
-      <nav className="sidebar-nav">
-        {!isCollapsed && <div className="nav-section-title">Módulos del Sistema</div>}
-        {navItems.map((item) => {
-          const isActive = currentTab === item.id;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              className={`nav-item ${isActive ? 'active' : ''}`}
-              onClick={() => onTabChange(item.id)}
-              title={isCollapsed ? item.label : undefined}
-            >
-              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {item.icon}
-              </span>
-              {!isCollapsed && (
-                <>
-                  <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>
-                  {item.badge !== undefined && (
-                    <span className="nav-item-badge">
-                      {item.badge}
-                    </span>
-                  )}
-                </>
-              )}
-            </button>
-          );
-        })}
-      </nav>
+        <nav className="sidebar-nav">
+          {!isCollapsed && <div className="nav-section-title">Módulos del Sistema</div>}
+          {navItems.map((item) => {
+            const isActive = currentTab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className={`nav-item ${isActive ? 'active' : ''}`}
+                onClick={() => {
+                  onTabChange(item.id);
+                  if (onCloseMobile) onCloseMobile();
+                }}
+                title={isCollapsed ? item.label : undefined}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {item.icon}
+                </span>
+                {!isCollapsed && (
+                  <>
+                    <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>
+                    {item.badge !== undefined && (
+                      <span className="nav-item-badge">
+                        {item.badge}
+                      </span>
+                    )}
+                  </>
+                )}
+              </button>
+            );
+          })}
+        </nav>
 
       <div className="sidebar-footer">
         <button
@@ -154,5 +169,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
       </div>
     </aside>
+    </>
   );
 };

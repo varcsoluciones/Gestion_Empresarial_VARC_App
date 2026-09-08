@@ -173,7 +173,7 @@ export const SettingsPage: React.FC = () => {
             <label className="form-label" style={{ marginBottom: '0.75rem' }}>
               {t.settings.themeModeTitle}
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
               <div
                 onClick={() => handleThemeChange('light')}
                 style={{

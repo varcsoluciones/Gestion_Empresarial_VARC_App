@@ -18,6 +18,7 @@ const AppContent: React.FC = () => {
   useAutoTableResizer();
   const [currentTab, setCurrentTab] = useState<NavigationTab>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const renderActivePage = () => {
     switch (currentTab) {
@@ -49,12 +50,15 @@ const AppContent: React.FC = () => {
         onTabChange={setCurrentTab}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        isOpenMobile={isMobileMenuOpen}
+        onCloseMobile={() => setIsMobileMenuOpen(false)}
       />
 
       <div className="app-main">
         <Topbar
           currentTab={currentTab}
           onNavigate={setCurrentTab}
+          onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         />
         {renderActivePage()}
       </div>

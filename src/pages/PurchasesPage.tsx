@@ -490,7 +490,7 @@ export const PurchasesPage: React.FC = () => {
               Agregar Producto a la Compra
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr auto', gap: '0.75rem', alignItems: 'flex-end' }}>
+            <div className="purchase-line-builder">
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Producto</label>
                 <ComboboxInline
@@ -610,7 +610,7 @@ export const PurchasesPage: React.FC = () => {
           </div>
 
           {/* Totals & Notes */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1.5rem', alignItems: 'flex-start' }}>
+          <div className="modal-totals-grid">
             <div className="form-group">
               <label className="form-label">Notas u Observaciones de la Compra</label>
               <textarea
@@ -676,7 +676,7 @@ export const PurchasesPage: React.FC = () => {
           }
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', padding: '1rem', backgroundColor: 'var(--bg-subtle)', borderRadius: 'var(--radius-md)' }}>
+            <div className="purchase-stats-grid">
               <div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Fecha:</div>
                 <div style={{ fontWeight: 600 }}>{formatDate(selectedPurchase.fecha)}</div>

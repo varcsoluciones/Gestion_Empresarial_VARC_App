@@ -804,7 +804,7 @@ export const MasterDataPage: React.FC = () => {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   {prodVariantes.map((v, idx) => (
-                    <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr 40px', gap: '0.5rem', alignItems: 'center' }}>
+                    <div key={idx} className="variant-line-builder">
                       <input
                         type="text"
                         className="form-control"
