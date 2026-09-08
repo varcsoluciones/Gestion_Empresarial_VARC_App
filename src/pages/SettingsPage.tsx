@@ -12,12 +12,13 @@ import {
 } from 'lucide-react';
 
 const accents: { key: AccentColor; name: string; hex: string; description: string }[] = [
-  { key: 'indigo', name: 'Índigo Apple', hex: '#6366f1', description: 'Elegante, moderno y tecnológico' },
-  { key: 'emerald', name: 'Esmeralda', hex: '#10b981', description: 'Financiero, fresco y confiable' },
-  { key: 'sapphire', name: 'Zafiro Clásico', hex: '#0284c7', description: 'Corporativo, formal y profesional' },
-  { key: 'rose', name: 'Rosa Boutique', hex: '#f43f5e', description: 'Vibrante, ideal para moda y diseño' },
-  { key: 'amber', name: 'Ámbar Cálido', hex: '#d97706', description: 'Enérgico, artesanal y dinámico' },
-  { key: 'slate', name: 'Grafito Minimalista', hex: '#475569', description: 'Sobrio, neutral y ejecutivo' }
+  { key: 'blue', name: 'Azul Cupertino', hex: '#007aff', description: 'System Blue icónico de Apple' },
+  { key: 'purple', name: 'Púrpura Apple', hex: '#5856d6', description: 'System Purple elegante y moderno' },
+  { key: 'green', name: 'Verde Apple', hex: '#34c759', description: 'System Green financiero y fresco' },
+  { key: 'orange', name: 'Naranja Apple', hex: '#ff9500', description: 'System Orange cálido y dinámico' },
+  { key: 'pink', name: 'Rosa Apple', hex: '#ff2d55', description: 'System Pink vibrante y sofisticado' },
+  { key: 'teal', name: 'Turquesa Apple', hex: '#00c7be', description: 'System Teal balanceado y limpio' },
+  { key: 'graphite', name: 'Gris Espacial', hex: '#636366', description: 'Space Gray minimalista y ejecutivo' }
 ];
 
 export const SettingsPage: React.FC = () => {
@@ -77,9 +78,9 @@ export const SettingsPage: React.FC = () => {
           <div className="card-header">
             <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Palette size={18} style={{ color: 'var(--color-accent)' }} />
-              Apariencia & Personalización Visual
+              Apariencia & Personalización Visual (Estilo Apple)
             </h2>
-            <p className="card-subtitle">Selector de modo y paleta de acentos estilo Apple</p>
+            <p className="card-subtitle">Selector de modo y paleta de acentos del sistema</p>
           </div>
 
           {/* Theme Selector */}
@@ -145,11 +146,18 @@ export const SettingsPage: React.FC = () => {
           {/* Accent Color Palette */}
           <div>
             <label className="form-label" style={{ marginBottom: '0.75rem' }}>
-              Color de Acento del Sistema
+              Color de Acento del Sistema (Paleta Apple)
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.85rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '0.85rem' }}>
               {accents.map((acc) => {
-                const isSelected = settings.colorAcento === acc.key;
+                const isSelected = settings.colorAcento === acc.key || 
+                  (acc.key === 'blue' && settings.colorAcento === 'sapphire') ||
+                  (acc.key === 'purple' && settings.colorAcento === 'indigo') ||
+                  (acc.key === 'green' && settings.colorAcento === 'emerald') ||
+                  (acc.key === 'orange' && settings.colorAcento === 'amber') ||
+                  (acc.key === 'pink' && settings.colorAcento === 'rose') ||
+                  (acc.key === 'graphite' && settings.colorAcento === 'slate');
+
                 return (
                   <div
                     key={acc.key}
@@ -163,6 +171,7 @@ export const SettingsPage: React.FC = () => {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.75rem',
+                      boxShadow: isSelected ? `0 2px 8px ${acc.hex}33` : 'none',
                       transition: 'all var(--transition-fast)'
                     }}
                   >
@@ -194,135 +203,165 @@ export const SettingsPage: React.FC = () => {
               <Building size={18} style={{ color: 'var(--color-accent)' }} />
               Datos Generales de la Empresa
             </h2>
-            <p className="card-subtitle">Información impresa en facturas, cotizaciones y reportes</p>
+            <p className="card-subtitle">Información fiscal, contable y comercial impresa en documentos</p>
           </div>
 
-          <div className="form-row">
-            <div className="form-group" style={{ flex: 1.5 }}>
-              <label className="form-label">Nombre Comercial / Razón Social *</label>
-              <input
-                type="text"
-                className="form-control"
-                value={formData.nombreEmpresa}
-                onChange={(e) => setFormData({ ...formData, nombreEmpresa: e.target.value })}
-                required
-              />
-            </div>
+          {/* Section 1: Identificación Fiscal */}
+          <div className="form-section-divider">
+            <h3 className="form-section-title">
+              Identificación & Razón Social
+            </h3>
+            <div className="form-grid-2">
+              <div className="form-group">
+                <label className="form-label">
+                  Nombre Comercial / Razón Social <span className="form-label-required">*</span>
+                </label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={formData.nombreEmpresa}
+                  onChange={(e) => setFormData({ ...formData, nombreEmpresa: e.target.value })}
+                  required
+                />
+              </div>
 
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">RFC / Identificación Fiscal *</label>
-              <input
-                type="text"
-                className="form-control"
-                value={formData.identificacionFiscal}
-                onChange={(e) => setFormData({ ...formData, identificacionFiscal: e.target.value.toUpperCase() })}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Moneda Principal</label>
-              <input
-                type="text"
-                className="form-control"
-                value={formData.moneda}
-                onChange={(e) => setFormData({ ...formData, moneda: e.target.value })}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Símbolo de Moneda</label>
-              <input
-                type="text"
-                className="form-control"
-                value={formData.monedaSimbolo}
-                onChange={(e) => setFormData({ ...formData, monedaSimbolo: e.target.value })}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Tasa de Impuesto / IVA Defecto (%)</label>
-              <input
-                type="number"
-                className="form-control"
-                value={formData.tasaImpuestoDefecto}
-                onChange={(e) => setFormData({ ...formData, tasaImpuestoDefecto: Number(e.target.value) })}
-                min={0}
-                max={100}
-              />
-            </div>
-
-            <div className="form-group" style={{ flex: 1.5 }}>
-              <label className="form-label">Base de Prorrateo Contable por Defecto</label>
-              <select
-                className="form-control"
-                value={formData.criterioProrrateoDefecto}
-                onChange={(e) => setFormData({ ...formData, criterioProrrateoDefecto: e.target.value as any })}
-              >
-                <option value="costo_material">💎 Costo de Material Directo (Recomendado - No castiga PTs bajos)</option>
-                <option value="valor_venta">🏷️ Precio de Venta (Capacidad de Ingresos)</option>
-                <option value="unidades_iguales">⚖️ Unidades Físicas Iguales (Lineal)</option>
-              </select>
+              <div className="form-group">
+                <label className="form-label">
+                  RFC / Identificación Fiscal <span className="form-label-required">*</span>
+                </label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={formData.identificacionFiscal}
+                  onChange={(e) => setFormData({ ...formData, identificacionFiscal: e.target.value.toUpperCase() })}
+                  required
+                />
+              </div>
             </div>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Dirección Fiscal / Ubicación</label>
-            <input
-              type="text"
-              className="form-control"
-              value={formData.direccion}
-              onChange={(e) => setFormData({ ...formData, direccion: e.target.value })}
-            />
+          {/* Section 2: Parámetros Monetarios & Contabilidad */}
+          <div className="form-section-divider">
+            <h3 className="form-section-title">
+              Parámetros Monetarios & Regla de Costeo
+            </h3>
+            <div className="form-grid-2">
+              <div className="form-group">
+                <label className="form-label">Moneda Principal</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={formData.moneda}
+                  onChange={(e) => setFormData({ ...formData, moneda: e.target.value })}
+                  placeholder="MXN, USD, EUR..."
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Símbolo de Moneda</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={formData.monedaSimbolo}
+                  onChange={(e) => setFormData({ ...formData, monedaSimbolo: e.target.value })}
+                  placeholder="$, €, £..."
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Tasa de Impuesto / IVA Defecto (%)</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  value={formData.tasaImpuestoDefecto}
+                  onChange={(e) => setFormData({ ...formData, tasaImpuestoDefecto: Number(e.target.value) })}
+                  min={0}
+                  max={100}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Base de Prorrateo Contable por Defecto</label>
+                <select
+                  className="form-control"
+                  value={formData.criterioProrrateoDefecto}
+                  onChange={(e) => setFormData({ ...formData, criterioProrrateoDefecto: e.target.value as any })}
+                >
+                  <option value="costo_material">💎 Costo de Material Directo (Recomendado)</option>
+                  <option value="valor_venta">🏷️ Precio de Venta (Capacidad de Ingresos)</option>
+                  <option value="unidades_iguales">⚖️ Unidades Físicas Iguales (Lineal)</option>
+                </select>
+              </div>
+            </div>
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Teléfono de Atención</label>
-              <input
-                type="tel"
-                className="form-control"
-                value={formData.telefono}
-                onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
-              />
-            </div>
+          {/* Section 3: Ubicación y Contacto */}
+          <div className="form-section-divider">
+            <h3 className="form-section-title">
+              Ubicación & Contacto Comercial
+            </h3>
+            <div className="form-grid-3">
+              <div className="form-group col-span-full">
+                <label className="form-label">Dirección Fiscal / Ubicación Física</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={formData.direccion}
+                  onChange={(e) => setFormData({ ...formData, direccion: e.target.value })}
+                />
+              </div>
 
-            <div className="form-group">
-              <label className="form-label">Correo Electrónico</label>
-              <input
-                type="email"
-                className="form-control"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              />
-            </div>
+              <div className="form-group">
+                <label className="form-label">Teléfono de Atención</label>
+                <input
+                  type="tel"
+                  className="form-control"
+                  value={formData.telefono}
+                  onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
+                />
+              </div>
 
+              <div className="form-group">
+                <label className="form-label">Correo Electrónico</label>
+                <input
+                  type="email"
+                  className="form-control"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Sitio Web</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={formData.website}
+                  onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 4: Documentos */}
+          <div style={{ marginBottom: '1.5rem' }}>
+            <h3 className="form-section-title">
+              Pie de Página en Facturas & Cotizaciones
+            </h3>
             <div className="form-group">
-              <label className="form-label">Sitio Web</label>
-              <input
-                type="text"
-                className="form-control"
-                value={formData.website}
-                onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+              <label className="form-label">Leyenda / Términos Comerciales Impresos</label>
+              <textarea
+                className="form-textarea"
+                rows={3}
+                value={formData.pieFactura}
+                onChange={(e) => setFormData({ ...formData, pieFactura: e.target.value })}
               />
             </div>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Leyenda / Pie de Página en Documentos</label>
-            <textarea
-              className="form-textarea"
-              rows={2}
-              value={formData.pieFactura}
-              onChange={(e) => setFormData({ ...formData, pieFactura: e.target.value })}
-            />
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
-            <button type="submit" className="btn btn-primary">
-              {isSaved ? <Check size={16} /> : <Save size={16} />}
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button type="submit" className="btn btn-primary btn-lg" style={{ minWidth: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+              {isSaved ? <Check size={18} /> : <Save size={18} />}
               {isSaved ? '¡Configuración Guardada!' : 'Guardar Cambios'}
             </button>
           </div>

@@ -25,7 +25,7 @@ export const initialSettings: CompanySettings = {
   website: 'www.varcsoluciones.com',
   pieFactura: 'Gracias por su preferencia. Régimen General de Ley Personas Morales. Pago en una sola exhibición.',
   tema: 'light',
-  colorAcento: 'indigo'
+  colorAcento: 'blue'
 };
 
 export const initialCategories: Category[] = [

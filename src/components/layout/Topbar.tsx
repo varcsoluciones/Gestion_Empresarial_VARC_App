@@ -23,12 +23,13 @@ const tabTitles: Record<NavigationTab, { title: string; category: string }> = {
 };
 
 const accentColors: { key: AccentColor; name: string; color: string }[] = [
-  { key: 'indigo', name: 'Índigo', color: '#6366f1' },
-  { key: 'emerald', name: 'Esmeralda', color: '#10b981' },
-  { key: 'sapphire', name: 'Zafiro', color: '#0284c7' },
-  { key: 'rose', name: 'Rosa', color: '#f43f5e' },
-  { key: 'amber', name: 'Ámbar', color: '#d97706' },
-  { key: 'slate', name: 'Grafito', color: '#475569' }
+  { key: 'blue', name: 'Azul Cupertino', color: '#007aff' },
+  { key: 'purple', name: 'Púrpura Apple', color: '#5856d6' },
+  { key: 'green', name: 'Verde Apple', color: '#34c759' },
+  { key: 'orange', name: 'Naranja Apple', color: '#ff9500' },
+  { key: 'pink', name: 'Rosa Apple', color: '#ff2d55' },
+  { key: 'teal', name: 'Turquesa Apple', color: '#00c7be' },
+  { key: 'graphite', name: 'Gris Espacial', color: '#636366' }
 ];
 
 export const Topbar: React.FC<TopbarProps> = ({
@@ -60,24 +61,35 @@ export const Topbar: React.FC<TopbarProps> = ({
       <div className="topbar-right">
         {/* Quick Accent Color Picker */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginRight: '0.5rem', padding: '0.25rem 0.5rem', backgroundColor: 'var(--bg-subtle)', borderRadius: 'var(--radius-full)', border: '1px solid var(--border-default)' }}>
-          {accentColors.map((acc) => (
-            <button
-              key={acc.key}
-              type="button"
-              onClick={() => handleAccentChange(acc.key)}
-              title={`Acento: ${acc.name}`}
-              style={{
-                width: '18px',
-                height: '18px',
-                borderRadius: '50%',
-                backgroundColor: acc.color,
-                border: settings.colorAcento === acc.key ? '2px solid var(--text-primary)' : '1px solid transparent',
-                cursor: 'pointer',
-                transform: settings.colorAcento === acc.key ? 'scale(1.15)' : 'none',
-                transition: 'transform var(--transition-fast)'
-              }}
-            />
-          ))}
+          {accentColors.map((acc) => {
+            const isSelected = settings.colorAcento === acc.key ||
+              (acc.key === 'blue' && settings.colorAcento === 'sapphire') ||
+              (acc.key === 'purple' && settings.colorAcento === 'indigo') ||
+              (acc.key === 'green' && settings.colorAcento === 'emerald') ||
+              (acc.key === 'orange' && settings.colorAcento === 'amber') ||
+              (acc.key === 'pink' && settings.colorAcento === 'rose') ||
+              (acc.key === 'graphite' && settings.colorAcento === 'slate');
+
+            return (
+              <button
+                key={acc.key}
+                type="button"
+                onClick={() => handleAccentChange(acc.key)}
+                title={`Acento: ${acc.name}`}
+                style={{
+                  width: '18px',
+                  height: '18px',
+                  borderRadius: '50%',
+                  backgroundColor: acc.color,
+                  border: isSelected ? '2px solid var(--text-primary)' : '1px solid transparent',
+                  cursor: 'pointer',
+                  transform: isSelected ? 'scale(1.2)' : 'none',
+                  boxShadow: isSelected ? `0 0 0 2px var(--bg-surface), 0 2px 6px ${acc.color}88` : 'none',
+                  transition: 'all var(--transition-fast)'
+                }}
+              />
+            );
+          })}
         </div>
 
         {/* Theme Toggle Button */}

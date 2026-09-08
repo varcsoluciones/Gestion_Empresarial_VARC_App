@@ -15,7 +15,20 @@ export type ExpenseType = 'fijo' | 'variable';
 export type PaymentMethod = 'transferencia' | 'efectivo' | 'tarjeta' | 'cheque';
 
 export type ThemeMode = 'light' | 'dark';
-export type AccentColor = 'indigo' | 'emerald' | 'sapphire' | 'rose' | 'amber' | 'slate';
+export type AccentColor = 
+  | 'blue' 
+  | 'purple' 
+  | 'green' 
+  | 'orange' 
+  | 'pink' 
+  | 'teal' 
+  | 'graphite' 
+  | 'indigo' 
+  | 'emerald' 
+  | 'sapphire' 
+  | 'rose' 
+  | 'amber' 
+  | 'slate';
 
 // 1. Datos Maestros
 export interface Client {
