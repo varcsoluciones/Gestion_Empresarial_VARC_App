@@ -8,7 +8,9 @@ import {
   AlertTriangle,
   SlidersHorizontal,
   Layers,
-  FileSpreadsheet
+  FileSpreadsheet,
+  RotateCcw,
+  CheckCircle2
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
@@ -24,7 +26,8 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
     products,
     categories,
     inventoryMovements,
-    createInventoryAdjustment
+    createInventoryAdjustment,
+    recalculateInventoryFromKardex
   } = useERP();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -32,6 +35,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('all');
   const [monthFilter, setMonthFilter] = useState<string>('all');
   const [activeView, setActiveView] = useState<'kardex' | 'stock'>(initialView || 'kardex');
+  const [syncToastMessage, setSyncToastMessage] = useState<string | null>(null);
 
   React.useEffect(() => {
     if (initialView) {
@@ -159,12 +163,49 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
           </p>
         </div>
         <div className="page-actions">
-          <button type="button" className="btn btn-secondary btn-sm" onClick={() => handleOpenAdjustment()}>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => {
+              recalculateInventoryFromKardex();
+              setSyncToastMessage('Existencias y costo promedio reconciliados y sincronizados con éxito desde el historial de Kardex.');
+              setTimeout(() => setSyncToastMessage(null), 4000);
+            }}
+            title="Auditar y sincronizar todas las existencias y costos con los movimientos de Kardex"
+          >
+            <RotateCcw size={15} />
+            Reconciliar Kardex
+          </button>
+          <button type="button" className="btn btn-primary btn-sm" onClick={() => handleOpenAdjustment()}>
             <SlidersHorizontal size={15} />
             + Ajuste Manual de Stock
           </button>
         </div>
       </div>
+
+      {/* Sync Toast Feedback */}
+      {syncToastMessage && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.65rem',
+            padding: '0.75rem 1rem',
+            backgroundColor: 'var(--color-success-bg)',
+            border: '1px solid var(--color-success-border)',
+            borderRadius: 'var(--radius-md)',
+            color: 'var(--color-success-text)',
+            fontSize: '0.85rem',
+            fontWeight: 600,
+            marginBottom: '1.25rem',
+            boxShadow: 'var(--shadow-sm)',
+            animation: 'fadeIn 0.2s ease-in-out'
+          }}
+        >
+          <CheckCircle2 size={18} />
+          <span>{syncToastMessage}</span>
+        </div>
+      )}
 
       {/* KPI Stats */}
       <div className="grid-3" style={{ marginBottom: '1.75rem' }}>

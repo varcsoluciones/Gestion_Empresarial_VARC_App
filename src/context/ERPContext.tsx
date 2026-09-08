@@ -86,6 +86,7 @@ export interface ERPContextType {
 
   // Acciones Inventario
   createInventoryAdjustment: (productoId: string, varianteId: string | undefined, cantidad: number, motivo: string) => void;
+  recalculateInventoryFromKardex: () => void;
 
   // Acciones Contabilidad
   addExpense: (expense: Omit<OperatingExpense, 'id'>) => void;
@@ -452,15 +453,150 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     } : p));
   };
 
-  // Self-healing: ensure any received purchases in storage have their inventory movements and stock applied
+  // Self-healing & Retroactive Kardex Reconciliation on startup:
+  // Reconciles all products' stockActual, variant stocks, and weighted average cost directly from Kardex movements
   useEffect(() => {
+    const movementsToAdd: InventoryMovement[] = [];
+
     purchases.forEach(pur => {
+      // 1. If purchase is received or paid, ensure ENTRADA_COMPRA exists
       if (pur.estado === 'recibida' || pur.estado === 'pagada') {
-        const hasMovement = inventoryMovements.some(m => m.referenciaDoc === pur.numeroCompra && m.tipo === 'ENTRADA_COMPRA');
-        if (!hasMovement && pur.items && pur.items.length > 0) {
-          applyPurchaseStockReception(pur);
+        const hasEntry = inventoryMovements.some(m => m.referenciaDoc === pur.numeroCompra && m.tipo === 'ENTRADA_COMPRA');
+        if (!hasEntry && pur.items && pur.items.length > 0) {
+          pur.items.forEach(item => {
+            movementsToAdd.push({
+              id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+              fecha: pur.fecha || new Date().toISOString(),
+              tipo: 'ENTRADA_COMPRA',
+              referenciaDoc: pur.numeroCompra,
+              productoId: item.productoId,
+              varianteId: item.varianteId,
+              cantidad: item.cantidad,
+              costoUnitario: item.costoUnitario,
+              stockResultante: 0,
+              motivo: `Recepción de compra ${pur.numeroCompra}`,
+              usuario: 'Almacén'
+            });
+          });
         }
       }
+
+      // 2. If purchase is annulled, ensure ANULACION_COMPRA exists if ENTRADA_COMPRA was present
+      if (pur.estado === 'anulada') {
+        const hasEntry = inventoryMovements.some(m => m.referenciaDoc === pur.numeroCompra && m.tipo === 'ENTRADA_COMPRA');
+        const hasAnnul = inventoryMovements.some(m => m.referenciaDoc === pur.numeroCompra && m.tipo === 'ANULACION_COMPRA');
+        if (hasEntry && !hasAnnul && pur.items && pur.items.length > 0) {
+          pur.items.forEach(item => {
+            movementsToAdd.push({
+              id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+              fecha: pur.anuladoFecha || pur.fecha || new Date().toISOString(),
+              tipo: 'ANULACION_COMPRA',
+              referenciaDoc: pur.numeroCompra,
+              productoId: item.productoId,
+              varianteId: item.varianteId,
+              cantidad: -item.cantidad,
+              costoUnitario: item.costoUnitario,
+              stockResultante: 0,
+              motivo: `Anulación de compra ${pur.numeroCompra}: ${pur.anuladoMotivo || 'Anulación registrada'}`,
+              usuario: 'Administrador'
+            });
+          });
+        }
+      }
+    });
+
+    if (movementsToAdd.length > 0) {
+      setInventoryMovements(prev => [...movementsToAdd, ...prev]);
+    }
+
+    // 3. Retroactively reconcile all products from the complete Kardex movements history
+    const allMovements = movementsToAdd.length > 0 ? [...movementsToAdd, ...inventoryMovements] : inventoryMovements;
+
+    setProducts(prevProducts => {
+      let changed = false;
+      const updated = prevProducts.map(product => {
+        const proMovements = allMovements
+          .filter(m => m.productoId === product.id)
+          .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+
+        if (proMovements.length === 0) return product;
+
+        let runningStock = 0;
+        let runningCost = 0;
+        const variantStocks: Record<string, number> = {};
+
+        if (product.variantes) {
+          product.variantes.forEach(v => {
+            variantStocks[v.id] = 0;
+          });
+        }
+
+        for (const m of proMovements) {
+          const qty = Number(m.cantidad) || 0;
+          const cost = Number(m.costoUnitario) || 0;
+
+          if (m.tipo === 'ENTRADA_COMPRA') {
+            const posQty = Math.abs(qty);
+            runningCost = calculateWeightedAverageCost(runningStock, runningCost, posQty, cost);
+            runningStock += posQty;
+            if (m.varianteId) {
+              variantStocks[m.varianteId] = (variantStocks[m.varianteId] || 0) + posQty;
+            }
+          } else if (m.tipo === 'SALIDA_VENTA') {
+            const outQty = Math.abs(qty);
+            runningStock = Math.max(0, runningStock - outQty);
+            if (m.varianteId) {
+              variantStocks[m.varianteId] = Math.max(0, (variantStocks[m.varianteId] || 0) - outQty);
+            }
+          } else if (m.tipo === 'AJUSTE_MANUAL') {
+            runningStock = Math.max(0, runningStock + qty);
+            if (m.varianteId) {
+              variantStocks[m.varianteId] = Math.max(0, (variantStocks[m.varianteId] || 0) + qty);
+            }
+          } else if (m.tipo === 'ANULACION_COMPRA') {
+            const cancQty = Math.abs(qty);
+            const currentVal = Math.max(0, runningStock * runningCost);
+            const cancelledVal = cancQty * cost;
+            const remainingVal = Math.max(0, currentVal - cancelledVal);
+            runningStock = Math.max(0, runningStock - cancQty);
+            runningCost = runningStock > 0 ? Number((remainingVal / runningStock).toFixed(2)) : 0;
+            if (m.varianteId) {
+              variantStocks[m.varianteId] = Math.max(0, (variantStocks[m.varianteId] || 0) - cancQty);
+            }
+          } else if (m.tipo === 'ANULACION_VENTA') {
+            const reenterQty = Math.abs(qty);
+            runningStock += reenterQty;
+            if (m.varianteId) {
+              variantStocks[m.varianteId] = (variantStocks[m.varianteId] || 0) + reenterQty;
+            }
+          }
+        }
+
+        let updatedVariants = product.variantes;
+        let finalStock = runningStock;
+
+        if (product.tieneVariantes && product.variantes && product.variantes.length > 0) {
+          updatedVariants = product.variantes.map(v => ({
+            ...v,
+            stockActual: variantStocks[v.id] ?? 0
+          }));
+          finalStock = updatedVariants.reduce((sum, v) => sum + (v.stockActual || 0), 0);
+        }
+
+        if (finalStock !== product.stockActual || runningCost !== product.costoPromedio) {
+          changed = true;
+          return {
+            ...product,
+            stockActual: finalStock,
+            costoPromedio: runningCost,
+            variantes: updatedVariants
+          };
+        }
+
+        return product;
+      });
+
+      return changed ? updated : prevProducts;
     });
   }, []);
 
@@ -1057,6 +1193,87 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setInventoryMovements(prev => [newMovement, ...prev]);
   };
 
+  const recalculateInventoryFromKardex = () => {
+    setProducts(prevProducts => {
+      return prevProducts.map(product => {
+        const proMovements = inventoryMovements
+          .filter(m => m.productoId === product.id)
+          .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+
+        if (proMovements.length === 0) return product;
+
+        let runningStock = 0;
+        let runningCost = 0;
+        const variantStocks: Record<string, number> = {};
+
+        if (product.variantes) {
+          product.variantes.forEach(v => {
+            variantStocks[v.id] = 0;
+          });
+        }
+
+        for (const m of proMovements) {
+          const qty = Number(m.cantidad) || 0;
+          const cost = Number(m.costoUnitario) || 0;
+
+          if (m.tipo === 'ENTRADA_COMPRA') {
+            const posQty = Math.abs(qty);
+            runningCost = calculateWeightedAverageCost(runningStock, runningCost, posQty, cost);
+            runningStock += posQty;
+            if (m.varianteId) {
+              variantStocks[m.varianteId] = (variantStocks[m.varianteId] || 0) + posQty;
+            }
+          } else if (m.tipo === 'SALIDA_VENTA') {
+            const outQty = Math.abs(qty);
+            runningStock = Math.max(0, runningStock - outQty);
+            if (m.varianteId) {
+              variantStocks[m.varianteId] = Math.max(0, (variantStocks[m.varianteId] || 0) - outQty);
+            }
+          } else if (m.tipo === 'AJUSTE_MANUAL') {
+            runningStock = Math.max(0, runningStock + qty);
+            if (m.varianteId) {
+              variantStocks[m.varianteId] = Math.max(0, (variantStocks[m.varianteId] || 0) + qty);
+            }
+          } else if (m.tipo === 'ANULACION_COMPRA') {
+            const cancQty = Math.abs(qty);
+            const currentVal = Math.max(0, runningStock * runningCost);
+            const cancelledVal = cancQty * cost;
+            const remainingVal = Math.max(0, currentVal - cancelledVal);
+            runningStock = Math.max(0, runningStock - cancQty);
+            runningCost = runningStock > 0 ? Number((remainingVal / runningStock).toFixed(2)) : 0;
+            if (m.varianteId) {
+              variantStocks[m.varianteId] = Math.max(0, (variantStocks[m.varianteId] || 0) - cancQty);
+            }
+          } else if (m.tipo === 'ANULACION_VENTA') {
+            const reenterQty = Math.abs(qty);
+            runningStock += reenterQty;
+            if (m.varianteId) {
+              variantStocks[m.varianteId] = (variantStocks[m.varianteId] || 0) + reenterQty;
+            }
+          }
+        }
+
+        let updatedVariants = product.variantes;
+        let finalStock = runningStock;
+
+        if (product.tieneVariantes && product.variantes && product.variantes.length > 0) {
+          updatedVariants = product.variantes.map(v => ({
+            ...v,
+            stockActual: variantStocks[v.id] ?? 0
+          }));
+          finalStock = updatedVariants.reduce((sum, v) => sum + (v.stockActual || 0), 0);
+        }
+
+        return {
+          ...product,
+          stockActual: finalStock,
+          costoPromedio: runningCost,
+          variantes: updatedVariants
+        };
+      });
+    });
+  };
+
   // Actions: Contabilidad (Gastos y Activos Fijos)
   const addExpense = (expenseData: Omit<OperatingExpense, 'id'>) => {
     const baseCount = expenses.filter(e => !e.esAnulacionDe).length;
@@ -1329,6 +1546,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         cancelInvoice,
         addClientPayment,
         createInventoryAdjustment,
+        recalculateInventoryFromKardex,
         addExpense,
         deleteExpense,
         addFixedAsset,
