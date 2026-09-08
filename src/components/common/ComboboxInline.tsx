@@ -19,6 +19,7 @@ interface ComboboxInlineProps {
   onOpenQuickCreateModal?: () => void;
   quickCreateLabel?: string;
   disabled?: boolean;
+  hideSearch?: boolean;
 }
 
 export const ComboboxInline: React.FC<ComboboxInlineProps> = ({
@@ -31,11 +32,14 @@ export const ComboboxInline: React.FC<ComboboxInlineProps> = ({
   onCreateInline,
   onOpenQuickCreateModal,
   quickCreateLabel = '+ Crear nuevo',
-  disabled = false
+  disabled = false,
+  hideSearch
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const showSearch = hideSearch !== undefined ? !hideSearch : (options.length > 5 || allowCreateInline);
 
   const selectedOption = options.find(o => o.id === value);
 
@@ -103,18 +107,20 @@ export const ComboboxInline: React.FC<ComboboxInlineProps> = ({
 
       {isOpen && (
         <div className="combobox-dropdown">
-          <div style={{ position: 'relative', padding: '0.4rem' }}>
-            <Search size={14} style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-            <input
-              type="text"
-              className="form-control"
-              style={{ paddingLeft: '2rem', fontSize: '0.825rem', padding: '0.45rem 0.45rem 0.45rem 2rem' }}
-              placeholder={searchPlaceholder}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              autoFocus
-            />
-          </div>
+          {showSearch && (
+            <div style={{ position: 'relative', padding: '0.4rem' }}>
+              <Search size={14} style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <input
+                type="text"
+                className="form-control"
+                style={{ paddingLeft: '2rem', fontSize: '0.825rem', padding: '0.45rem 0.45rem 0.45rem 2rem' }}
+                placeholder={searchPlaceholder}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                autoFocus
+              />
+            </div>
+          )}
 
           <div style={{ maxHeight: '160px', overflowY: 'auto' }}>
             {filteredOptions.length > 0 ? (

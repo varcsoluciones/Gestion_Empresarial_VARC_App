@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Modal } from '../common/Modal';
+import { ComboboxInline } from '../common/ComboboxInline';
 import { useERP } from '../../context/ERPContext';
 import type { PaymentTerm } from '../../types/erp';
 
@@ -8,6 +9,11 @@ interface QuickCreateCustomerModalProps {
   onClose: () => void;
   onCustomerCreated: (newCustomerId: string) => void;
 }
+
+const paymentTermOptions = [
+  { id: 'contado', label: 'Contado (Inmediato)' },
+  { id: 'credito', label: 'Crédito (Línea de crédito)' }
+];
 
 export const QuickCreateCustomerModal: React.FC<QuickCreateCustomerModalProps> = ({
   isOpen,
@@ -22,8 +28,8 @@ export const QuickCreateCustomerModal: React.FC<QuickCreateCustomerModalProps> =
   const [email, setEmail] = useState('');
   const [direccion, setDireccion] = useState('');
   const [tipoPago, setTipoPago] = useState<PaymentTerm>('contado');
-  const [diasCredito, setDiasCredito] = useState(30);
-  const [limiteCredito, setLimiteCredito] = useState(10000);
+  const [diasCredito, setDiasCredito] = useState<number | ''>(30);
+  const [limiteCredito, setLimiteCredito] = useState<number | ''>(10000);
   const [error, setError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -40,8 +46,8 @@ export const QuickCreateCustomerModal: React.FC<QuickCreateCustomerModalProps> =
       email: email.trim(),
       direccion: direccion.trim(),
       tipoPago,
-      diasCredito: tipoPago === 'credito' ? Number(diasCredito) : 0,
-      limiteCredito: tipoPago === 'credito' ? Number(limiteCredito) : 0
+      diasCredito: tipoPago === 'credito' ? Number(diasCredito) || 0 : 0,
+      limiteCredito: tipoPago === 'credito' ? Number(limiteCredito) || 0 : 0
     });
 
     onCustomerCreated(newClient.id);
@@ -53,6 +59,8 @@ export const QuickCreateCustomerModal: React.FC<QuickCreateCustomerModalProps> =
     setEmail('');
     setDireccion('');
     setTipoPago('contado');
+    setDiasCredito(30);
+    setLimiteCredito(10000);
     setError('');
   };
 
@@ -133,15 +141,24 @@ export const QuickCreateCustomerModal: React.FC<QuickCreateCustomerModalProps> =
 
           <div className="form-group">
             <label className="form-label">Condición de Pago</label>
-            <select
-              className="form-select"
+            <ComboboxInline
+              options={paymentTermOptions}
               value={tipoPago}
-              onChange={(e) => setTipoPago(e.target.value as PaymentTerm)}
-            >
-              <option value="contado">Contado</option>
-              <option value="credito">Crédito</option>
-            </select>
+              onChange={(val) => setTipoPago(val as PaymentTerm)}
+              hideSearch={true}
+            />
           </div>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Dirección / Ubicación</label>
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Calle, Número, Colonia, Ciudad, Estado o C.P."
+            value={direccion}
+            onChange={(e) => setDireccion(e.target.value)}
+          />
         </div>
 
         {tipoPago === 'credito' && (
@@ -152,8 +169,9 @@ export const QuickCreateCustomerModal: React.FC<QuickCreateCustomerModalProps> =
                 type="number"
                 className="form-control"
                 value={diasCredito}
-                onChange={(e) => setDiasCredito(Number(e.target.value))}
+                onChange={(e) => setDiasCredito(e.target.value === '' ? '' : Number(e.target.value))}
                 min={1}
+                placeholder="30"
               />
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
@@ -162,8 +180,9 @@ export const QuickCreateCustomerModal: React.FC<QuickCreateCustomerModalProps> =
                 type="number"
                 className="form-control"
                 value={limiteCredito}
-                onChange={(e) => setLimiteCredito(Number(e.target.value))}
+                onChange={(e) => setLimiteCredito(e.target.value === '' ? '' : Number(e.target.value))}
                 min={0}
+                placeholder="10000"
               />
             </div>
           </div>

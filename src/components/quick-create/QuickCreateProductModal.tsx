@@ -10,6 +10,14 @@ interface QuickCreateProductModalProps {
   onProductCreated: (newProductId: string) => void;
 }
 
+const unitOptions = [
+  { id: 'pza', label: 'Pieza (pza)' },
+  { id: 'par', label: 'Par' },
+  { id: 'kg', label: 'Kilogramo (kg)' },
+  { id: 'm', label: 'Metro (m)' },
+  { id: 'set', label: 'Juego / Set' }
+];
+
 export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = ({
   isOpen,
   onClose,
@@ -148,17 +156,12 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
 
           <div className="form-group">
             <label className="form-label">Unidad de Medida</label>
-            <select
-              className="form-select"
+            <ComboboxInline
+              options={unitOptions}
               value={unidadMedida}
-              onChange={(e) => setUnidadMedida(e.target.value)}
-            >
-              <option value="pza">Pieza (pza)</option>
-              <option value="par">Par</option>
-              <option value="kg">Kilogramo (kg)</option>
-              <option value="m">Metro (m)</option>
-              <option value="set">Juego / Set</option>
-            </select>
+              onChange={setUnidadMedida}
+              hideSearch={true}
+            />
           </div>
         </div>
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useERP } from '../context/ERPContext';
-import type { Client, Supplier, Product, PaymentTerm } from '../types/erp';
-import { formatCurrency, getNextProductSKU } from '../utils/formatters';
+import type { Client, Supplier, Product, Category, PaymentTerm } from '../types/erp';
+import { formatCurrency, getNextProductSKU, generateDocNumber } from '../utils/formatters';
 import {
   Users,
   Truck,
@@ -20,6 +20,19 @@ import { Modal } from '../components/common/Modal';
 import { ComboboxInline } from '../components/common/ComboboxInline';
 import { ExcelExportButton } from '../components/common/ExcelExportButton';
 
+const unitOptions = [
+  { id: 'pza', label: 'Pieza (pza)' },
+  { id: 'par', label: 'Par' },
+  { id: 'kg', label: 'Kilogramo (kg)' },
+  { id: 'm', label: 'Metro (m)' },
+  { id: 'set', label: 'Set / Conjunto' }
+];
+
+const paymentTermOptions = [
+  { id: 'contado', label: 'Contado (Inmediato)' },
+  { id: 'credito', label: 'Crédito (Línea de crédito)' }
+];
+
 interface MasterDataPageProps {
   initialTab?: 'clients' | 'suppliers' | 'categories' | 'products';
 }
@@ -35,6 +48,7 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
     addSupplier,
     updateSupplier,
     addCategory,
+    updateCategory,
     addProduct,
     updateProduct
   } = useERP();
@@ -56,8 +70,16 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
 
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [newCatName, setNewCatName] = useState('');
   const [newCatDesc, setNewCatDesc] = useState('');
+  const [hasSubcategories, setHasSubcategories] = useState(false);
+  const [catSubcategories, setCatSubcategories] = useState<{ id?: string; nombre: string; descripcion: string }[]>([]);
+  const [expandedCategoryIds, setExpandedCategoryIds] = useState<Record<string, boolean>>({});
+
+  const toggleExpandCategory = (id: string) => {
+    setExpandedCategoryIds(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -72,7 +94,7 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
   const [prodStockMin, setProdStockMin] = useState<number | ''>(5);
   const [prodStockInit, setProdStockInit] = useState<number | ''>(0);
   const [prodTieneVariantes, setProdTieneVariantes] = useState(false);
-  const [prodVariantes, setProdVariantes] = useState<{ talla: string; color: string; sku: string; stockActual: number }[]>([]);
+  const [prodVariantes, setProdVariantes] = useState<{ talla: string; color: string; sku: string; stockActual: number | '' }[]>([]);
   const [prodDesc, setProdDesc] = useState('');
 
   // Form states for Client
@@ -197,7 +219,7 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
     const variantSKU = `${prodCodigo || 'SKU0001'}-${nextIdx}`;
     setProdVariantes(prev => [
       ...prev,
-      { talla: '', color: '', sku: variantSKU, stockActual: 0 }
+      { talla: '', color: '', sku: variantSKU, stockActual: '' }
     ]);
   };
 
@@ -311,13 +333,74 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
     setIsSupplierModalOpen(false);
   };
 
-  // Category save
+  // Category Modal Handlers
+  const handleOpenNewCategory = () => {
+    setEditingCategory(null);
+    setNewCatName('');
+    setNewCatDesc('');
+    setHasSubcategories(false);
+    setCatSubcategories([]);
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleEditCategory = (cat: Category) => {
+    setEditingCategory(cat);
+    setNewCatName(cat.nombre);
+    setNewCatDesc(cat.descripcion || '');
+    setHasSubcategories(!!(cat.subcategorias && cat.subcategorias.length > 0));
+    setCatSubcategories(cat.subcategorias ? cat.subcategorias.map(s => ({
+      id: s.id,
+      nombre: s.nombre,
+      descripcion: s.descripcion || ''
+    })) : []);
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleAddSubcategoryRow = () => {
+    const nextIdx = catSubcategories.length + 1;
+    const currentPrefix = editingCategory ? editingCategory.id : generateDocNumber('CA', categories.length);
+    const subId = `${currentPrefix}-${nextIdx}`;
+    setCatSubcategories(prev => [
+      ...prev,
+      { id: subId, nombre: '', descripcion: '' }
+    ]);
+  };
+
+  const handleRemoveSubcategoryRow = (index: number) => {
+    setCatSubcategories(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSaveCategory = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCatName.trim()) return;
-    addCategory({ nombre: newCatName.trim(), descripcion: newCatDesc.trim() });
+
+    const validSubcats = hasSubcategories
+      ? catSubcategories.filter(s => s.nombre.trim()).map((s, idx) => ({
+          id: s.id || `${editingCategory?.id || generateDocNumber('CA', categories.length)}-${idx + 1}`,
+          categoriaId: editingCategory?.id || '',
+          nombre: s.nombre.trim(),
+          descripcion: s.descripcion.trim()
+        }))
+      : undefined;
+
+    if (editingCategory) {
+      updateCategory(editingCategory.id, {
+        nombre: newCatName.trim(),
+        descripcion: newCatDesc.trim(),
+        subcategorias: validSubcats || []
+      });
+    } else {
+      addCategory({
+        nombre: newCatName.trim(),
+        descripcion: newCatDesc.trim(),
+        subcategorias: validSubcats
+      });
+    }
+
     setNewCatName('');
     setNewCatDesc('');
+    setHasSubcategories(false);
+    setCatSubcategories([]);
     setIsCategoryModalOpen(false);
   };
 
@@ -372,7 +455,7 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
             </button>
           )}
           {activeTab === 'categories' && (
-            <button type="button" className="btn btn-primary btn-sm" onClick={() => setIsCategoryModalOpen(true)}>
+            <button type="button" className="btn btn-primary btn-sm" onClick={handleOpenNewCategory}>
               <Plus size={16} />
               + Nueva Categoría
             </button>
@@ -667,42 +750,128 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
           <table className="table">
             <thead>
               <tr>
+                <th style={{ width: '40px' }}></th>
                 <th style={{ width: '90px' }}>ID</th>
                 <th>Nombre de la Categoría</th>
                 <th>Descripción / Notas</th>
-                <th style={{ textAlign: 'center', width: '180px' }}>Productos Asociados</th>
+                <th style={{ textAlign: 'center', width: '160px' }}>Subcategorías</th>
+                <th style={{ textAlign: 'center', width: '160px' }}>Productos Asociados</th>
+                <th style={{ textAlign: 'right', width: '90px' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {filteredCategories.length === 0 ? (
                 <tr>
-                  <td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                     No se encontraron categorías registradas.
                   </td>
                 </tr>
               ) : (
                 filteredCategories.map(cat => {
                   const count = products.filter(p => p.categoriaId === cat.id).length;
+                  const hasSubs = !!(cat.subcategorias && cat.subcategorias.length > 0);
+                  const isExpanded = expandedCategoryIds[cat.id];
+
                   return (
-                    <tr key={cat.id}>
-                      <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                        {cat.id}
-                      </td>
-                      <td style={{ fontWeight: 600 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <Tags size={15} style={{ color: 'var(--color-accent)' }} />
-                          <span>{cat.nombre}</span>
-                        </div>
-                      </td>
-                      <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                        {cat.descripcion || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Sin descripción adicional</span>}
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <Badge variant={count > 0 ? 'accent' : 'neutral'}>
-                          {count} {count === 1 ? 'producto' : 'productos'}
-                        </Badge>
-                      </td>
-                    </tr>
+                    <React.Fragment key={cat.id}>
+                      <tr>
+                        <td>
+                          {hasSubs && (
+                            <button
+                              type="button"
+                              className="btn-icon btn-sm"
+                              style={{ border: 'none', background: 'none' }}
+                              onClick={() => toggleExpandCategory(cat.id)}
+                              title="Ver subcategorías"
+                            >
+                              {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                            </button>
+                          )}
+                        </td>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                          {cat.id}
+                        </td>
+                        <td style={{ fontWeight: 600 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <Tags size={15} style={{ color: 'var(--color-accent)' }} />
+                            <span>{cat.nombre}</span>
+                          </div>
+                        </td>
+                        <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                          {cat.descripcion || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Sin descripción adicional</span>}
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          {hasSubs ? (
+                            <span
+                              className="badge badge-accent"
+                              style={{ cursor: 'pointer' }}
+                              onClick={() => toggleExpandCategory(cat.id)}
+                            >
+                              {cat.subcategorias!.length} subcategorías
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>-</span>
+                          )}
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <Badge variant={count > 0 ? 'accent' : 'neutral'}>
+                            {count} {count === 1 ? 'producto' : 'productos'}
+                          </Badge>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <button
+                            type="button"
+                            className="btn-icon btn-sm"
+                            onClick={() => handleEditCategory(cat)}
+                            title="Editar categoría y subcategorías"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                        </td>
+                      </tr>
+
+                      {/* Expandable Subcategories Breakdown */}
+                      {isExpanded && hasSubs && (
+                        <tr style={{ backgroundColor: 'var(--bg-subtle)' }}>
+                          <td colSpan={7} style={{ padding: '0.75rem 2rem' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                              <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                <Tags size={14} />
+                                Subcategorías de {cat.nombre}
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.75rem' }}>
+                                {cat.subcategorias!.map(sub => (
+                                  <div
+                                    key={sub.id}
+                                    style={{
+                                      backgroundColor: 'var(--bg-surface)',
+                                      border: '1px solid var(--border-default)',
+                                      borderRadius: 'var(--radius-md)',
+                                      padding: '0.6rem 0.85rem',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      gap: '0.25rem'
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                      <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{sub.nombre}</span>
+                                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                                        {sub.id}
+                                      </span>
+                                    </div>
+                                    {sub.descripcion && (
+                                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                        {sub.descripcion}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })
               )}
@@ -771,17 +940,12 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
 
             <div className="form-group">
               <label className="form-label">Unidad de Medida</label>
-              <select
-                className="form-select"
+              <ComboboxInline
+                options={unitOptions}
                 value={prodUnidad}
-                onChange={(e) => setProdUnidad(e.target.value)}
-              >
-                <option value="pza">Pieza (pza)</option>
-                <option value="par">Par</option>
-                <option value="kg">Kilogramo (kg)</option>
-                <option value="m">Metro (m)</option>
-                <option value="set">Set / Conjunto</option>
-              </select>
+                onChange={setProdUnidad}
+                hideSearch={true}
+              />
             </div>
           </div>
 
@@ -863,7 +1027,7 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                   <div>
                     <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                      Matriz de Variantes & Stock Inicial por Talla / Color
+                      Matriz de Variantes & Stock Inicial
                     </div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                       Define los atributos y el inventario inicial para cada presentación del producto.
@@ -895,8 +1059,8 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
                   }}
                 >
                   <div>ID / SKU Variante</div>
-                  <div>Variable 1 (Talla / Medida)</div>
-                  <div>Variable 2 (Color / Atributo)</div>
+                  <div>Variable 1</div>
+                  <div>Variable 2</div>
                   <div style={{ textAlign: 'center' }}>Stock Inicial</div>
                   <div style={{ textAlign: 'center' }}>Acción</div>
                 </div>
@@ -945,10 +1109,15 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
                           className="form-control"
                           placeholder="0"
                           min={0}
-                          value={v.stockActual}
+                          value={v.stockActual === 0 && (v as any)._isCleared ? '' : v.stockActual}
                           onChange={(e) => {
-                            const val = Number(e.target.value);
-                            setProdVariantes(prev => prev.map((item, i) => i === idx ? { ...item, stockActual: val } : item));
+                            const raw = e.target.value;
+                            const val = raw === '' ? '' : Number(raw);
+                            setProdVariantes(prev => prev.map((item, i) => i === idx ? { 
+                              ...item, 
+                              stockActual: val as any,
+                              _isCleared: raw === ''
+                            } : item));
                           }}
                           style={{ textAlign: 'center' }}
                         />
@@ -995,9 +1164,11 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
             <input
               type="text"
               className="form-control"
+              placeholder="Ej. Boutique San Ángel o Juan Pérez"
               value={cliNombre}
               onChange={(e) => setCliNombre(e.target.value)}
               required
+              autoFocus
             />
           </div>
           <div className="form-row">
@@ -1006,6 +1177,7 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
               <input
                 type="text"
                 className="form-control"
+                placeholder="Ej. BSA190415KL9"
                 value={cliRFC}
                 onChange={(e) => setCliRFC(e.target.value.toUpperCase())}
               />
@@ -1015,6 +1187,7 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
               <input
                 type="tel"
                 className="form-control"
+                placeholder="Ej. 55 1234 5678"
                 value={cliTel}
                 onChange={(e) => setCliTel(e.target.value)}
               />
@@ -1026,40 +1199,53 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
               <input
                 type="email"
                 className="form-control"
+                placeholder="contacto@cliente.com"
                 value={cliEmail}
                 onChange={(e) => setCliEmail(e.target.value)}
               />
             </div>
             <div className="form-group">
               <label className="form-label">Condición de Pago</label>
-              <select
-                className="form-select"
+              <ComboboxInline
+                options={paymentTermOptions}
                 value={cliTipoPago}
-                onChange={(e) => setCliTipoPago(e.target.value as PaymentTerm)}
-              >
-                <option value="contado">Contado</option>
-                <option value="credito">Crédito</option>
-              </select>
+                onChange={(val) => setCliTipoPago(val as PaymentTerm)}
+                hideSearch={true}
+              />
             </div>
           </div>
+          <div className="form-group">
+            <label className="form-label">Dirección / Ubicación</label>
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Calle, Número, Colonia, Ciudad, Estado o C.P."
+              value={cliDir}
+              onChange={(e) => setCliDir(e.target.value)}
+            />
+          </div>
           {cliTipoPago === 'credito' && (
-            <div className="form-row" style={{ backgroundColor: 'var(--bg-subtle)', padding: '0.75rem', borderRadius: 'var(--radius-md)' }}>
-              <div className="form-group">
+            <div className="form-row" style={{ backgroundColor: 'var(--bg-subtle)', padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Días de Crédito</label>
                 <input
                   type="number"
                   className="form-control"
                   value={cliDias}
-                  onChange={(e) => setCliDias(Number(e.target.value))}
+                  onChange={(e) => setCliDias(e.target.value === '' ? '' : Number(e.target.value))}
+                  min={1}
+                  placeholder="30"
                 />
               </div>
-              <div className="form-group">
+              <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Límite de Crédito ($)</label>
                 <input
                   type="number"
                   className="form-control"
                   value={cliLimite}
-                  onChange={(e) => setCliLimite(Number(e.target.value))}
+                  onChange={(e) => setCliLimite(e.target.value === '' ? '' : Number(e.target.value))}
+                  min={0}
+                  placeholder="10000"
                 />
               </div>
             </div>
@@ -1148,19 +1334,20 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
         </form>
       </Modal>
 
-      {/* Category Modal */}
+      {/* Category Modal with Subcategories */}
       <Modal
         isOpen={isCategoryModalOpen}
         onClose={() => setIsCategoryModalOpen(false)}
-        title="Nueva Categoría de Producto"
-        size="sm"
+        title={editingCategory ? "Editar Categoría de Producto" : "Nueva Categoría de Producto"}
+        subtitle="Administra la categoría y sus subcategorías para clasificar productos"
+        size="md"
         footer={
           <>
             <button type="button" className="btn btn-secondary" onClick={() => setIsCategoryModalOpen(false)}>
               Cancelar
             </button>
             <button type="submit" form="cat-form" className="btn btn-primary">
-              Guardar Categoría
+              {editingCategory ? "Actualizar Categoría" : "Guardar Categoría"}
             </button>
           </>
         }
@@ -1171,7 +1358,7 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
             <input
               type="text"
               className="form-control"
-              placeholder="Ej. Chamarras & Abrigos"
+              placeholder="Ej. Ropa Deportiva, Calzado, Electrónica"
               value={newCatName}
               onChange={(e) => setNewCatName(e.target.value)}
               required
@@ -1183,10 +1370,136 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
             <input
               type="text"
               className="form-control"
-              placeholder="Breve descripción..."
+              placeholder="Breve descripción o notas adicionales..."
               value={newCatDesc}
               onChange={(e) => setNewCatDesc(e.target.value)}
             />
+          </div>
+
+          {/* Subcategories Checkbox & Builder */}
+          <div style={{ margin: '1rem 0 0.5rem 0', padding: '0.9rem', backgroundColor: 'var(--bg-subtle)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: hasSubcategories ? '0.9rem' : 0 }}>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>¿Tiene subcategorías?</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Habilita este control para crear clasificaciones secundarias</div>
+              </div>
+              <input
+                type="checkbox"
+                id="toggle-subcategories"
+                checked={hasSubcategories}
+                onChange={(e) => {
+                  setHasSubcategories(e.target.checked);
+                  if (e.target.checked && catSubcategories.length === 0) {
+                    const currentPrefix = editingCategory ? editingCategory.id : generateDocNumber('CA', categories.length);
+                    setCatSubcategories([
+                      { id: `${currentPrefix}-1`, nombre: '', descripcion: '' }
+                    ]);
+                  }
+                }}
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              />
+            </div>
+
+            {hasSubcategories && (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Lista de Subcategorías
+                  </div>
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={handleAddSubcategoryRow}>
+                    <Plus size={14} />
+                    + Agregar Subcategoría
+                  </button>
+                </div>
+
+                {/* Subcategory headers */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1.2fr 1.8fr 2fr 40px',
+                    gap: '0.5rem',
+                    padding: '0.4rem 0.6rem',
+                    backgroundColor: 'var(--bg-surface)',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--border-default)',
+                    fontSize: '0.725rem',
+                    fontWeight: 700,
+                    color: 'var(--text-secondary)',
+                    textTransform: 'uppercase',
+                    marginBottom: '0.45rem',
+                    alignItems: 'center'
+                  }}
+                >
+                  <div>ID Subcategoría</div>
+                  <div>Nombre de Subcategoría</div>
+                  <div>Descripción (Opcional)</div>
+                  <div style={{ textAlign: 'center' }}>Acción</div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                  {catSubcategories.map((sub, idx) => {
+                    const currentPrefix = editingCategory ? editingCategory.id : generateDocNumber('CA', categories.length);
+                    const subId = sub.id || `${currentPrefix}-${idx + 1}`;
+                    return (
+                      <div
+                        key={idx}
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: '1.2fr 1.8fr 2fr 40px',
+                          gap: '0.5rem',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <input
+                          type="text"
+                          className="form-control"
+                          value={subId}
+                          readOnly
+                          style={{
+                            backgroundColor: 'var(--bg-subtle)',
+                            fontFamily: 'var(--font-mono)',
+                            fontWeight: 700,
+                            color: 'var(--text-secondary)',
+                            cursor: 'not-allowed',
+                            fontSize: '0.8rem'
+                          }}
+                        />
+                        <input
+                          type="text"
+                          className="form-control"
+                          placeholder="Ej. Sudaderas, Playeras, etc."
+                          value={sub.nombre}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setCatSubcategories(prev => prev.map((item, i) => i === idx ? { ...item, nombre: val } : item));
+                          }}
+                        />
+                        <input
+                          type="text"
+                          className="form-control"
+                          placeholder="Notas o detalle..."
+                          value={sub.descripcion}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setCatSubcategories(prev => prev.map((item, i) => i === idx ? { ...item, descripcion: val } : item));
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="btn-icon"
+                          style={{ color: 'var(--color-danger)' }}
+                          onClick={() => handleRemoveSubcategoryRow(idx)}
+                          title="Eliminar subcategoría"
+                          disabled={catSubcategories.length <= 1}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </form>
       </Modal>

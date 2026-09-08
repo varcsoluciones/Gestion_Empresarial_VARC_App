@@ -510,17 +510,16 @@ export const PurchasesPage: React.FC = () => {
               {selectedProdObj && selectedProdObj.tieneVariantes && selectedProdObj.variantes ? (
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">Variante</label>
-                  <select
-                    className="form-select"
+                  <ComboboxInline
+                    options={selectedProdObj.variantes.map(v => ({
+                      id: v.id,
+                      label: `${v.talla ? `Talla: ${v.talla}` : ''} ${v.color ? `Color: ${v.color}` : ''}`.trim() || v.sku,
+                      sublabel: `Stock: ${v.stockActual} | SKU: ${v.sku}`
+                    }))}
                     value={selectedVarForLine}
-                    onChange={(e) => setSelectedVarForLine(e.target.value)}
-                  >
-                    {selectedProdObj.variantes.map(v => (
-                      <option key={v.id} value={v.id}>
-                        {v.color} / Talla {v.talla} (Stock: {v.stockActual})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setSelectedVarForLine}
+                    hideSearch={true}
+                  />
                 </div>
               ) : (
                 <div className="form-group" style={{ marginBottom: 0 }}>

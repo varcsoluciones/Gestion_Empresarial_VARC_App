@@ -470,17 +470,16 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
           {selectedAdjProdObj && selectedAdjProdObj.tieneVariantes && selectedAdjProdObj.variantes && (
             <div className="form-group">
               <label className="form-label">Variante</label>
-              <select
-                className="form-select"
+              <ComboboxInline
+                options={selectedAdjProdObj.variantes.map(v => ({
+                  id: v.id,
+                  label: `${v.talla ? `Talla: ${v.talla}` : ''} ${v.color ? `Color: ${v.color}` : ''}`.trim() || v.sku,
+                  sublabel: `Stock actual: ${v.stockActual} | SKU: ${v.sku}`
+                }))}
                 value={adjVarId}
-                onChange={(e) => setAdjVarId(e.target.value)}
-              >
-                {selectedAdjProdObj.variantes.map(v => (
-                  <option key={v.id} value={v.id}>
-                    {v.color} / Talla {v.talla} (Stock actual: {v.stockActual})
-                  </option>
-                ))}
-              </select>
+                onChange={setAdjVarId}
+                hideSearch={true}
+              />
             </div>
           )}
 

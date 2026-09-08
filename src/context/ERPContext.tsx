@@ -61,6 +61,7 @@ export interface ERPContextType {
 
   // Acciones Categorías & Productos
   addCategory: (category: Omit<Category, 'id'>) => Category;
+  updateCategory: (id: string, data: Partial<Category>) => void;
   addProduct: (product: Omit<Product, 'id' | 'creadoEn' | 'costoPromedio' | 'stockActual'> & { costoInicial?: number; stockInicial?: number }) => Product;
   updateProduct: (id: string, data: Partial<Product>) => void;
 
@@ -231,12 +232,31 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Actions: Categories & Products
   const addCategory = (data: Omit<Category, 'id'>): Category => {
     const nextId = generateDocNumber('CA', categories.length);
+    const subcats = data.subcategorias ? data.subcategorias.map((s, idx) => ({
+      ...s,
+      id: s.id || `${nextId}-${idx + 1}`,
+      categoriaId: nextId
+    })) : undefined;
+
     const newCategory: Category = {
       ...data,
-      id: nextId
+      id: nextId,
+      subcategorias: subcats
     };
     setCategories(prev => [...prev, newCategory]);
     return newCategory;
+  };
+
+  const updateCategory = (id: string, data: Partial<Category>) => {
+    setCategories(prev => prev.map(c => {
+      if (c.id !== id) return c;
+      const subcats = data.subcategorias ? data.subcategorias.map((s, idx) => ({
+        ...s,
+        id: s.id || `${id}-${idx + 1}`,
+        categoriaId: id
+      })) : c.subcategorias;
+      return { ...c, ...data, subcategorias: subcats };
+    }));
   };
 
   const addProduct = (data: Omit<Product, 'id' | 'creadoEn' | 'costoPromedio' | 'stockActual'> & { costoInicial?: number; stockInicial?: number }): Product => {
@@ -1245,6 +1265,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         addSupplier,
         updateSupplier,
         addCategory,
+        updateCategory,
         addProduct,
         updateProduct,
         createPurchase,

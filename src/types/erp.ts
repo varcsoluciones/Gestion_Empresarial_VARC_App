@@ -66,10 +66,18 @@ export interface Supplier {
   notas?: string;
 }
 
+export interface Subcategory {
+  id: string;
+  categoriaId: string;
+  nombre: string;
+  descripcion?: string;
+}
+
 export interface Category {
   id: string;
   nombre: string;
   descripcion?: string;
+  subcategorias?: Subcategory[];
 }
 
 export interface ProductVariant {
@@ -87,6 +95,7 @@ export interface Product {
   codigo: string;
   nombre: string;
   categoriaId: string;
+  subcategoriaId?: string;
   unidadMedida: string; // pza, par, kg, m, set, etc.
   precioVenta: number;
   costoPromedio: number;
