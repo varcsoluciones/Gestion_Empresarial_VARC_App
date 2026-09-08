@@ -45,24 +45,17 @@ export const DocumentPrintView: React.FC<DocumentPrintViewProps> = ({
   };
 
   return (
-    <div className="modal-overlay" style={{ overflowY: 'auto', padding: '2rem 1rem' }}>
-      <div
-        className="modal-card modal-xl print-document-container"
-        style={{
-          backgroundColor: '#ffffff',
-          color: '#1e293b',
-          maxWidth: '900px',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
-        }}
-      >
-        {/* Action Header - Hidden on Print */}
+    <div className="modal-overlay" style={{ padding: '1.5rem 1rem' }}>
+      <div className="modal-card modal-xl print-document-container">
+        {/* Action Header - Sticky & Hidden on Print */}
         <div className="no-print" style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           padding: '1rem 1.5rem',
           backgroundColor: 'var(--bg-subtle)',
-          borderBottom: '1px solid var(--border-default)'
+          borderBottom: '1px solid var(--border-default)',
+          flexShrink: 0
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Vista Previa de Impresión</span>
@@ -80,8 +73,8 @@ export const DocumentPrintView: React.FC<DocumentPrintViewProps> = ({
           </div>
         </div>
 
-        {/* Printable Document Body */}
-        <div style={{ padding: '2.5rem 3rem', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+        {/* Printable Document Body with Smooth Scroll */}
+        <div className="print-document-body">
           {/* Header Row */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #e2e8f0', paddingBottom: '1.5rem' }}>
             <div>
@@ -108,7 +101,7 @@ export const DocumentPrintView: React.FC<DocumentPrintViewProps> = ({
               }}>
                 {docTitle}
               </div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0f172a', marginTop: '0.2rem' }}>
+              <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0f172a', marginTop: '0.2rem', fontFamily: 'monospace' }}>
                 {docNumber}
               </div>
               <div style={{ marginTop: '0.5rem', display: 'inline-block' }}>
@@ -118,7 +111,7 @@ export const DocumentPrintView: React.FC<DocumentPrintViewProps> = ({
           </div>
 
           {/* Metadata Row: Client & Dates */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '2rem', margin: '1.5rem 0' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.5rem', margin: '1.5rem 0' }}>
             <div style={{ backgroundColor: '#f8fafc', padding: '1rem 1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
               <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
                 Información del Cliente
@@ -127,7 +120,7 @@ export const DocumentPrintView: React.FC<DocumentPrintViewProps> = ({
                 {client?.nombre || 'Cliente General'}
               </div>
               <div style={{ fontSize: '0.85rem', color: '#475569', marginTop: '0.25rem' }}>
-                RFC / ID: {client?.identificacionFiscal || 'N/A'}
+                RFC / ID: <strong>{client?.identificacionFiscal || 'N/A'}</strong>
               </div>
               {client?.direccion && (
                 <div style={{ fontSize: '0.85rem', color: '#475569' }}>
@@ -156,7 +149,7 @@ export const DocumentPrintView: React.FC<DocumentPrintViewProps> = ({
               {isInvoice && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '0.2rem 0' }}>
                   <span style={{ color: '#64748b' }}>Términos de Pago:</span>
-                  <strong style={{ color: '#0f172a', textTransform: 'capitalize' }}>{invoice?.tipoPago}</strong>
+                  <strong style={{ color: '#0f172a', textTransform: 'uppercase' }}>{invoice?.tipoPago}</strong>
                 </div>
               )}
               {isInvoice && invoice?.cotizacionIdOrigen && (
@@ -202,23 +195,44 @@ export const DocumentPrintView: React.FC<DocumentPrintViewProps> = ({
             </tbody>
           </table>
 
-          {/* Totals Section */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: '1.5rem', gap: '2rem' }}>
-            <div style={{ flex: 1, backgroundColor: '#f8fafc', padding: '1rem 1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
-                Notas y Condiciones
+          {/* Totals & Notes Section */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '1.5rem', marginTop: '1.5rem' }}>
+            <div style={{ backgroundColor: '#f8fafc', padding: '1rem 1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                  Notas y Condiciones Comerciales
+                </div>
+                <div style={{ fontSize: '0.825rem', color: '#475569', lineHeight: 1.5 }}>
+                  {doc.notas || settings.pieFactura || 'Sin notas adicionales.'}
+                </div>
               </div>
-              <div style={{ fontSize: '0.825rem', color: '#475569', lineHeight: 1.4 }}>
-                {doc.notas || settings.pieFactura || 'Sin notas adicionales.'}
-              </div>
+
               {isInvoice && invoice?.anuladoMotivo && (
-                <div style={{ marginTop: '0.5rem', padding: '0.5rem', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', color: '#991b1b', fontSize: '0.8rem' }}>
-                  <strong>Motivo de Anulación:</strong> {invoice.anuladoMotivo} ({formatDate(invoice.anuladoFecha)})
+                <div style={{ padding: '0.75rem', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', color: '#991b1b', fontSize: '0.8rem' }}>
+                  <strong>Motivo de Anulación:</strong> {invoice.anuladoMotivo}
+                  <div style={{ fontSize: '0.75rem', marginTop: '0.2rem', color: '#b91c1c' }}>Fecha de Anulación: {formatDate(invoice.anuladoFecha)}</div>
+                </div>
+              )}
+
+              {/* Payments breakdown if any */}
+              {isInvoice && invoice && invoice.pagos && invoice.pagos.length > 0 && (
+                <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '0.5rem' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
+                    Historial de Cobros / Abonos Recibidos ({invoice.pagos.length})
+                  </div>
+                  <div style={{ fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    {invoice.pagos.map((p, pIdx) => (
+                      <div key={pIdx} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0', borderBottom: '1px dashed #e2e8f0' }}>
+                        <span>{formatDate(p.fecha)} — <span style={{ textTransform: 'capitalize', color: '#64748b' }}>{p.metodoPago}</span> {p.referencia ? `(${p.referencia})` : ''}</span>
+                        <strong style={{ color: '#059669' }}>{formatCurrency(p.monto)}</strong>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
 
-            <div style={{ width: '280px', backgroundColor: '#f8fafc', padding: '1rem 1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <div style={{ backgroundColor: '#f8fafc', padding: '1rem 1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0', height: 'fit-content' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '0.25rem 0', color: '#475569' }}>
                 <span>Subtotal:</span>
                 <span>{formatCurrency(doc.subtotal)}</span>
@@ -233,19 +247,19 @@ export const DocumentPrintView: React.FC<DocumentPrintViewProps> = ({
                 <span>IVA ({settings.tasaImpuestoDefecto}%):</span>
                 <span>{formatCurrency(doc.impuestos)}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', fontWeight: 800, padding: '0.6rem 0 0.25rem', borderTop: '2px solid #cbd5e1', marginTop: '0.5rem', color: '#0f172a' }}>
-                <span>Total:</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.15rem', fontWeight: 800, padding: '0.6rem 0 0.25rem', borderTop: '2px solid #cbd5e1', marginTop: '0.5rem', color: '#0f172a' }}>
+                <span>Total Factura:</span>
                 <span style={{ color: '#4338ca' }}>{formatCurrency(doc.total)}</span>
               </div>
 
               {isInvoice && (
                 <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '0.25rem 0', color: '#059669', borderTop: '1px dashed #e2e8f0', marginTop: '0.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '0.35rem 0', color: '#059669', borderTop: '1px dashed #e2e8f0', marginTop: '0.5rem' }}>
                     <span>Total Pagado:</span>
-                    <span>{formatCurrency(invoice ? invoice.total - invoice.saldoPendiente : 0)}</span>
+                    <strong>{formatCurrency(invoice ? invoice.total - invoice.saldoPendiente : 0)}</strong>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', fontWeight: 700, padding: '0.25rem 0', color: invoice && invoice.saldoPendiente > 0 ? '#b91c1c' : '#059669' }}>
-                    <span>Saldo Pendiente:</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', fontWeight: 700, padding: '0.35rem 0', color: invoice && invoice.saldoPendiente > 0 ? '#b91c1c' : '#059669' }}>
+                    <span>Saldo Pendiente (CxC):</span>
                     <span>{formatCurrency(invoice ? invoice.saldoPendiente : 0)}</span>
                   </div>
                 </>
@@ -253,9 +267,10 @@ export const DocumentPrintView: React.FC<DocumentPrintViewProps> = ({
             </div>
           </div>
 
-          {/* Footer note */}
-          <div style={{ marginTop: '3rem', paddingTop: '1.25rem', borderTop: '1px solid #e2e8f0', textAlign: 'center', fontSize: '0.75rem', color: '#94a3b8' }}>
-            Este documento es una representación gráfica simplificada emitida a través del Micro ERP {settings.nombreEmpresa}.
+          {/* Footer note & credentials */}
+          <div style={{ marginTop: '2.5rem', paddingTop: '1.25rem', borderTop: '1px solid #e2e8f0', textAlign: 'center', fontSize: '0.75rem', color: '#94a3b8', paddingBottom: '1.5rem' }}>
+            <div>Documento emitido para efectos de control interno y administración empresarial por <strong>{settings.nombreEmpresa}</strong>.</div>
+            <div style={{ marginTop: '0.2rem' }}>RFC: {settings.identificacionFiscal} | Tel: {settings.telefono} | {settings.email}</div>
           </div>
         </div>
       </div>

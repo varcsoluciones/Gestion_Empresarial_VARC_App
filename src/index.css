@@ -1142,27 +1142,81 @@ body {
   background-color: var(--color-accent-subtle);
 }
 
+/* Document Print / Preview Container */
+.print-document-container {
+  background-color: #ffffff;
+  color: #1e293b;
+  max-width: 900px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+
+.print-document-body {
+  padding: 2.5rem 3rem 3rem 3rem;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  color: #1e293b;
+  background-color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.print-document-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.print-document-body::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 4px;
+}
+
 /* Print Styles */
 @media print {
   body {
     background: white !important;
     color: black !important;
   }
-  .app-sidebar, .app-topbar, .page-header .btn, .no-print {
+  .app-sidebar, .app-topbar, .page-header, .page-actions, .tabs-nav, .filters-bar, .no-print {
     display: none !important;
+  }
+  .modal-overlay {
+    position: static !important;
+    padding: 0 !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    display: block !important;
+    animation: none !important;
+  }
+  .modal-card.print-document-container {
+    max-height: none !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    animation: none !important;
+  }
+  .print-document-body {
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
   }
   .app-main {
     height: auto !important;
     overflow: visible !important;
+    padding: 0 !important;
   }
   .page-content {
     padding: 0 !important;
     max-width: 100% !important;
-  }
-  .print-document-container {
-    box-shadow: none !important;
-    border: none !important;
-    padding: 0 !important;
   }
 }
 

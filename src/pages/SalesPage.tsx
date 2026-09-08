@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useERP } from '../context/ERPContext';
 import type { Invoice, Quote, PaymentMethod, PaymentTerm } from '../types/erp';
-import { formatCurrency, formatDate } from '../utils/formatters';
+import { formatCurrency, formatDate, generateDocNumber } from '../utils/formatters';
 import {
   TrendingUp,
   Plus,
@@ -12,7 +12,8 @@ import {
   DollarSign,
   Trash2,
   Sparkles,
-  FileText
+  FileText,
+  AlertCircle
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
@@ -20,6 +21,22 @@ import { ComboboxInline } from '../components/common/ComboboxInline';
 import { QuickCreateCustomerModal } from '../components/quick-create/QuickCreateCustomerModal';
 import { QuickCreateProductModal } from '../components/quick-create/QuickCreateProductModal';
 import { DocumentPrintView } from '../components/print/DocumentPrintView';
+
+interface ConfirmIssueData {
+  title: string;
+  subtitle: string;
+  docFolio: string;
+  clientName: string;
+  clientRFC: string;
+  tipoPago: string;
+  fechaEmision: string;
+  totalPieces: number;
+  totalItems: number;
+  subtotal: number;
+  impuestos: number;
+  total: number;
+  onConfirm: () => void;
+}
 
 export const SalesPage: React.FC = () => {
   const {
@@ -45,6 +62,7 @@ export const SalesPage: React.FC = () => {
   const [isNewQuoteModalOpen, setIsNewQuoteModalOpen] = useState(false);
   const [isQuickClientOpen, setIsQuickClientOpen] = useState(false);
   const [isQuickProductOpen, setIsQuickProductOpen] = useState(false);
+  const [confirmIssueData, setConfirmIssueData] = useState<ConfirmIssueData | null>(null);
 
   // Print view state
   const [printDoc, setPrintDoc] = useState<{ doc: Invoice | Quote; type: 'invoice' | 'quote' } | null>(null);
@@ -192,7 +210,7 @@ export const SalesPage: React.FC = () => {
   const formImpuestos = Number((formSubtotal * (settings.tasaImpuestoDefecto / 100)).toFixed(2));
   const formTotal = formSubtotal + formImpuestos;
 
-  const handleSaveInvoice = (directIssue = false) => {
+  const handleSaveDraftInvoice = () => {
     if (!formClienteId || formItems.length === 0) return;
 
     createInvoice({
@@ -200,7 +218,7 @@ export const SalesPage: React.FC = () => {
       fechaEmision: formFechaEmision,
       fechaVencimiento: formFechaVencimiento,
       tipoPago: formTipoPago,
-      estado: directIssue ? 'emitida' : 'borrador',
+      estado: 'borrador',
       items: formItems.map((item, idx) => ({
         ...item,
         id: `fitem-${Date.now()}-${idx + 1}`,
@@ -215,6 +233,105 @@ export const SalesPage: React.FC = () => {
     });
 
     setIsNewInvoiceModalOpen(false);
+  };
+
+  const handleRequestIssueNewInvoice = () => {
+    if (!formClienteId || formItems.length === 0) return;
+    const client = clients.find(c => c.id === formClienteId);
+    const nextFolio = generateDocNumber('FAC', invoices.length);
+    const totalPieces = formItems.reduce((sum, item) => sum + item.cantidad, 0);
+
+    setConfirmIssueData({
+      title: 'Confirmar Emisión de Factura',
+      subtitle: 'Verifica los datos antes de emitir la factura formal y afectar existencias de inventario.',
+      docFolio: nextFolio,
+      clientName: client?.nombre || 'Cliente General',
+      clientRFC: client?.identificacionFiscal || 'XAXX010101000',
+      tipoPago: formTipoPago.toUpperCase(),
+      fechaEmision: formFechaEmision,
+      totalPieces,
+      totalItems: formItems.length,
+      subtotal: formSubtotal,
+      impuestos: formImpuestos,
+      total: formTotal,
+      onConfirm: () => {
+        const newInv = createInvoice({
+          clienteId: formClienteId,
+          fechaEmision: formFechaEmision,
+          fechaVencimiento: formFechaVencimiento,
+          tipoPago: formTipoPago,
+          estado: 'emitida',
+          items: formItems.map((item, idx) => ({
+            ...item,
+            id: `fitem-${Date.now()}-${idx + 1}`,
+            facturaId: ''
+          })),
+          subtotal: formSubtotal,
+          descuentoTotal: 0,
+          tasaImpuesto: settings.tasaImpuestoDefecto,
+          impuestos: formImpuestos,
+          total: formTotal,
+          notas: formNotas
+        });
+        setConfirmIssueData(null);
+        setIsNewInvoiceModalOpen(false);
+        setPrintDoc({ doc: newInv, type: 'invoice' });
+      }
+    });
+  };
+
+  const handleRequestIssueDraft = (inv: Invoice) => {
+    const client = clients.find(c => c.id === inv.clienteId);
+    const totalPieces = inv.items.reduce((sum, item) => sum + item.cantidad, 0);
+
+    setConfirmIssueData({
+      title: 'Confirmar Emisión de Factura Borrador',
+      subtitle: `Se emitirá la factura ${inv.numeroFactura} y se descontará el inventario correspondiente.`,
+      docFolio: inv.numeroFactura,
+      clientName: client?.nombre || 'Cliente General',
+      clientRFC: client?.identificacionFiscal || 'N/A',
+      tipoPago: inv.tipoPago.toUpperCase(),
+      fechaEmision: inv.fechaEmision,
+      totalPieces,
+      totalItems: inv.items.length,
+      subtotal: inv.subtotal,
+      impuestos: inv.impuestos,
+      total: inv.total,
+      onConfirm: () => {
+        issueInvoice(inv.id);
+        setConfirmIssueData(null);
+        setPrintDoc({
+          doc: { ...inv, estado: inv.saldoPendiente <= 0 ? 'pagada' : 'emitida', emitidaFecha: new Date().toISOString() },
+          type: 'invoice'
+        });
+      }
+    });
+  };
+
+  const handleRequestConvertQuote = (quote: Quote) => {
+    const client = clients.find(c => c.id === quote.clienteId);
+    const totalPieces = quote.items.reduce((sum, item) => sum + item.cantidad, 0);
+
+    setConfirmIssueData({
+      title: 'Confirmar Conversión de Cotización a Factura',
+      subtitle: `¿Deseas convertir la cotización ${quote.numeroCotizacion} en una Factura emitida y afectar stock?`,
+      docFolio: 'Próximo Folio FAC',
+      clientName: client?.nombre || 'Cliente',
+      clientRFC: client?.identificacionFiscal || 'N/A',
+      tipoPago: (client?.tipoPago || 'contado').toUpperCase(),
+      fechaEmision: new Date().toISOString().split('T')[0],
+      totalPieces,
+      totalItems: quote.items.length,
+      subtotal: quote.subtotal,
+      impuestos: quote.impuestos,
+      total: quote.total,
+      onConfirm: () => {
+        const inv = convertQuoteToInvoice(quote.id, true);
+        setConfirmIssueData(null);
+        setActiveTab('invoices');
+        setPrintDoc({ doc: inv, type: 'invoice' });
+      }
+    });
   };
 
   const handleSaveQuote = () => {
@@ -237,13 +354,6 @@ export const SalesPage: React.FC = () => {
     });
 
     setIsNewQuoteModalOpen(false);
-  };
-
-  // Convert Quote To Invoice handler
-  const handleConvertQuote = (quoteId: string) => {
-    const inv = convertQuoteToInvoice(quoteId);
-    setActiveTab('invoices');
-    setPrintDoc({ doc: inv, type: 'invoice' });
   };
 
   // Payment handler (CxC)
@@ -318,14 +428,18 @@ export const SalesPage: React.FC = () => {
           </p>
         </div>
         <div className="page-actions">
-          <button type="button" className="btn btn-secondary btn-sm" onClick={handleOpenNewQuote}>
-            <FileText size={15} />
-            + Nueva Cotización
-          </button>
-          <button type="button" className="btn btn-primary btn-sm" onClick={handleOpenNewInvoice}>
-            <Plus size={16} />
-            + Nueva Factura
-          </button>
+          {activeTab === 'invoices' && (
+            <button type="button" className="btn btn-primary btn-sm" onClick={handleOpenNewInvoice}>
+              <Plus size={16} />
+              + Nueva Factura
+            </button>
+          )}
+          {activeTab === 'quotes' && (
+            <button type="button" className="btn btn-primary btn-sm" onClick={handleOpenNewQuote}>
+              <Plus size={16} />
+              + Nueva Cotización
+            </button>
+          )}
         </div>
       </div>
 
@@ -451,7 +565,7 @@ export const SalesPage: React.FC = () => {
                             <button
                               type="button"
                               className="btn btn-primary btn-sm"
-                              onClick={() => issueInvoice(inv.id)}
+                              onClick={() => handleRequestIssueDraft(inv)}
                               title="Emitir factura y descontar stock"
                             >
                               <CheckCircle size={14} />
@@ -558,7 +672,7 @@ export const SalesPage: React.FC = () => {
                             <button
                               type="button"
                               className="btn btn-primary btn-sm"
-                              onClick={() => handleConvertQuote(q.id)}
+                              onClick={() => handleRequestConvertQuote(q)}
                               title="Convertir cotización en Factura con 1 clic"
                             >
                               <Sparkles size={14} />
@@ -600,7 +714,7 @@ export const SalesPage: React.FC = () => {
             <button
               type="button"
               className="btn btn-secondary"
-              onClick={() => handleSaveInvoice(false)}
+              onClick={handleSaveDraftInvoice}
               disabled={formItems.length === 0}
             >
               Guardar como Borrador
@@ -608,7 +722,7 @@ export const SalesPage: React.FC = () => {
             <button
               type="button"
               className="btn btn-primary"
-              onClick={() => handleSaveInvoice(true)}
+              onClick={handleRequestIssueNewInvoice}
               disabled={formItems.length === 0}
             >
               <CheckCircle size={16} />
@@ -1153,6 +1267,138 @@ export const SalesPage: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Confirmation Modal Before Emitting Invoice */}
+      {confirmIssueData && (
+        <Modal
+          isOpen={!!confirmIssueData}
+          onClose={() => setConfirmIssueData(null)}
+          title={confirmIssueData.title}
+          subtitle={confirmIssueData.subtitle}
+          size="lg"
+          footer={
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setConfirmIssueData(null)}
+              >
+                Regresar / Modificar
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={confirmIssueData.onConfirm}
+              >
+                <CheckCircle size={16} />
+                Confirmar y Emitir Factura
+              </button>
+            </>
+          }
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {/* Impact notification alert */}
+            <div style={{
+              padding: '1rem',
+              backgroundColor: 'var(--color-accent-subtle)',
+              border: '1px solid var(--color-accent)',
+              borderRadius: 'var(--radius-md)',
+              display: 'flex',
+              gap: '0.75rem',
+              alignItems: 'flex-start'
+            }}>
+              <AlertCircle size={20} style={{ color: 'var(--color-accent)', flexShrink: 0, marginTop: '2px' }} />
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                <strong style={{ display: 'block', marginBottom: '0.2rem', color: 'var(--color-accent)' }}>
+                  Afectación Contable e Inventario en Tiempo Real
+                </strong>
+                Al confirmar la emisión, la factura quedará en estado <strong>EMITIDA</strong> de forma inmutable. Se descontarán automáticamente las existencias de cada variante en el Kardex y se ingresará a <strong>Cuentas por Cobrar (CxC)</strong>.
+              </div>
+            </div>
+
+            {/* Document summary grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.25rem' }}>
+              <div style={{
+                padding: '1.15rem',
+                backgroundColor: 'var(--bg-subtle)',
+                borderRadius: 'var(--radius-lg)',
+                border: '1px solid var(--border-default)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.6rem'
+              }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Datos del Documento y Cliente
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)' }}>Folio a emitir:</div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--color-accent)' }}>
+                    {confirmIssueData.docFolio}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)' }}>Cliente:</div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 600 }}>{confirmIssueData.clientName}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>RFC / ID: {confirmIssueData.clientRFC}</div>
+                </div>
+                <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.25rem' }}>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Condición:</div>
+                    <Badge variant={confirmIssueData.tipoPago === 'CREDITO' ? 'accent' : 'neutral'}>
+                      {confirmIssueData.tipoPago}
+                    </Badge>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Emisión:</div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{formatDate(confirmIssueData.fechaEmision)}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{
+                padding: '1.15rem',
+                backgroundColor: 'var(--bg-subtle)',
+                borderRadius: 'var(--radius-lg)',
+                border: '1px solid var(--border-default)',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between'
+              }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
+                  Resumen Económico & Mercancía
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.85rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Ítems / Variantes:</span>
+                    <span style={{ fontWeight: 600 }}>{confirmIssueData.totalItems} ítems ({confirmIssueData.totalPieces} pzs)</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Subtotal:</span>
+                    <span style={{ fontWeight: 600 }}>{formatCurrency(confirmIssueData.subtotal)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>IVA ({settings.tasaImpuestoDefecto}%):</span>
+                    <span style={{ fontWeight: 600 }}>{formatCurrency(confirmIssueData.impuestos)}</span>
+                  </div>
+                </div>
+                <div style={{
+                  borderTop: '2px solid var(--border-default)',
+                  paddingTop: '0.6rem',
+                  marginTop: '0.6rem',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'baseline'
+                }}>
+                  <span style={{ fontSize: '0.95rem', fontWeight: 700 }}>Total Factura:</span>
+                  <span style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--color-accent)' }}>
+                    {formatCurrency(confirmIssueData.total)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* Print Document Modal View */}
       {printDoc && (

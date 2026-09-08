@@ -73,7 +73,7 @@ export interface ERPContextType {
   // Acciones Cotizaciones
   createQuote: (quote: Omit<Quote, 'id' | 'numeroCotizacion'>) => Quote;
   updateQuote: (id: string, data: Partial<Quote>) => void;
-  convertQuoteToInvoice: (quoteId: string) => Invoice;
+  convertQuoteToInvoice: (quoteId: string, directIssue?: boolean) => Invoice;
 
   // Acciones Facturación & CxC
   createInvoice: (invoice: Omit<Invoice, 'id' | 'numeroFactura' | 'saldoPendiente' | 'pagos'>) => Invoice;
@@ -521,13 +521,14 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setQuotes(prev => prev.map(q => q.id === id ? { ...q, ...data } : q));
   };
 
-  const convertQuoteToInvoice = (quoteId: string): Invoice => {
+  const convertQuoteToInvoice = (quoteId: string, directIssue: boolean = true): Invoice => {
     const quote = quotes.find(q => q.id === quoteId);
     if (!quote) throw new Error('Cotización no encontrada');
 
     const client = clients.find(c => c.id === quote.clienteId);
     const tipoPago = client?.tipoPago || 'contado';
     const numFactura = generateDocNumber('FAC', invoices.length);
+    const now = new Date().toISOString();
 
     const invoiceItems = quote.items.map(item => ({
       id: `fitem-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
@@ -549,7 +550,8 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       fechaEmision: new Date().toISOString().split('T')[0],
       fechaVencimiento: new Date(Date.now() + (client?.diasCredito || 0) * 86400000).toISOString().split('T')[0],
       tipoPago: tipoPago,
-      estado: 'borrador',
+      estado: directIssue ? (quote.total <= 0 ? 'pagada' : 'emitida') : 'borrador',
+      emitidaFecha: directIssue ? now : undefined,
       items: invoiceItems,
       subtotal: quote.subtotal,
       descuentoTotal: quote.descuentoTotal,
@@ -561,6 +563,72 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       notas: `Factura generada desde cotización ${quote.numeroCotizacion}`
     };
 
+    if (directIssue) {
+      const newMovements: InventoryMovement[] = [];
+      setProducts(prevProducts => {
+        return prevProducts.map(product => {
+          const itemsForThisProduct = newInvoice.items.filter(item => item.productoId === product.id);
+          if (itemsForThisProduct.length === 0) return product;
+
+          let updatedStock = product.stockActual;
+          let updatedVariants = product.variantes ? [...product.variantes] : undefined;
+
+          for (const item of itemsForThisProduct) {
+            if (product.tieneVariantes && item.varianteId && updatedVariants) {
+              updatedVariants = updatedVariants.map(v => {
+                if (v.id === item.varianteId) {
+                  const varNewStock = Math.max(0, v.stockActual - item.cantidad);
+                  newMovements.push({
+                    id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+                    fecha: now,
+                    tipo: 'SALIDA_VENTA',
+                    referenciaDoc: newInvoice.numeroFactura,
+                    productoId: product.id,
+                    varianteId: v.id,
+                    cantidad: -item.cantidad,
+                    costoUnitario: product.costoPromedio,
+                    stockResultante: varNewStock,
+                    motivo: `Venta según factura ${newInvoice.numeroFactura} (${v.talla} / ${v.color})`,
+                    usuario: 'Ventas'
+                  });
+                  return { ...v, stockActual: varNewStock };
+                }
+                return v;
+              });
+            } else {
+              updatedStock = Math.max(0, updatedStock - item.cantidad);
+              newMovements.push({
+                id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+                fecha: now,
+                tipo: 'SALIDA_VENTA',
+                referenciaDoc: newInvoice.numeroFactura,
+                productoId: product.id,
+                cantidad: -item.cantidad,
+                costoUnitario: product.costoPromedio,
+                stockResultante: updatedStock,
+                motivo: `Venta según factura ${newInvoice.numeroFactura}`,
+                usuario: 'Ventas'
+              });
+            }
+          }
+
+          if (product.tieneVariantes && updatedVariants) {
+            updatedStock = updatedVariants.reduce((acc, v) => acc + v.stockActual, 0);
+          }
+
+          return {
+            ...product,
+            stockActual: updatedStock,
+            variantes: updatedVariants
+          };
+        });
+      });
+
+      if (newMovements.length > 0) {
+        setInventoryMovements(prev => [...newMovements, ...prev]);
+      }
+    }
+
     setInvoices(prev => [newInvoice, ...prev]);
     setQuotes(prev => prev.map(q => q.id === quoteId ? { ...q, estado: 'aprobada', convertidaEnFacturaId: newInvoice.id } : q));
 
@@ -570,21 +638,86 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Actions: Facturación (Invoices & CxC)
   const createInvoice = (data: Omit<Invoice, 'id' | 'numeroFactura' | 'saldoPendiente' | 'pagos'>): Invoice => {
     const num = generateDocNumber('FAC', invoices.length);
+    const now = new Date().toISOString();
+    const isDirectEmit = data.estado === 'emitida';
+
     const newInvoice: Invoice = {
       ...data,
       id: `inv-${Date.now()}`,
       numeroFactura: num,
       saldoPendiente: data.total,
       pagos: [],
-      estado: data.estado || 'borrador'
+      estado: isDirectEmit ? (data.total <= 0 ? 'pagada' : 'emitida') : 'borrador',
+      emitidaFecha: isDirectEmit ? now : undefined
     };
 
-    setInvoices(prev => [newInvoice, ...prev]);
+    if (isDirectEmit) {
+      const newMovements: InventoryMovement[] = [];
+      setProducts(prevProducts => {
+        return prevProducts.map(product => {
+          const itemsForThisProduct = newInvoice.items.filter(item => item.productoId === product.id);
+          if (itemsForThisProduct.length === 0) return product;
 
-    if (newInvoice.estado === 'emitida') {
-      setTimeout(() => issueInvoice(newInvoice.id), 50);
+          let updatedStock = product.stockActual;
+          let updatedVariants = product.variantes ? [...product.variantes] : undefined;
+
+          for (const item of itemsForThisProduct) {
+            if (product.tieneVariantes && item.varianteId && updatedVariants) {
+              updatedVariants = updatedVariants.map(v => {
+                if (v.id === item.varianteId) {
+                  const varNewStock = Math.max(0, v.stockActual - item.cantidad);
+                  newMovements.push({
+                    id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+                    fecha: now,
+                    tipo: 'SALIDA_VENTA',
+                    referenciaDoc: newInvoice.numeroFactura,
+                    productoId: product.id,
+                    varianteId: v.id,
+                    cantidad: -item.cantidad,
+                    costoUnitario: product.costoPromedio,
+                    stockResultante: varNewStock,
+                    motivo: `Venta según factura ${newInvoice.numeroFactura} (${v.talla} / ${v.color})`,
+                    usuario: 'Ventas'
+                  });
+                  return { ...v, stockActual: varNewStock };
+                }
+                return v;
+              });
+            } else {
+              updatedStock = Math.max(0, updatedStock - item.cantidad);
+              newMovements.push({
+                id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+                fecha: now,
+                tipo: 'SALIDA_VENTA',
+                referenciaDoc: newInvoice.numeroFactura,
+                productoId: product.id,
+                cantidad: -item.cantidad,
+                costoUnitario: product.costoPromedio,
+                stockResultante: updatedStock,
+                motivo: `Venta según factura ${newInvoice.numeroFactura}`,
+                usuario: 'Ventas'
+              });
+            }
+          }
+
+          if (product.tieneVariantes && updatedVariants) {
+            updatedStock = updatedVariants.reduce((acc, v) => acc + v.stockActual, 0);
+          }
+
+          return {
+            ...product,
+            stockActual: updatedStock,
+            variantes: updatedVariants
+          };
+        });
+      });
+
+      if (newMovements.length > 0) {
+        setInventoryMovements(prev => [...newMovements, ...prev]);
+      }
     }
 
+    setInvoices(prev => [newInvoice, ...prev]);
     return newInvoice;
   };
 
