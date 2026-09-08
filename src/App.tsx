@@ -19,31 +19,37 @@ import { QuickNavigationModal } from './components/navigation/QuickNavigationMod
 const AppContent: React.FC = () => {
   useAutoTableResizer();
   const [currentTab, setCurrentTab] = useState<NavigationTab>('dashboard');
+  const [targetSubTab, setTargetSubTab] = useState<string | undefined>(undefined);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [isQuickNavOpen, setIsQuickNavOpen] = useState(false);
 
+  const handleNavigate = (tab: NavigationTab, subTab?: string) => {
+    setCurrentTab(tab);
+    setTargetSubTab(subTab);
+  };
+
   const renderActivePage = () => {
     switch (currentTab) {
       case 'dashboard':
-        return <DashboardPage onNavigate={setCurrentTab} />;
+        return <DashboardPage onNavigate={handleNavigate} />;
       case 'master-data':
-        return <MasterDataPage />;
+        return <MasterDataPage initialTab={targetSubTab as any} />;
       case 'purchases':
         return <PurchasesPage />;
       case 'inventory':
-        return <InventoryPage />;
+        return <InventoryPage initialView={targetSubTab as any} />;
       case 'sales':
-        return <SalesPage />;
+        return <SalesPage initialTab={targetSubTab as any} />;
       case 'accounting':
-        return <AccountingPage />;
+        return <AccountingPage initialTab={targetSubTab as any} />;
       case 'reports':
-        return <ReportsPage />;
+        return <ReportsPage initialReport={targetSubTab as any} />;
       case 'settings':
         return <SettingsPage />;
       default:
-        return <DashboardPage onNavigate={setCurrentTab} />;
+        return <DashboardPage onNavigate={handleNavigate} />;
     }
   };
 
@@ -51,7 +57,7 @@ const AppContent: React.FC = () => {
     <div className="app-container">
       <Sidebar
         currentTab={currentTab}
-        onTabChange={setCurrentTab}
+        onTabChange={(tab) => handleNavigate(tab)}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         isOpenMobile={isMobileMenuOpen}
@@ -61,7 +67,7 @@ const AppContent: React.FC = () => {
       <div className="app-main">
         <Topbar
           currentTab={currentTab}
-          onNavigate={setCurrentTab}
+          onNavigate={(tab) => handleNavigate(tab)}
           onOpenQuickNav={() => setIsQuickNavOpen(true)}
           onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           onOpenGuide={() => setIsGuideOpen(true)}
@@ -80,7 +86,7 @@ const AppContent: React.FC = () => {
       <QuickNavigationModal
         isOpen={isQuickNavOpen}
         onClose={() => setIsQuickNavOpen(false)}
-        onNavigate={setCurrentTab}
+        onNavigate={handleNavigate}
       />
     </div>
   );

@@ -22,7 +22,11 @@ import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 import { ExcelExportButton } from '../components/common/ExcelExportButton';
 
-export const AccountingPage: React.FC = () => {
+interface AccountingPageProps {
+  initialTab?: 'prorrateo' | 'expenses' | 'assets';
+}
+
+export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) => {
   const {
     settings,
     expenses,
@@ -38,7 +42,13 @@ export const AccountingPage: React.FC = () => {
   const { t } = useTranslation();
 
   const [selectedMonth, setSelectedMonth] = useState(getMonthKey());
-  const [activeTab, setActiveTab] = useState<'prorrateo' | 'expenses' | 'assets'>('prorrateo');
+  const [activeTab, setActiveTab] = useState<'prorrateo' | 'expenses' | 'assets'>(initialTab || 'prorrateo');
+
+  React.useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
   
   // Prorrateo is strictly informative using the company default established in settings:
   const activeCriterio = settings.criterioProrrateoDefecto || 'costo_material';

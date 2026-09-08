@@ -20,7 +20,11 @@ import {
 import { Badge } from '../components/common/Badge';
 import { ExcelExportButton } from '../components/common/ExcelExportButton';
 
-export const ReportsPage: React.FC = () => {
+interface ReportsPageProps {
+  initialReport?: 'pnl' | 'balance' | 'sales' | 'costs';
+}
+
+export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
   const {
     invoices,
     purchases,
@@ -35,7 +39,13 @@ export const ReportsPage: React.FC = () => {
   } = useERP();
 
   const [selectedMonth, setSelectedMonth] = useState(getMonthKey());
-  const [activeReport, setActiveReport] = useState<'pnl' | 'balance' | 'sales' | 'costs'>('pnl');
+  const [activeReport, setActiveReport] = useState<'pnl' | 'balance' | 'sales' | 'costs'>(initialReport || 'pnl');
+
+  React.useEffect(() => {
+    if (initialReport) {
+      setActiveReport(initialReport);
+    }
+  }, [initialReport]);
 
   // Expanded row state for Product and Client tables in the Sales report
   const [expandedProducts, setExpandedProducts] = useState<Record<string, boolean>>({});

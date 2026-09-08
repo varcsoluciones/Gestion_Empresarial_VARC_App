@@ -20,7 +20,11 @@ import { Modal } from '../components/common/Modal';
 import { ComboboxInline } from '../components/common/ComboboxInline';
 import { ExcelExportButton } from '../components/common/ExcelExportButton';
 
-export const MasterDataPage: React.FC = () => {
+interface MasterDataPageProps {
+  initialTab?: 'clients' | 'suppliers' | 'categories' | 'products';
+}
+
+export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) => {
   const {
     clients,
     suppliers,
@@ -35,7 +39,13 @@ export const MasterDataPage: React.FC = () => {
     updateProduct
   } = useERP();
 
-  const [activeTab, setActiveTab] = useState<'clients' | 'suppliers' | 'categories' | 'products'>('products');
+  const [activeTab, setActiveTab] = useState<'clients' | 'suppliers' | 'categories' | 'products'>(initialTab || 'products');
+
+  React.useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
   const [searchTerm, setSearchTerm] = useState('');
 
   // Modals state

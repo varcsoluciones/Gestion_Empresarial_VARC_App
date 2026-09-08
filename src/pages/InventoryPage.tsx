@@ -15,7 +15,11 @@ import { Modal } from '../components/common/Modal';
 import { ComboboxInline } from '../components/common/ComboboxInline';
 import { ExcelExportButton } from '../components/common/ExcelExportButton';
 
-export const InventoryPage: React.FC = () => {
+interface InventoryPageProps {
+  initialView?: 'kardex' | 'stock';
+}
+
+export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => {
   const {
     products,
     categories,
@@ -27,7 +31,13 @@ export const InventoryPage: React.FC = () => {
   const [selectedProductFilter, setSelectedProductFilter] = useState<string>('all');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('all');
   const [monthFilter, setMonthFilter] = useState<string>('all');
-  const [activeView, setActiveView] = useState<'kardex' | 'stock'>('kardex');
+  const [activeView, setActiveView] = useState<'kardex' | 'stock'>(initialView || 'kardex');
+
+  React.useEffect(() => {
+    if (initialView) {
+      setActiveView(initialView);
+    }
+  }, [initialView]);
 
   // Manual Adjustment Modal
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);

@@ -53,7 +53,11 @@ interface ConfirmIssueData {
   onConfirm: () => void;
 }
 
-export const SalesPage: React.FC = () => {
+interface SalesPageProps {
+  initialTab?: 'invoices' | 'quotes';
+}
+
+export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
   const {
     invoices,
     quotes,
@@ -68,7 +72,13 @@ export const SalesPage: React.FC = () => {
     convertQuoteToInvoice
   } = useERP();
 
-  const [activeTab, setActiveTab] = useState<'invoices' | 'quotes'>('invoices');
+  const [activeTab, setActiveTab] = useState<'invoices' | 'quotes'>(initialTab || 'invoices');
+
+  React.useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [monthFilter, setMonthFilter] = useState<string>('all');
