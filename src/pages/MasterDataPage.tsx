@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useERP } from '../context/ERPContext';
 import type { Client, Supplier, Product, PaymentTerm } from '../types/erp';
-import { formatCurrency } from '../utils/formatters';
+import { formatCurrency, getNextProductSKU } from '../utils/formatters';
 import {
   Users,
   Truck,
@@ -103,7 +103,8 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
   // Product Modal Open/Edit handlers
   const handleOpenNewProduct = () => {
     setEditingProduct(null);
-    setProdCodigo(`SKU-${Date.now().toString().slice(-4)}`);
+    const nextSKU = getNextProductSKU(products);
+    setProdCodigo(nextSKU);
     setProdNombre('');
     setProdCatId(categories[0]?.id || '');
     setProdUnidad('pza');
@@ -113,8 +114,8 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
     setProdStockInit(0);
     setProdTieneVariantes(false);
     setProdVariantes([
-      { talla: 'M', color: 'Negro', sku: 'SKU-NEG-M', stockActual: 10 },
-      { talla: 'L', color: 'Negro', sku: 'SKU-NEG-L', stockActual: 10 }
+      { talla: 'M', color: 'Negro', sku: `${nextSKU}-NEG-M`, stockActual: 10 },
+      { talla: 'L', color: 'Negro', sku: `${nextSKU}-NEG-L`, stockActual: 10 }
     ]);
     setProdDesc('');
     setIsProductModalOpen(true);
@@ -145,10 +146,12 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
     e.preventDefault();
     if (!prodNombre.trim() || !prodPrecio || Number(prodPrecio) <= 0) return;
 
+    const finalCode = prodCodigo.trim() ? prodCodigo.trim().toUpperCase() : getNextProductSKU(products);
+
     if (editingProduct) {
       updateProduct(editingProduct.id, {
-        codigo: prodCodigo,
-        nombre: prodNombre,
+        codigo: finalCode,
+        nombre: prodNombre.trim(),
         categoriaId: prodCatId,
         unidadMedida: prodUnidad,
         precioVenta: Number(prodPrecio),
@@ -166,8 +169,8 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
       });
     } else {
       addProduct({
-        codigo: prodCodigo,
-        nombre: prodNombre,
+        codigo: finalCode,
+        nombre: prodNombre.trim(),
         categoriaId: prodCatId,
         unidadMedida: prodUnidad,
         precioVenta: Number(prodPrecio),

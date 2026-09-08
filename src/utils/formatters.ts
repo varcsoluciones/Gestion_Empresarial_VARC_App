@@ -78,3 +78,43 @@ export function formatMonthLabel(monthKey: string): string {
   }
   return monthKey;
 }
+
+/**
+ * Calculates the next sequential product SKU starting from SKU0001 (e.g. SKU0001, SKU0002, ...).
+ * It scans all existing product codes and variant SKUs to find the highest number and increments by 1.
+ */
+export function getNextProductSKU(products: { codigo?: string; variantes?: { sku?: string }[] }[] = []): string {
+  let maxNumber = 0;
+  const skuRegex = /^SKU-?(\d+)$/i;
+
+  if (Array.isArray(products)) {
+    products.forEach(p => {
+      if (p.codigo) {
+        const match = p.codigo.trim().match(skuRegex);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (!isNaN(num) && num > maxNumber) {
+            maxNumber = num;
+          }
+        }
+      }
+      if (p.variantes && Array.isArray(p.variantes)) {
+        p.variantes.forEach(v => {
+          if (v && v.sku) {
+            const vMatch = v.sku.trim().match(skuRegex);
+            if (vMatch) {
+              const vNum = parseInt(vMatch[1], 10);
+              if (!isNaN(vNum) && vNum > maxNumber) {
+                maxNumber = vNum;
+              }
+            }
+          }
+        });
+      }
+    });
+  }
+
+  const nextNumber = maxNumber + 1;
+  return `SKU${nextNumber.toString().padStart(4, '0')}`;
+}
+

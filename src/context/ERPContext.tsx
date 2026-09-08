@@ -32,7 +32,7 @@ import {
   initialOperatingExpenses,
   initialFixedAssets
 } from '../data/seedData';
-import { calculateWeightedAverageCost, generateDocNumber, getMonthKey } from '../utils/formatters';
+import { calculateWeightedAverageCost, generateDocNumber, getMonthKey, getNextProductSKU } from '../utils/formatters';
 import {
   downloadJSONBackup,
   downloadExcelWorkbook,
@@ -256,9 +256,12 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       totalStock = variants.reduce((acc, v) => acc + (v.stockActual || 0), 0);
     }
 
+    const nextSKU = getNextProductSKU(products);
+    const finalCode = (data.codigo && data.codigo.trim()) ? data.codigo.trim().toUpperCase() : nextSKU;
+
     const newProduct: Product = {
       id: prodId,
-      codigo: data.codigo || prodId,
+      codigo: finalCode,
       nombre: data.nombre,
       categoriaId: data.categoriaId,
       unidadMedida: data.unidadMedida || 'pza',

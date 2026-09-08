@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal } from '../common/Modal';
 import { ComboboxInline } from '../common/ComboboxInline';
 import { useERP } from '../../context/ERPContext';
+import { getNextProductSKU } from '../../utils/formatters';
 
 interface QuickCreateProductModalProps {
   isOpen: boolean;
@@ -14,7 +15,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
   onClose,
   onProductCreated
 }) => {
-  const { categories, addCategory, addProduct } = useERP();
+  const { products, categories, addCategory, addProduct } = useERP();
 
   const [codigo, setCodigo] = useState('');
   const [nombre, setNombre] = useState('');
@@ -25,6 +26,13 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
   const [stockInicial, setStockInicial] = useState<number | ''>('');
   const [stockMinimo, setStockMinimo] = useState<number | ''>(5);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      setCodigo(getNextProductSKU(products));
+      setError('');
+    }
+  }, [isOpen, products]);
 
   const categoryOptions = categories.map(c => ({
     id: c.id,
@@ -47,10 +55,10 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
       return;
     }
 
-    const autoCode = codigo.trim() || `PRD-${Date.now().toString().slice(-4)}`;
+    const autoCode = codigo.trim() ? codigo.trim().toUpperCase() : getNextProductSKU(products);
 
     const newProduct = addProduct({
-      codigo: autoCode.toUpperCase(),
+      codigo: autoCode,
       nombre: nombre.trim(),
       categoriaId: categoriaId || categories[0]?.id || 'cat-1',
       unidadMedida: unidadMedida || 'pza',
