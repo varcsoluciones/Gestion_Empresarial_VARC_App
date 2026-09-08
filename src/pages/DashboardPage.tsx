@@ -10,7 +10,8 @@ import {
   CreditCard,
   PlusCircle,
   FileText,
-  Calculator
+  Calculator,
+  CheckCircle
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import type { NavigationTab } from '../components/layout/Sidebar';
@@ -219,7 +220,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
 
           {lowStockProducts.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-muted)' }}>
-              <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>✅</div>
+              <CheckCircle size={32} style={{ color: 'var(--color-success)', margin: '0 auto 0.5rem auto', display: 'block' }} />
               Todos los productos tienen niveles de stock saludables.
             </div>
           ) : (

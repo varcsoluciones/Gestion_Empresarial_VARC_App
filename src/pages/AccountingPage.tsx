@@ -399,47 +399,80 @@ export const AccountingPage: React.FC = () => {
               <thead>
                 <tr>
                   <th>Fecha</th>
+                  <th>ID Contable</th>
                   <th>Categoría</th>
                   <th style={{ textAlign: 'center' }}>Tipo</th>
                   <th>Descripción</th>
                   <th style={{ textAlign: 'right' }}>Monto ($)</th>
-                  <th style={{ textAlign: 'right' }}>Acciones</th>
+                  <th style={{ textAlign: 'right' }}>Estado / Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredExpenses.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                       No hay gastos registrados en el periodo {selectedMonth}.
                     </td>
                   </tr>
                 ) : (
-                  filteredExpenses.map(exp => (
-                    <tr key={exp.id}>
-                      <td>{formatDate(exp.fecha)}</td>
-                      <td style={{ fontWeight: 600 }}>{exp.categoria}</td>
-                      <td style={{ textAlign: 'center' }}>
-                        <Badge variant={exp.tipo === 'fijo' ? 'accent' : 'warning'}>
-                          {exp.tipo.toUpperCase()}
-                        </Badge>
-                      </td>
-                      <td style={{ color: 'var(--text-secondary)' }}>{exp.descripcion}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 700 }}>
-                        {formatCurrency(exp.monto)}
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <button
-                          type="button"
-                          className="btn-icon btn-sm"
-                          style={{ color: 'var(--color-danger)' }}
-                          onClick={() => deleteExpense(exp.id)}
-                          title="Eliminar gasto"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                  filteredExpenses.map(exp => {
+                    const isReversal = !!exp.esAnulacionDe || exp.monto < 0;
+                    const isCancelled = exp.anulado;
+
+                    return (
+                      <tr key={exp.id} style={{ opacity: isCancelled && !isReversal ? 0.75 : 1 }}>
+                        <td>{formatDate(exp.fecha)}</td>
+                        <td>
+                          <span style={{
+                            fontFamily: 'var(--font-mono)',
+                            fontWeight: 700,
+                            color: isReversal ? 'var(--color-danger)' : (isCancelled ? 'var(--text-muted)' : 'var(--color-accent)')
+                          }}>
+                            {exp.codigoContable || exp.id}
+                          </span>
+                        </td>
+                        <td style={{ fontWeight: 600 }}>{exp.categoria}</td>
+                        <td style={{ textAlign: 'center' }}>
+                          <Badge variant={exp.tipo === 'fijo' ? 'accent' : 'warning'}>
+                            {exp.tipo.toUpperCase()}
+                          </Badge>
+                        </td>
+                        <td style={{ color: isReversal ? 'var(--color-danger)' : 'var(--text-secondary)' }}>
+                          {exp.descripcion}
+                          {exp.esAnulacionDe && (
+                            <span style={{ fontSize: '0.75rem', display: 'block', color: 'var(--color-danger)' }}>
+                              (Contramovimiento de {exp.esAnulacionDe})
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ textAlign: 'right', fontWeight: 700 }}>
+                          <span style={{
+                            color: isReversal ? 'var(--color-danger)' : (isCancelled ? 'var(--text-muted)' : 'inherit'),
+                            textDecoration: isCancelled && !isReversal ? 'line-through' : 'none'
+                          }}>
+                            {formatCurrency(exp.monto)}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          {isCancelled || isReversal ? (
+                            <Badge variant="danger">
+                              {isReversal ? 'ANULACIÓN' : 'ANULADO'}
+                            </Badge>
+                          ) : (
+                            <button
+                              type="button"
+                              className="btn-icon btn-sm"
+                              style={{ color: 'var(--color-danger)' }}
+                              onClick={() => deleteExpense(exp.id)}
+                              title="Anular gasto (Genera movimiento copia con signo contrario y sufijo A)"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -465,6 +498,7 @@ export const AccountingPage: React.FC = () => {
             <table className="table">
               <thead>
                 <tr>
+                  <th>ID Activo</th>
                   <th>Activo / Nombre</th>
                   <th>Categoría</th>
                   <th>Adquisición</th>
@@ -479,6 +513,9 @@ export const AccountingPage: React.FC = () => {
               <tbody>
                 {fixedAssets.map(ast => (
                   <tr key={ast.id}>
+                    <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-accent)' }}>
+                      {ast.id}
+                    </td>
                     <td>
                       <div style={{ fontWeight: 600 }}>{ast.nombre}</div>
                       {ast.notas && <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{ast.notas}</div>}

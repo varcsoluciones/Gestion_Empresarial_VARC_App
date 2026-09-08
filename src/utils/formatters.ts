@@ -41,9 +41,8 @@ export function formatDateTime(dateString?: string): string {
 }
 
 export function generateDocNumber(prefix: string, count: number): string {
-  const currentYear = new Date().getFullYear();
   const seq = (count + 1).toString().padStart(4, '0');
-  return `${prefix}-${currentYear}-${seq}`;
+  return `${prefix}${seq}`;
 }
 
 export function calculateWeightedAverageCost(

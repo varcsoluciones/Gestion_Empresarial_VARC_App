@@ -15,9 +15,9 @@ import {
   FileText,
   AlertCircle,
   AlertTriangle,
-  Calendar,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Eye
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
@@ -274,7 +274,7 @@ export const SalesPage: React.FC = () => {
   const handleRequestIssueNewInvoice = () => {
     if (!formClienteId || formItems.length === 0) return;
     const client = clients.find(c => c.id === formClienteId);
-    const nextFolio = generateDocNumber('FAC', invoices.length);
+    const nextFolio = generateDocNumber('FA', invoices.length);
     const totalPieces = formItems.reduce((sum, item) => sum + item.cantidad, 0);
     const deficits = checkStockDeficits(formItems);
 
@@ -356,7 +356,7 @@ export const SalesPage: React.FC = () => {
     setConfirmIssueData({
       title: 'Confirmar Conversión de Cotización a Factura',
       subtitle: `¿Deseas convertir la cotización ${quote.numeroCotizacion} en una Factura emitida y afectar stock?`,
-      docFolio: 'Próximo Folio FAC',
+      docFolio: generateDocNumber('FA', invoices.length),
       clientName: client?.nombre || 'Cliente',
       clientRFC: client?.identificacionFiscal || 'N/A',
       tipoPago: (client?.tipoPago || 'contado').toUpperCase(),
@@ -533,47 +533,45 @@ export const SalesPage: React.FC = () => {
           />
         </div>
 
-        {/* Month Selector Dropdown */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          <Calendar size={16} style={{ color: 'var(--text-muted)' }} />
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap' }}>
           <select
             className="form-select"
-            style={{ minWidth: '180px' }}
+            style={{ width: 'auto' }}
             value={monthFilter}
             onChange={(e) => setMonthFilter(e.target.value)}
           >
-            <option value="all">📅 Todos los meses / periodos</option>
+            <option value="all">Todos los meses</option>
             {(activeTab === 'invoices' ? availableInvoiceMonths : availableQuoteMonths).map(m => (
               <option key={m} value={m}>
-                {formatMonthLabel(m)} ({m})
+                {formatMonthLabel(m)}
               </option>
             ))}
           </select>
-        </div>
 
-        <select
-          className="form-select"
-          style={{ width: 'auto' }}
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="all">Todos los estados</option>
-          {activeTab === 'invoices' ? (
-            <>
-              <option value="borrador">Borrador</option>
-              <option value="emitida">Emitida (Pendiente de Pago)</option>
-              <option value="pagada">Pagada</option>
-              <option value="anulada">Anulada</option>
-            </>
-          ) : (
-            <>
-              <option value="pendiente">Pendiente</option>
-              <option value="aprobada">Aprobada (Facturada)</option>
-              <option value="vencida">Vencida</option>
-              <option value="rechazada">Rechazada</option>
-            </>
-          )}
-        </select>
+          <select
+            className="form-select"
+            style={{ width: 'auto' }}
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="all">Todos los estados</option>
+            {activeTab === 'invoices' ? (
+              <>
+                <option value="borrador">Borrador</option>
+                <option value="emitida">Emitida (Pendiente de Pago)</option>
+                <option value="pagada">Pagada</option>
+                <option value="anulada">Anulada</option>
+              </>
+            ) : (
+              <>
+                <option value="pendiente">Pendiente</option>
+                <option value="aprobada">Facturada / Aprobada</option>
+                <option value="vencida">Vencida</option>
+                <option value="rechazada">Rechazada</option>
+              </>
+            )}
+          </select>
+        </div>
       </div>
 
       {/* Tab 1: Invoices Table */}
@@ -880,7 +878,16 @@ export const SalesPage: React.FC = () => {
                             type="button"
                             className="btn-icon btn-sm"
                             onClick={() => setPrintDoc({ doc: q, type: 'quote' })}
-                            title="Imprimir o ver cotización"
+                            title="Previsualizar detalle de la cotización"
+                          >
+                            <Eye size={14} />
+                          </button>
+
+                          <button
+                            type="button"
+                            className="btn-icon btn-sm"
+                            onClick={() => setPrintDoc({ doc: q, type: 'quote' })}
+                            title="Imprimir o exportar cotización"
                           >
                             <Printer size={14} />
                           </button>
@@ -989,7 +996,7 @@ export const SalesPage: React.FC = () => {
 
               {selectedProdObj && selectedProdObj.tieneVariantes && selectedProdObj.variantes ? (
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Variante (Talla / Color)</label>
+                  <label className="form-label">Variante</label>
                   <select
                     className="form-select"
                     value={selectedVarForLine}
@@ -1248,7 +1255,7 @@ export const SalesPage: React.FC = () => {
 
               {selectedProdObj && selectedProdObj.tieneVariantes && selectedProdObj.variantes ? (
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Variante (Talla / Color)</label>
+                  <label className="form-label">Variante</label>
                   <select
                     className="form-select"
                     value={selectedVarForLine}

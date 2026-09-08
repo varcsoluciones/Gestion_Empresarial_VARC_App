@@ -262,14 +262,14 @@ export const PurchasesPage: React.FC = () => {
           />
         </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap' }}>
           <select
             className="form-select"
             style={{ width: 'auto' }}
             value={monthFilter}
             onChange={(e) => setMonthFilter(e.target.value)}
           >
-            <option value="all">📅 Todos los meses / movimientos</option>
+            <option value="all">Todos los meses</option>
             {availableMonths.map(mKey => (
               <option key={mKey} value={mKey}>
                 {formatMonthLabel(mKey)}
@@ -500,7 +500,7 @@ export const PurchasesPage: React.FC = () => {
 
               {selectedProdObj && selectedProdObj.tieneVariantes && selectedProdObj.variantes ? (
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Variante (Talla / Color)</label>
+                  <label className="form-label">Variante</label>
                   <select
                     className="form-select"
                     value={selectedVarForLine}

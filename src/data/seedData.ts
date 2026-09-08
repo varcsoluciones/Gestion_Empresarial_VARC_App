@@ -33,15 +33,15 @@ export const initialSettings: CompanySettings = {
 };
 
 export const initialCategories: Category[] = [
-  { id: 'cat-1', nombre: 'Playeras & Polos', descripcion: 'Prendas superiores de algodón y piqué' },
-  { id: 'cat-2', nombre: 'Pantalones & Jeans', descripcion: 'Denim stretch, gabardina y pantalones de vestir' },
-  { id: 'cat-3', nombre: 'Sudaderas & Hoodies', descripcion: 'Algodón fleece con y sin capucha' },
-  { id: 'cat-4', nombre: 'Accesorios & Gorras', descripcion: 'Cinturones, gorras bordadas y calcetines' }
+  { id: 'CA0001', nombre: 'Playeras & Polos', descripcion: 'Prendas superiores de algodón y piqué' },
+  { id: 'CA0002', nombre: 'Pantalones & Jeans', descripcion: 'Denim stretch, gabardina y pantalones de vestir' },
+  { id: 'CA0003', nombre: 'Sudaderas & Hoodies', descripcion: 'Algodón fleece con y sin capucha' },
+  { id: 'CA0004', nombre: 'Accesorios & Gorras', descripcion: 'Cinturones, gorras bordadas y calcetines' }
 ];
 
 export const initialClients: Client[] = [
   {
-    id: 'cli-1',
+    id: 'CL0001',
     nombre: 'Boutique San Pedro S.A. de C.V.',
     identificacionFiscal: 'BSP190520KL1',
     telefono: '55 1234 5678',
@@ -54,7 +54,7 @@ export const initialClients: Client[] = [
     notas: 'Cliente mayorista prioritario con entrega quincenal.'
   },
   {
-    id: 'cli-2',
+    id: 'CL0002',
     nombre: 'Moda Urbana CDMX',
     identificacionFiscal: 'MUC2108159X4',
     telefono: '55 9876 5432',
@@ -67,7 +67,7 @@ export const initialClients: Client[] = [
     notas: 'Pago de contado vía transferencia interbancaria.'
   },
   {
-    id: 'cli-3',
+    id: 'CL0003',
     nombre: 'Alejandro Morales Torres (Público General)',
     identificacionFiscal: 'XAXX010101000',
     telefono: '55 4567 8901',
@@ -82,7 +82,7 @@ export const initialClients: Client[] = [
 
 export const initialSuppliers: Supplier[] = [
   {
-    id: 'prov-1',
+    id: 'PV0001',
     nombre: 'Textiles del Norte S.A.',
     identificacionFiscal: 'TXN120401AB3',
     telefono: '81 8345 6789',
@@ -93,7 +93,7 @@ export const initialSuppliers: Supplier[] = [
     notas: 'Proveedor principal de telas de algodón y confección de playeras.'
   },
   {
-    id: 'prov-2',
+    id: 'PV0002',
     nombre: 'Confecciones & Denim de Puebla',
     identificacionFiscal: 'CDP160710JH8',
     telefono: '22 2456 7890',
@@ -107,10 +107,10 @@ export const initialSuppliers: Supplier[] = [
 
 export const initialProducts: Product[] = [
   {
-    id: 'prod-1',
-    codigo: 'POL-01',
+    id: 'PR0001',
+    codigo: 'PR0001',
     nombre: 'Playera Polo Piqué Clásica',
-    categoriaId: 'cat-1',
+    categoriaId: 'CA0001',
     unidadMedida: 'pza',
     precioVenta: 450,
     costoPromedio: 180,
@@ -120,17 +120,17 @@ export const initialProducts: Product[] = [
     creadoEn: '2026-01-10T10:00:00Z',
     descripcion: 'Playera polo 100% algodón peinado con cuello y puños tejidos.',
     variantes: [
-      { id: 'var-1-1', productoId: 'prod-1', sku: 'POL-01-NEG-M', talla: 'M', color: 'Negro', stockActual: 20 },
-      { id: 'var-1-2', productoId: 'prod-1', sku: 'POL-01-NEG-L', talla: 'L', color: 'Negro', stockActual: 15 },
-      { id: 'var-1-3', productoId: 'prod-1', sku: 'POL-01-BLA-M', talla: 'M', color: 'Blanco', stockActual: 15 },
-      { id: 'var-1-4', productoId: 'prod-1', sku: 'POL-01-BLA-L', talla: 'L', color: 'Blanco', stockActual: 10 }
+      { id: 'var-1-1', productoId: 'PR0001', sku: 'PR0001-VAR-1', talla: 'M', color: 'Negro', stockActual: 20 },
+      { id: 'var-1-2', productoId: 'PR0001', sku: 'PR0001-VAR-2', talla: 'L', color: 'Negro', stockActual: 15 },
+      { id: 'var-1-3', productoId: 'PR0001', sku: 'PR0001-VAR-3', talla: 'M', color: 'Blanco', stockActual: 15 },
+      { id: 'var-1-4', productoId: 'PR0001', sku: 'PR0001-VAR-4', talla: 'L', color: 'Blanco', stockActual: 10 }
     ]
   },
   {
-    id: 'prod-2',
-    codigo: 'JEA-02',
+    id: 'PR0002',
+    codigo: 'PR0002',
     nombre: 'Jeans Slim Fit Denim 12oz',
-    categoriaId: 'cat-2',
+    categoriaId: 'CA0002',
     unidadMedida: 'pza',
     precioVenta: 890,
     costoPromedio: 360,
@@ -140,16 +140,16 @@ export const initialProducts: Product[] = [
     creadoEn: '2026-01-12T10:00:00Z',
     descripcion: 'Pantalón de mezclilla premium con 2% elastano para confort.',
     variantes: [
-      { id: 'var-2-1', productoId: 'prod-2', sku: 'JEA-02-AZU-30', talla: '30', color: 'Azul Índigo', stockActual: 10 },
-      { id: 'var-2-2', productoId: 'prod-2', sku: 'JEA-02-AZU-32', talla: '32', color: 'Azul Índigo', stockActual: 15 },
-      { id: 'var-2-3', productoId: 'prod-2', sku: 'JEA-02-AZU-34', talla: '34', color: 'Azul Índigo', stockActual: 10 }
+      { id: 'var-2-1', productoId: 'PR0002', sku: 'PR0002-VAR-1', talla: '30', color: 'Azul Índigo', stockActual: 10 },
+      { id: 'var-2-2', productoId: 'PR0002', sku: 'PR0002-VAR-2', talla: '32', color: 'Azul Índigo', stockActual: 15 },
+      { id: 'var-2-3', productoId: 'PR0002', sku: 'PR0002-VAR-3', talla: '34', color: 'Azul Índigo', stockActual: 10 }
     ]
   },
   {
-    id: 'prod-3',
-    codigo: 'HOO-03',
+    id: 'PR0003',
+    codigo: 'PR0003',
     nombre: 'Sudadera Hoodie Oversized Fleece',
-    categoriaId: 'cat-3',
+    categoriaId: 'CA0003',
     unidadMedida: 'pza',
     precioVenta: 750,
     costoPromedio: 290,
@@ -159,15 +159,15 @@ export const initialProducts: Product[] = [
     creadoEn: '2026-01-15T12:00:00Z',
     descripcion: 'Sudadera cálida con gorro ajustable y bolsillo canguro.',
     variantes: [
-      { id: 'var-3-1', productoId: 'prod-3', sku: 'HOO-03-GRI-M', talla: 'M', color: 'Gris Jaspe', stockActual: 12 },
-      { id: 'var-3-2', productoId: 'prod-3', sku: 'HOO-03-GRI-L', talla: 'L', color: 'Gris Jaspe', stockActual: 12 }
+      { id: 'var-3-1', productoId: 'PR0003', sku: 'PR0003-VAR-1', talla: 'M', color: 'Gris Jaspe', stockActual: 12 },
+      { id: 'var-3-2', productoId: 'PR0003', sku: 'PR0003-VAR-2', talla: 'L', color: 'Gris Jaspe', stockActual: 12 }
     ]
   },
   {
-    id: 'prod-4',
-    codigo: 'GOR-04',
+    id: 'PR0004',
+    codigo: 'PR0004',
     nombre: 'Gorra Trucker Bordada VARC',
-    categoriaId: 'cat-4',
+    categoriaId: 'CA0004',
     unidadMedida: 'pza',
     precioVenta: 280,
     costoPromedio: 95,
@@ -178,10 +178,10 @@ export const initialProducts: Product[] = [
     descripcion: 'Gorra snapback de 5 paneles con bordado en alto relieve.'
   },
   {
-    id: 'prod-5',
-    codigo: 'CAL-05',
+    id: 'PR0005',
+    codigo: 'PR0005',
     nombre: 'Pack 3 Calcetines Bamboo No-Show',
-    categoriaId: 'cat-4',
+    categoriaId: 'CA0004',
     unidadMedida: 'set',
     precioVenta: 99,
     costoPromedio: 35,
@@ -195,16 +195,16 @@ export const initialProducts: Product[] = [
 
 export const initialPurchases: Purchase[] = [
   {
-    id: 'pur-1',
-    numeroCompra: 'OC-2026-0001',
-    proveedorId: 'prov-1',
+    id: 'CO0001',
+    numeroCompra: 'CO0001',
+    proveedorId: 'PV0001',
     fecha: '2026-01-15',
     estado: 'pagada',
     items: [
       {
         id: 'pdet-1',
-        compraId: 'pur-1',
-        productoId: 'prod-1',
+        compraId: 'CO0001',
+        productoId: 'PR0001',
         varianteId: 'var-1-1',
         descripcion: 'Playera Polo Piqué Clásica (Negro / M)',
         cantidad: 30,
@@ -213,8 +213,8 @@ export const initialPurchases: Purchase[] = [
       },
       {
         id: 'pdet-2',
-        compraId: 'pur-1',
-        productoId: 'prod-1',
+        compraId: 'CO0001',
+        productoId: 'PR0001',
         varianteId: 'var-1-2',
         descripcion: 'Playera Polo Piqué Clásica (Negro / L)',
         cantidad: 25,
@@ -223,8 +223,8 @@ export const initialPurchases: Purchase[] = [
       },
       {
         id: 'pdet-3',
-        compraId: 'pur-1',
-        productoId: 'prod-1',
+        compraId: 'CO0001',
+        productoId: 'PR0001',
         varianteId: 'var-1-3',
         descripcion: 'Playera Polo Piqué Clásica (Blanco / M)',
         cantidad: 20,
@@ -239,7 +239,7 @@ export const initialPurchases: Purchase[] = [
     pagos: [
       {
         id: 'pay-1',
-        compraId: 'pur-1',
+        compraId: 'CO0001',
         fecha: '2026-01-16',
         monto: 15660,
         metodoPago: 'transferencia',
@@ -251,16 +251,16 @@ export const initialPurchases: Purchase[] = [
     notas: 'Lote inicial de temporada invierno.'
   },
   {
-    id: 'pur-2',
-    numeroCompra: 'OC-2026-0002',
-    proveedorId: 'prov-2',
+    id: 'CO0002',
+    numeroCompra: 'CO0002',
+    proveedorId: 'PV0002',
     fecha: '2026-02-05',
     estado: 'recibida',
     items: [
       {
         id: 'pdet-4',
-        compraId: 'pur-2',
-        productoId: 'prod-2',
+        compraId: 'CO0002',
+        productoId: 'PR0002',
         varianteId: 'var-2-1',
         descripcion: 'Jeans Slim Fit Denim 12oz (Azul Índigo / 30)',
         cantidad: 15,
@@ -269,8 +269,8 @@ export const initialPurchases: Purchase[] = [
       },
       {
         id: 'pdet-5',
-        compraId: 'pur-2',
-        productoId: 'prod-2',
+        compraId: 'CO0002',
+        productoId: 'PR0002',
         varianteId: 'var-2-2',
         descripcion: 'Jeans Slim Fit Denim 12oz (Azul Índigo / 32)',
         cantidad: 20,
@@ -285,7 +285,7 @@ export const initialPurchases: Purchase[] = [
     pagos: [
       {
         id: 'pay-2',
-        compraId: 'pur-2',
+        compraId: 'CO0002',
         fecha: '2026-02-10',
         monto: 8000,
         metodoPago: 'transferencia',
@@ -303,60 +303,60 @@ export const initialInventoryMovements: InventoryMovement[] = [
     id: 'mov-1',
     fecha: '2026-01-15T15:00:00Z',
     tipo: 'ENTRADA_COMPRA',
-    referenciaDoc: 'OC-2026-0001',
-    productoId: 'prod-1',
+    referenciaDoc: 'CO0001',
+    productoId: 'PR0001',
     varianteId: 'var-1-1',
     cantidad: 30,
     costoUnitario: 180,
     stockResultante: 30,
-    motivo: 'Recepción de Orden de Compra OC-2026-0001',
+    motivo: 'Recepción de Orden de Compra CO0001',
     usuario: 'Almacén'
   },
   {
     id: 'mov-2',
     fecha: '2026-01-15T15:00:00Z',
     tipo: 'ENTRADA_COMPRA',
-    referenciaDoc: 'OC-2026-0001',
-    productoId: 'prod-1',
+    referenciaDoc: 'CO0001',
+    productoId: 'PR0001',
     varianteId: 'var-1-2',
     cantidad: 25,
     costoUnitario: 180,
     stockResultante: 25,
-    motivo: 'Recepción de Orden de Compra OC-2026-0001',
+    motivo: 'Recepción de Orden de Compra CO0001',
     usuario: 'Almacén'
   },
   {
     id: 'mov-3',
     fecha: '2026-01-20T10:00:00Z',
     tipo: 'SALIDA_VENTA',
-    referenciaDoc: 'FAC-2026-0001',
-    productoId: 'prod-1',
+    referenciaDoc: 'FA0001',
+    productoId: 'PR0001',
     varianteId: 'var-1-1',
     cantidad: -10,
     costoUnitario: 180,
     stockResultante: 20,
-    motivo: 'Emisión de Factura FAC-2026-0001',
+    motivo: 'Emisión de Factura FA0001',
     usuario: 'Ventas'
   },
   {
     id: 'mov-4',
     fecha: '2026-02-05T12:00:00Z',
     tipo: 'ENTRADA_COMPRA',
-    referenciaDoc: 'OC-2026-0002',
-    productoId: 'prod-2',
+    referenciaDoc: 'CO0002',
+    productoId: 'PR0002',
     varianteId: 'var-2-1',
     cantidad: 15,
     costoUnitario: 360,
     stockResultante: 15,
-    motivo: 'Recepción de Orden de Compra OC-2026-0002',
+    motivo: 'Recepción de Orden de Compra CO0002',
     usuario: 'Almacén'
   },
   {
     id: 'mov-5',
     fecha: '2026-02-12T16:00:00Z',
     tipo: 'AJUSTE_MANUAL',
-    referenciaDoc: 'AJU-2026-0001',
-    productoId: 'prod-4',
+    referenciaDoc: 'AJ0001',
+    productoId: 'PR0004',
     cantidad: -2,
     costoUnitario: 95,
     stockResultante: 8,
@@ -367,16 +367,16 @@ export const initialInventoryMovements: InventoryMovement[] = [
 
 export const initialQuotes: Quote[] = [
   {
-    id: 'quot-1',
-    numeroCotizacion: 'COT-2026-0001',
-    clienteId: 'cli-1',
+    id: 'CT0001',
+    numeroCotizacion: 'CT0001',
+    clienteId: 'CL0001',
     fechaEmision: '2026-01-18',
     fechaVencimiento: '2026-02-18',
     estado: 'aprobada',
     items: [
       {
         id: 'qitem-1',
-        productoId: 'prod-1',
+        productoId: 'PR0001',
         varianteId: 'var-1-1',
         descripcion: 'Playera Polo Piqué Clásica (Negro / M)',
         cantidad: 10,
@@ -386,7 +386,7 @@ export const initialQuotes: Quote[] = [
       },
       {
         id: 'qitem-2',
-        productoId: 'prod-1',
+        productoId: 'PR0001',
         varianteId: 'var-1-2',
         descripcion: 'Playera Polo Piqué Clásica (Negro / L)',
         cantidad: 10,
@@ -399,20 +399,20 @@ export const initialQuotes: Quote[] = [
     descuentoTotal: 225,
     impuestos: 1404,
     total: 10179,
-    convertidaEnFacturaId: 'inv-1',
+    convertidaEnFacturaId: 'FA0001',
     notas: 'Cotización especial con 5% de descuento en talla L.'
   },
   {
-    id: 'quot-2',
-    numeroCotizacion: 'COT-2026-0002',
-    clienteId: 'cli-2',
+    id: 'CT0002',
+    numeroCotizacion: 'CT0002',
+    clienteId: 'CL0002',
     fechaEmision: '2026-02-20',
     fechaVencimiento: '2026-03-20',
     estado: 'pendiente',
     items: [
       {
         id: 'qitem-3',
-        productoId: 'prod-2',
+        productoId: 'PR0002',
         varianteId: 'var-2-2',
         descripcion: 'Jeans Slim Fit Denim 12oz (Azul Índigo / 32)',
         cantidad: 5,
@@ -422,7 +422,7 @@ export const initialQuotes: Quote[] = [
       },
       {
         id: 'qitem-4',
-        productoId: 'prod-3',
+        productoId: 'PR0003',
         varianteId: 'var-3-1',
         descripcion: 'Sudadera Hoodie Oversized Fleece (Gris / M)',
         cantidad: 4,
@@ -441,10 +441,10 @@ export const initialQuotes: Quote[] = [
 
 export const initialInvoices: Invoice[] = [
   {
-    id: 'inv-1',
-    numeroFactura: 'FAC-2026-0001',
-    cotizacionIdOrigen: 'quot-1',
-    clienteId: 'cli-1',
+    id: 'FA0001',
+    numeroFactura: 'FA0001',
+    cotizacionIdOrigen: 'CT0001',
+    clienteId: 'CL0001',
     fechaEmision: '2026-01-20',
     fechaVencimiento: '2026-02-19',
     tipoPago: 'credito',
@@ -452,8 +452,8 @@ export const initialInvoices: Invoice[] = [
     items: [
       {
         id: 'fitem-1',
-        facturaId: 'inv-1',
-        productoId: 'prod-1',
+        facturaId: 'FA0001',
+        productoId: 'PR0001',
         varianteId: 'var-1-1',
         descripcion: 'Playera Polo Piqué Clásica (Negro / M)',
         cantidad: 10,
@@ -463,8 +463,8 @@ export const initialInvoices: Invoice[] = [
       },
       {
         id: 'fitem-2',
-        facturaId: 'inv-1',
-        productoId: 'prod-1',
+        facturaId: 'FA0001',
+        productoId: 'PR0001',
         varianteId: 'var-1-2',
         descripcion: 'Playera Polo Piqué Clásica (Negro / L)',
         cantidad: 10,
@@ -482,7 +482,7 @@ export const initialInvoices: Invoice[] = [
     pagos: [
       {
         id: 'cpay-1',
-        facturaId: 'inv-1',
+        facturaId: 'FA0001',
         fecha: '2026-02-15',
         monto: 10179,
         metodoPago: 'transferencia',
@@ -491,12 +491,12 @@ export const initialInvoices: Invoice[] = [
       }
     ],
     emitidaFecha: '2026-01-20T10:00:00Z',
-    notas: 'Factura generada a partir de cotización COT-2026-0001.'
+    notas: 'Factura generada a partir de cotización CT0001.'
   },
   {
-    id: 'inv-2',
-    numeroFactura: 'FAC-2026-0002',
-    clienteId: 'cli-2',
+    id: 'FA0002',
+    numeroFactura: 'FA0002',
+    clienteId: 'CL0002',
     fechaEmision: '2026-02-22',
     fechaVencimiento: '2026-02-22',
     tipoPago: 'contado',
@@ -504,8 +504,8 @@ export const initialInvoices: Invoice[] = [
     items: [
       {
         id: 'fitem-3',
-        facturaId: 'inv-2',
-        productoId: 'prod-2',
+        facturaId: 'FA0002',
+        productoId: 'PR0002',
         varianteId: 'var-2-1',
         descripcion: 'Jeans Slim Fit Denim 12oz (Azul Índigo / 30)',
         cantidad: 5,
@@ -515,8 +515,8 @@ export const initialInvoices: Invoice[] = [
       },
       {
         id: 'fitem-4',
-        facturaId: 'inv-2',
-        productoId: 'prod-4',
+        facturaId: 'FA0002',
+        productoId: 'PR0004',
         descripcion: 'Gorra Trucker Bordada VARC',
         cantidad: 3,
         precioUnitario: 280,
@@ -533,7 +533,7 @@ export const initialInvoices: Invoice[] = [
     pagos: [
       {
         id: 'cpay-2',
-        facturaId: 'inv-2',
+        facturaId: 'FA0002',
         fecha: '2026-02-22',
         monto: 3000,
         metodoPago: 'tarjeta',
@@ -548,7 +548,8 @@ export const initialInvoices: Invoice[] = [
 
 export const initialOperatingExpenses: OperatingExpense[] = [
   {
-    id: 'exp-1',
+    id: 'GA0001',
+    codigoContable: 'GA0001',
     fecha: '2026-02-01',
     periodoMes: '2026-02',
     tipo: 'fijo',
@@ -557,7 +558,8 @@ export const initialOperatingExpenses: OperatingExpense[] = [
     descripcion: 'Renta mensual de local comercial y showroom'
   },
   {
-    id: 'exp-2',
+    id: 'GA0002',
+    codigoContable: 'GA0002',
     fecha: '2026-02-05',
     periodoMes: '2026-02',
     tipo: 'fijo',
@@ -566,7 +568,8 @@ export const initialOperatingExpenses: OperatingExpense[] = [
     descripcion: 'Energía eléctrica, agua e internet fibra óptica'
   },
   {
-    id: 'exp-3',
+    id: 'GA0003',
+    codigoContable: 'GA0003',
     fecha: '2026-02-15',
     periodoMes: '2026-02',
     tipo: 'fijo',
@@ -575,7 +578,8 @@ export const initialOperatingExpenses: OperatingExpense[] = [
     descripcion: 'Sueldo de encargada de tienda y auxiliar de ventas'
   },
   {
-    id: 'exp-4',
+    id: 'GA0004',
+    codigoContable: 'GA0004',
     fecha: '2026-02-10',
     periodoMes: '2026-02',
     tipo: 'variable',
@@ -584,7 +588,8 @@ export const initialOperatingExpenses: OperatingExpense[] = [
     descripcion: 'Campaña en Meta Ads e Instagram para nueva colección'
   },
   {
-    id: 'exp-5',
+    id: 'GA0005',
+    codigoContable: 'GA0005',
     fecha: '2026-02-18',
     periodoMes: '2026-02',
     tipo: 'variable',
@@ -596,7 +601,7 @@ export const initialOperatingExpenses: OperatingExpense[] = [
 
 export const initialFixedAssets: FixedAsset[] = [
   {
-    id: 'ast-1',
+    id: 'DE0001',
     nombre: 'Máquina de Coser Industrial Overlock Pegasus',
     categoriaActivo: 'Maquinaria y Equipo',
     fechaAdquisicion: '2025-06-01',
@@ -610,7 +615,7 @@ export const initialFixedAssets: FixedAsset[] = [
     notas: 'Equipo en taller para ajustes y confección menor.'
   },
   {
-    id: 'ast-2',
+    id: 'DE0002',
     nombre: 'Terminal Punto de Venta iMac 24" M3 + Impresora Térmica',
     categoriaActivo: 'Equipo de Cómputo',
     fechaAdquisicion: '2025-10-01',
@@ -624,7 +629,7 @@ export const initialFixedAssets: FixedAsset[] = [
     notas: 'Computadora de mostrador para gestión del ERP y ventas.'
   },
   {
-    id: 'ast-3',
+    id: 'DE0003',
     nombre: 'Mobiliario de Exhibición y Racks de Acero Negro',
     categoriaActivo: 'Mobiliario y Enseres',
     fechaAdquisicion: '2025-07-01',

@@ -188,9 +188,10 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Actions: Clients & Suppliers
   const addClient = (data: Omit<Client, 'id' | 'creadoEn'>): Client => {
+    const nextId = generateDocNumber('CL', clients.length);
     const newClient: Client = {
       ...data,
-      id: `cli-${Date.now()}`,
+      id: nextId,
       creadoEn: new Date().toISOString()
     };
     setClients(prev => [newClient, ...prev]);
@@ -202,9 +203,10 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const addSupplier = (data: Omit<Supplier, 'id' | 'creadoEn'>): Supplier => {
+    const nextId = generateDocNumber('PV', suppliers.length);
     const newSupplier: Supplier = {
       ...data,
-      id: `prov-${Date.now()}`,
+      id: nextId,
       creadoEn: new Date().toISOString()
     };
     setSuppliers(prev => [newSupplier, ...prev]);
@@ -217,16 +219,17 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Actions: Categories & Products
   const addCategory = (data: Omit<Category, 'id'>): Category => {
+    const nextId = generateDocNumber('CA', categories.length);
     const newCategory: Category = {
       ...data,
-      id: `cat-${Date.now()}`
+      id: nextId
     };
     setCategories(prev => [...prev, newCategory]);
     return newCategory;
   };
 
   const addProduct = (data: Omit<Product, 'id' | 'creadoEn' | 'costoPromedio' | 'stockActual'> & { costoInicial?: number; stockInicial?: number }): Product => {
-    const prodId = `prod-${Date.now()}`;
+    const prodId = generateDocNumber('PR', products.length);
     const initialCost = data.costoInicial || 0;
     const initialStock = data.stockInicial || 0;
 
@@ -244,7 +247,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const newProduct: Product = {
       id: prodId,
-      codigo: data.codigo,
+      codigo: data.codigo || prodId,
       nombre: data.nombre,
       categoriaId: data.categoriaId,
       unidadMedida: data.unidadMedida || 'pza',
@@ -293,10 +296,10 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Actions: Compras (Purchases)
   const createPurchase = (data: Omit<Purchase, 'id' | 'numeroCompra' | 'saldoPendiente' | 'pagos'>): Purchase => {
-    const num = generateDocNumber('OC', purchases.length);
+    const num = generateDocNumber('CO', purchases.length);
     const newPurchase: Purchase = {
       ...data,
-      id: `pur-${Date.now()}`,
+      id: num,
       numeroCompra: num,
       saldoPendiente: data.total,
       pagos: [],
@@ -507,10 +510,10 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Actions: Cotizaciones (Quotes)
   const createQuote = (data: Omit<Quote, 'id' | 'numeroCotizacion'>): Quote => {
-    const num = generateDocNumber('COT', quotes.length);
+    const num = generateDocNumber('CT', quotes.length);
     const newQuote: Quote = {
       ...data,
-      id: `quot-${Date.now()}`,
+      id: num,
       numeroCotizacion: num
     };
     setQuotes(prev => [newQuote, ...prev]);
@@ -527,7 +530,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const client = clients.find(c => c.id === quote.clienteId);
     const tipoPago = client?.tipoPago || 'contado';
-    const numFactura = generateDocNumber('FAC', invoices.length);
+    const numFactura = generateDocNumber('FA', invoices.length);
     const now = new Date().toISOString();
 
     const invoiceItems = quote.items.map(item => ({
@@ -543,7 +546,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }));
 
     const newInvoice: Invoice = {
-      id: `inv-${Date.now()}`,
+      id: numFactura,
       numeroFactura: numFactura,
       cotizacionIdOrigen: quote.id,
       clienteId: quote.clienteId,
@@ -637,13 +640,13 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Actions: Facturación (Invoices & CxC)
   const createInvoice = (data: Omit<Invoice, 'id' | 'numeroFactura' | 'saldoPendiente' | 'pagos'>): Invoice => {
-    const num = generateDocNumber('FAC', invoices.length);
+    const num = generateDocNumber('FA', invoices.length);
     const now = new Date().toISOString();
     const isDirectEmit = data.estado === 'emitida';
 
     const newInvoice: Invoice = {
       ...data,
-      id: `inv-${Date.now()}`,
+      id: num,
       numeroFactura: num,
       saldoPendiente: data.total,
       pagos: [],
@@ -945,7 +948,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       id: `mov-${Date.now()}`,
       fecha: now,
       tipo: 'AJUSTE_MANUAL',
-      referenciaDoc: generateDocNumber('AJU', inventoryMovements.filter(m => m.tipo === 'AJUSTE_MANUAL').length),
+      referenciaDoc: generateDocNumber('AJ', inventoryMovements.filter(m => m.tipo === 'AJUSTE_MANUAL').length),
       productoId,
       varianteId,
       cantidad,
@@ -960,22 +963,41 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Actions: Contabilidad (Gastos y Activos Fijos)
   const addExpense = (expenseData: Omit<OperatingExpense, 'id'>) => {
+    const baseCount = expenses.filter(e => !e.esAnulacionDe).length;
+    const nextCode = generateDocNumber('GA', baseCount);
     const newExpense: OperatingExpense = {
       ...expenseData,
-      id: `exp-${Date.now()}`
+      id: nextCode,
+      codigoContable: nextCode
     };
     setExpenses(prev => [newExpense, ...prev]);
   };
 
   const deleteExpense = (id: string) => {
-    setExpenses(prev => prev.filter(e => e.id !== id));
+    const exp = expenses.find(e => e.id === id || e.codigoContable === id);
+    if (!exp || exp.anulado) return;
+    const reversalCode = `${exp.codigoContable || exp.id}A`;
+    const reversalExpense: OperatingExpense = {
+      id: reversalCode,
+      codigoContable: reversalCode,
+      fecha: new Date().toISOString().split('T')[0],
+      periodoMes: exp.periodoMes,
+      tipo: exp.tipo,
+      categoria: exp.categoria,
+      monto: -Math.abs(exp.monto),
+      descripcion: `Anulación de gasto ${exp.codigoContable || exp.id} - ${exp.descripcion}`,
+      anulado: true,
+      esAnulacionDe: exp.codigoContable || exp.id
+    };
+    setExpenses(prev => prev.map(e => (e.id === exp.id ? { ...e, anulado: true } : e)).concat([reversalExpense]));
   };
 
   const addFixedAsset = (assetData: Omit<FixedAsset, 'id' | 'depreciacionMensual' | 'depreciacionAcumulada' | 'valorEnLibros' | 'activoEstado'>) => {
+    const nextId = generateDocNumber('DE', fixedAssets.length);
     const mensual = assetData.vidaUtilMeses > 0 ? Number((assetData.valorAdquisicion / assetData.vidaUtilMeses).toFixed(2)) : 0;
     const newAsset: FixedAsset = {
       ...assetData,
-      id: `ast-${Date.now()}`,
+      id: nextId,
       metodoDepreciacion: 'lineal',
       depreciacionMensual: mensual,
       depreciacionAcumulada: mensual,

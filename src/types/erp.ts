@@ -248,12 +248,15 @@ export interface ProductRealCostResult {
 
 export interface OperatingExpense {
   id: string;
+  codigoContable?: string; // e.g. GA0001, GA0001A
   fecha: string;
   periodoMes: string; // YYYY-MM
   tipo: ExpenseType;
   categoria: string; // Renta, Nómina, Publicidad, Servicios, Empaque, etc.
   monto: number;
   descripcion: string;
+  anulado?: boolean;
+  esAnulacionDe?: string; // ID o código del gasto original anulado
 }
 
 export interface FixedAsset {

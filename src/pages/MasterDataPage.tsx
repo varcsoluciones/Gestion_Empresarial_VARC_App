@@ -327,7 +327,7 @@ export const MasterDataPage: React.FC = () => {
         <div>
           <h1 className="page-title">Catálogos & Datos Maestros</h1>
           <p className="page-description">
-            Configura el catálogo de productos con variantes de talla/color, clientes, proveedores y categorías.
+            Configura el catálogo de productos con variantes, clientes, proveedores y categorías.
           </p>
         </div>
         <div className="page-actions">
@@ -442,7 +442,7 @@ export const MasterDataPage: React.FC = () => {
                             className="btn-icon btn-sm"
                             style={{ border: 'none', background: 'none' }}
                             onClick={() => toggleExpandProduct(p.id)}
-                            title="Ver desglose de tallas y colores"
+                            title="Ver desglose de variantes"
                           >
                             {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                           </button>
@@ -500,7 +500,7 @@ export const MasterDataPage: React.FC = () => {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                             <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                               <Layers size={14} />
-                              Desglose de Stock por Talla y Color ({p.nombre})
+                              Desglose de Stock por Variantes ({p.nombre})
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.75rem' }}>
                               {p.variantes.map(v => (
@@ -665,8 +665,8 @@ export const MasterDataPage: React.FC = () => {
       <Modal
         isOpen={isProductModalOpen}
         onClose={() => setIsProductModalOpen(false)}
-        title={editingProduct ? 'Editar Producto' : 'Crear Nuevo Producto & Variantes'}
-        subtitle="Configura precios, costos, stock y variantes de talla/color"
+        title={editingProduct ? "Editar Producto" : "Crear Nuevo Producto"}
+        subtitle="Configura precios, costos, stock y variantes de producto"
         size="lg"
         footer={
           <>
@@ -778,8 +778,8 @@ export const MasterDataPage: React.FC = () => {
           <div style={{ margin: '1.25rem 0', padding: '1rem', backgroundColor: 'var(--bg-subtle)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: prodTieneVariantes ? '1rem' : 0 }}>
               <div>
-                <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Manejo de Variantes (Talla / Color)</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Actívalo si esta prenda tiene diferentes tallas o colores con stock independiente</div>
+                <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Manejo de Variantes</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Actívalo si este producto tiene diferentes variantes o presentaciones con control de stock independiente</div>
               </div>
               <input
                 type="checkbox"
@@ -796,7 +796,7 @@ export const MasterDataPage: React.FC = () => {
                   <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Lista de Variantes</span>
                   <button type="button" className="btn btn-secondary btn-sm" onClick={handleAddVariantRow}>
                     <Plus size={14} />
-                    + Agregar Talla/Color
+                    + Agregar Variante
                   </button>
                 </div>
 
@@ -806,7 +806,7 @@ export const MasterDataPage: React.FC = () => {
                       <input
                         type="text"
                         className="form-control"
-                        placeholder="Color (ej. Negro)"
+                        placeholder="Variante / Atributo (ej. Negro, 32, Modelo)"
                         value={v.color}
                         onChange={(e) => {
                           const val = e.target.value;
@@ -816,7 +816,7 @@ export const MasterDataPage: React.FC = () => {
                       <input
                         type="text"
                         className="form-control"
-                        placeholder="Talla (ej. M)"
+                        placeholder="Detalle (ej. M, 12oz)"
                         value={v.talla}
                         onChange={(e) => {
                           const val = e.target.value;

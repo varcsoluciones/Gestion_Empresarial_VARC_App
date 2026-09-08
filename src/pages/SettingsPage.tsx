@@ -402,9 +402,9 @@ export const SettingsPage: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, criterioProrrateoDefecto: e.target.value as any })}
                   style={{ fontWeight: 600 }}
                 >
-                  <option value="costo_material">💎 {t.settings.ruleMaterialTitle}</option>
-                  <option value="valor_venta">🏷️ {t.settings.rulePriceTitle}</option>
-                  <option value="unidades_iguales">⚖️ {t.settings.ruleUnitsTitle}</option>
+                  <option value="costo_material">{t.settings.ruleMaterialTitle}</option>
+                  <option value="valor_venta">{t.settings.rulePriceTitle}</option>
+                  <option value="unidades_iguales">{t.settings.ruleUnitsTitle}</option>
                 </select>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
                   {formData.criterioProrrateoDefecto === 'costo_material' && t.settings.ruleMaterialDesc}
@@ -838,9 +838,15 @@ export const SettingsPage: React.FC = () => {
               backgroundColor: 'var(--color-warning-bg)',
               border: '1px solid var(--color-warning-border)',
               color: 'var(--color-warning-text)',
-              fontSize: '0.85rem'
+              fontSize: '0.85rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
             }}>
-              <strong>⚠️ Advertencia:</strong> Esta acción reemplazará todos los datos actuales del sistema por los contenidos en el archivo de respaldo seleccionado.
+              <AlertCircle size={18} style={{ flexShrink: 0 }} />
+              <span>
+                <strong>Advertencia:</strong> Esta acción reemplazará todos los datos actuales del sistema por los contenidos en el archivo de respaldo seleccionado.
+              </span>
             </div>
 
             <div style={{ backgroundColor: 'var(--bg-subtle)', padding: '1rem', borderRadius: 'var(--radius-md)', fontSize: '0.85rem' }}>
