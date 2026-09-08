@@ -275,7 +275,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                       <tr key={inv.id}>
                         <td>
                           <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{inv.numeroFactura}</div>
-                          <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px' }}>
+                          <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', wordBreak: 'break-word' }}>
                             {inv.clientName}
                           </div>
                         </td>
@@ -377,7 +377,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                     {lowStockProducts.slice(0, 5).map(p => (
                       <tr key={p.id}>
                         <td>
-                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px' }}>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', wordBreak: 'break-word' }}>
                             {p.nombre}
                           </div>
                           <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>SKU: {p.codigo}</div>
@@ -564,7 +564,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <span style={{ fontWeight: 800, color: 'var(--color-accent)', width: '16px' }}>#{index + 1}</span>
                           <div>
-                            <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '150px' }}>
+                            <div style={{ fontWeight: 600, color: 'var(--text-primary)', wordBreak: 'break-word' }}>
                               {product.nombre}
                             </div>
                             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{qty} pzas vendidas</div>

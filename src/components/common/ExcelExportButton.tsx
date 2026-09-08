@@ -73,6 +73,7 @@ export const ExcelExportButton: React.FC<ExcelExportButtonProps> = ({
       style={{
         display: 'inline-flex',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: '0.35rem',
         padding: isCompact ? '0.25rem 0.5rem' : '0.35rem 0.65rem',
         fontSize: '0.775rem',
@@ -83,7 +84,14 @@ export const ExcelExportButton: React.FC<ExcelExportButtonProps> = ({
         color: '#107c41',
         cursor: 'pointer',
         transition: 'all 0.15s ease',
-        userSelect: 'none'
+        userSelect: 'none',
+        whiteSpace: 'nowrap',
+        flexShrink: 0,
+        flexGrow: 0,
+        width: 'auto',
+        maxWidth: 'max-content',
+        height: isCompact ? '30px' : '34px',
+        boxSizing: 'border-box'
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.backgroundColor = '#107c41';
@@ -99,7 +107,7 @@ export const ExcelExportButton: React.FC<ExcelExportButtonProps> = ({
       }}
     >
       <FileSpreadsheet size={15} style={{ flexShrink: 0 }} />
-      {!isCompact && <span>{label}</span>}
+      {!isCompact && <span style={{ whiteSpace: 'nowrap' }}>{label}</span>}
     </button>
   );
 };
