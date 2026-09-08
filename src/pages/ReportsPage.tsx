@@ -745,6 +745,27 @@ export const ReportsPage: React.FC = () => {
                     })
                   )}
                 </tbody>
+                {productSalesList.length > 0 && (
+                  <tfoot>
+                    <tr style={{ backgroundColor: 'var(--bg-subtle)', fontWeight: 800, borderTop: '2px solid var(--border-default)' }}>
+                      <td colSpan={4} style={{ textAlign: 'right', padding: '0.75rem 1rem' }}>
+                        TOTALES:
+                      </td>
+                      <td style={{ textAlign: 'center', padding: '0.75rem 0.5rem' }}>
+                        {productSalesList.reduce((sum, p) => sum + p.totalCantidad, 0)} pzas
+                      </td>
+                      <td style={{ textAlign: 'right', padding: '0.75rem 0.5rem' }}>
+                        {formatCurrency(productSalesList.reduce((sum, p) => sum + p.totalDescuento, 0))}
+                      </td>
+                      <td style={{ textAlign: 'right', padding: '0.75rem 0.5rem', color: 'var(--color-accent)', fontSize: '0.95rem' }}>
+                        {formatCurrency(productSalesList.reduce((sum, p) => sum + p.totalMonto, 0))}
+                      </td>
+                      <td style={{ textAlign: 'center', padding: '0.75rem 0.5rem' }}>
+                        100.0%
+                      </td>
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             </div>
           </div>
@@ -912,6 +933,30 @@ export const ReportsPage: React.FC = () => {
                     })
                   )}
                 </tbody>
+                {clientSalesList.length > 0 && (
+                  <tfoot>
+                    <tr style={{ backgroundColor: 'var(--bg-subtle)', fontWeight: 800, borderTop: '2px solid var(--border-default)' }}>
+                      <td colSpan={4} style={{ textAlign: 'right', padding: '0.75rem 1rem' }}>
+                        TOTALES:
+                      </td>
+                      <td style={{ textAlign: 'center', padding: '0.75rem 0.5rem' }}>
+                        {clientSalesList.reduce((sum, c) => sum + c.totalFacturas, 0)} facturas
+                      </td>
+                      <td style={{ textAlign: 'center', padding: '0.75rem 0.5rem' }}>
+                        {clientSalesList.reduce((sum, c) => sum + c.totalPiezas, 0)} pzas
+                      </td>
+                      <td style={{ textAlign: 'right', padding: '0.75rem 0.5rem', color: 'var(--color-warning-text)' }}>
+                        {formatCurrency(clientSalesList.reduce((sum, c) => sum + c.totalSaldo, 0))}
+                      </td>
+                      <td style={{ textAlign: 'right', padding: '0.75rem 0.5rem', color: 'var(--color-accent)', fontSize: '0.95rem' }}>
+                        {formatCurrency(clientSalesList.reduce((sum, c) => sum + c.totalMonto, 0))}
+                      </td>
+                      <td style={{ textAlign: 'center', padding: '0.75rem 0.5rem' }}>
+                        100.0%
+                      </td>
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             </div>
           </div>
