@@ -18,6 +18,7 @@ import {
   ArrowDownRight
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
+import { ExcelExportButton } from '../components/common/ExcelExportButton';
 
 export const ReportsPage: React.FC = () => {
   const {
@@ -308,10 +309,13 @@ export const ReportsPage: React.FC = () => {
             />
           </div>
 
-          <button type="button" className="btn btn-secondary btn-sm" onClick={handlePrintReport}>
-            <Printer size={15} />
-            Imprimir Reporte
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <ExcelExportButton filename={`Reporte_${activeReport.toUpperCase()}_${selectedMonth}`} />
+            <button type="button" className="btn btn-secondary btn-sm" onClick={handlePrintReport}>
+              <Printer size={15} />
+              Imprimir Reporte
+            </button>
+          </div>
         </div>
       </div>
 
@@ -589,7 +593,7 @@ export const ReportsPage: React.FC = () => {
 
           {/* TABLE 1: Resumen y Detalle de Ventas por Producto */}
           <div className="card">
-            <div className="card-header">
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                   <Package size={20} style={{ color: 'var(--color-accent)' }} />
@@ -599,9 +603,12 @@ export const ReportsPage: React.FC = () => {
                   Monto total vendido y unidades por producto. <strong>Haz clic en cualquier fila para desplegar las transacciones y clientes.</strong>
                 </p>
               </div>
-              <span className="badge badge-neutral" style={{ fontSize: '0.8rem' }}>
-                {productSalesList.length} productos con movimiento
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <ExcelExportButton filename={`Ventas_Por_Producto_${selectedMonth}`} />
+                <span className="badge badge-neutral" style={{ fontSize: '0.8rem' }}>
+                  {productSalesList.length} productos con movimiento
+                </span>
+              </div>
             </div>
 
             <div className="table-container" style={{ border: 'none', boxShadow: 'none' }}>
@@ -744,7 +751,7 @@ export const ReportsPage: React.FC = () => {
 
           {/* TABLE 2: Resumen y Detalle de Ventas por Cliente */}
           <div className="card">
-            <div className="card-header">
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                   <Users size={20} style={{ color: 'var(--color-accent)' }} />
@@ -754,9 +761,12 @@ export const ReportsPage: React.FC = () => {
                   Compras consolidadas y facturación acumulada por cliente. <strong>Haz clic en cualquier fila para ver el desglose de facturas emitidas.</strong>
                 </p>
               </div>
-              <span className="badge badge-neutral" style={{ fontSize: '0.8rem' }}>
-                {clientSalesList.length} clientes con facturación
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <ExcelExportButton filename={`Ventas_Por_Cliente_${selectedMonth}`} />
+                <span className="badge badge-neutral" style={{ fontSize: '0.8rem' }}>
+                  {clientSalesList.length} clientes con facturación
+                </span>
+              </div>
             </div>
 
             <div className="table-container" style={{ border: 'none', boxShadow: 'none' }}>
@@ -971,13 +981,14 @@ export const ReportsPage: React.FC = () => {
           </div>
 
           <div className="card">
-            <div className="card-header">
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <h2 className="card-title">Matriz de Costo Directo vs Costo Real Absorbido & Valuación de Stock</h2>
                 <p className="card-subtitle">
                   Regla Activa: <strong>{prorrateo.criterio === 'costo_material' ? `Distribución proporcional por Material Directo (+${prorrateo.tasaAbsorcionPorcentaje}% sobre costo de compra)` : prorrateo.criterio === 'valor_venta' ? `Distribución por Precio de Venta (+${prorrateo.tasaAbsorcionPorcentaje}% sobre PVP)` : `División lineal (${formatCurrency(prorrateo.costoOperativoProrrateadoPorUnidad)}/unidad)`}</strong>
                 </p>
               </div>
+              <ExcelExportButton filename={`Comparativa_Costos_Valuacion_${selectedMonth}`} />
             </div>
 
             <div className="table-container" style={{ border: 'none', boxShadow: 'none' }}>

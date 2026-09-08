@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
+import { ExcelExportButton } from '../components/common/ExcelExportButton';
 
 export const AccountingPage: React.FC = () => {
   const {
@@ -357,13 +358,14 @@ export const AccountingPage: React.FC = () => {
 
           {/* Matrix Table */}
           <div className="card">
-            <div className="card-header">
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <h2 className="card-title">Matriz de Costeo Total Absorbido por Producto</h2>
                 <p className="card-subtitle">
                   Comparativa de Costo de Compra Directo vs. Costo Real Final (absorbiendo {formatCurrency(prorrateo.gastoOperativoTotal)} de gastos)
                 </p>
               </div>
+              <ExcelExportButton filename={`Matriz_Costeo_Prorrateo_${selectedMonth}`} />
             </div>
 
             <div className="table-container" style={{ border: 'none', boxShadow: 'none' }}>
@@ -427,15 +429,18 @@ export const AccountingPage: React.FC = () => {
       {/* Tab 2: Expenses List Table */}
       {activeTab === 'expenses' && (
         <div className="card">
-          <div className="card-header">
+          <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <h2 className="card-title">Registro de Gastos del Periodo ({selectedMonth})</h2>
               <p className="card-subtitle">Gastos operativos fijos y variables devengados</p>
             </div>
-            <button type="button" className="btn btn-primary btn-sm" onClick={() => setIsExpenseModalOpen(true)}>
-              <Plus size={16} />
-              + Nuevo Gasto
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <ExcelExportButton filename={`Gastos_Operativos_${selectedMonth}`} />
+              <button type="button" className="btn btn-primary btn-sm" onClick={() => setIsExpenseModalOpen(true)}>
+                <Plus size={16} />
+                + Nuevo Gasto
+              </button>
+            </div>
           </div>
 
           <div className="table-container" style={{ border: 'none', boxShadow: 'none' }}>
@@ -527,15 +532,18 @@ export const AccountingPage: React.FC = () => {
       {/* Tab 3: Fixed Assets & Depreciation with Progress Bar */}
       {activeTab === 'assets' && (
         <div className="card">
-          <div className="card-header">
+          <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <h2 className="card-title">Inventario de Activos Fijos & Depreciación Lineal</h2>
               <p className="card-subtitle">Cálculo de alícuota mensual y barra de avance de depreciación acumulada</p>
             </div>
-            <button type="button" className="btn btn-primary btn-sm" onClick={() => setIsAssetModalOpen(true)}>
-              <Plus size={16} />
-              + Nuevo Activo Fijo
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <ExcelExportButton filename="Activos_Fijos_Depreciacion" />
+              <button type="button" className="btn btn-primary btn-sm" onClick={() => setIsAssetModalOpen(true)}>
+                <Plus size={16} />
+                + Nuevo Activo Fijo
+              </button>
+            </div>
           </div>
 
           <div className="table-container" style={{ border: 'none', boxShadow: 'none' }}>

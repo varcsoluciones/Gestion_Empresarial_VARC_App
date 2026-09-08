@@ -18,6 +18,7 @@ import {
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 import { ComboboxInline } from '../components/common/ComboboxInline';
+import { ExcelExportButton } from '../components/common/ExcelExportButton';
 
 export const MasterDataPage: React.FC = () => {
   const {
@@ -406,6 +407,7 @@ export const MasterDataPage: React.FC = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+        <ExcelExportButton filename={`Catalogo_Maestro_${activeTab.toUpperCase()}`} />
       </div>
 
       {/* Tab: Products & Variants */}

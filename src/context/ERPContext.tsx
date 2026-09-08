@@ -294,33 +294,8 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }));
   };
 
-  // Actions: Compras (Purchases)
-  const createPurchase = (data: Omit<Purchase, 'id' | 'numeroCompra' | 'saldoPendiente' | 'pagos'>): Purchase => {
-    const num = generateDocNumber('CO', purchases.length);
-    const newPurchase: Purchase = {
-      ...data,
-      id: num,
-      numeroCompra: num,
-      saldoPendiente: data.total,
-      pagos: [],
-      estado: data.estado || 'borrador'
-    };
-
-    setPurchases(prev => [newPurchase, ...prev]);
-
-    if (newPurchase.estado === 'recibida') {
-      setTimeout(() => receivePurchase(newPurchase.id), 50);
-    }
-
-    return newPurchase;
-  };
-
-  const receivePurchase = (purchaseId: string) => {
-    const purchase = purchases.find(p => p.id === purchaseId);
-    if (!purchase || purchase.estado === 'recibida' || purchase.estado === 'pagada' || purchase.estado === 'anulada') {
-      return;
-    }
-
+  // Helper to synchronously receive stock and update weighted average cost
+  const applyPurchaseStockReception = (purchase: Purchase) => {
     const now = new Date().toISOString();
     const newMovements: InventoryMovement[] = [];
 
@@ -331,7 +306,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         let updatedStock = product.stockActual;
         let updatedCost = product.costoPromedio;
-        let updatedVariants = product.variantes ? [...product.variantes] : undefined;
+        let updatedVariants = product.variantes ? product.variantes.map(v => ({ ...v })) : undefined;
 
         for (const item of itemsForThisProduct) {
           updatedCost = calculateWeightedAverageCost(
@@ -344,10 +319,10 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           if (product.tieneVariantes && item.varianteId && updatedVariants) {
             updatedVariants = updatedVariants.map(v => {
               if (v.id === item.varianteId) {
-                const varNewStock = v.stockActual + item.cantidad;
+                const varNewStock = (v.stockActual || 0) + item.cantidad;
                 newMovements.push({
                   id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-                  fecha: now,
+                  fecha: purchase.fecha || now,
                   tipo: 'ENTRADA_COMPRA',
                   referenciaDoc: purchase.numeroCompra,
                   productoId: product.id,
@@ -366,7 +341,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             updatedStock += item.cantidad;
             newMovements.push({
               id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-              fecha: now,
+              fecha: purchase.fecha || now,
               tipo: 'ENTRADA_COMPRA',
               referenciaDoc: purchase.numeroCompra,
               productoId: product.id,
@@ -380,7 +355,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
 
         if (product.tieneVariantes && updatedVariants) {
-          updatedStock = updatedVariants.reduce((acc, v) => acc + v.stockActual, 0);
+          updatedStock = updatedVariants.reduce((acc, v) => acc + (v.stockActual || 0), 0);
         }
 
         return {
@@ -395,6 +370,41 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (newMovements.length > 0) {
       setInventoryMovements(prev => [...newMovements, ...prev]);
     }
+  };
+
+  // Actions: Compras (Purchases)
+  const createPurchase = (data: Omit<Purchase, 'id' | 'numeroCompra' | 'saldoPendiente' | 'pagos'>): Purchase => {
+    const num = generateDocNumber('CO', purchases.length);
+    const isDirectReceive = data.estado === 'recibida';
+    const now = new Date().toISOString();
+
+    const newPurchase: Purchase = {
+      ...data,
+      id: num,
+      numeroCompra: num,
+      saldoPendiente: data.total,
+      pagos: [],
+      estado: data.estado || 'borrador',
+      recibidaFecha: isDirectReceive ? now : undefined
+    };
+
+    setPurchases(prev => [newPurchase, ...prev]);
+
+    if (isDirectReceive) {
+      applyPurchaseStockReception(newPurchase);
+    }
+
+    return newPurchase;
+  };
+
+  const receivePurchase = (purchaseId: string) => {
+    const purchase = purchases.find(p => p.id === purchaseId);
+    if (!purchase || purchase.estado === 'recibida' || purchase.estado === 'pagada' || purchase.estado === 'anulada') {
+      return;
+    }
+
+    const now = new Date().toISOString();
+    applyPurchaseStockReception(purchase);
 
     setPurchases(prev => prev.map(p => p.id === purchaseId ? {
       ...p,
@@ -402,6 +412,18 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       recibidaFecha: now
     } : p));
   };
+
+  // Self-healing: ensure any received purchases in storage have their inventory movements and stock applied
+  useEffect(() => {
+    purchases.forEach(pur => {
+      if (pur.estado === 'recibida' || pur.estado === 'pagada') {
+        const hasMovement = inventoryMovements.some(m => m.referenciaDoc === pur.numeroCompra && m.tipo === 'ENTRADA_COMPRA');
+        if (!hasMovement && pur.items && pur.items.length > 0) {
+          applyPurchaseStockReception(pur);
+        }
+      }
+    });
+  }, []);
 
   const cancelPurchase = (purchaseId: string, motivo: string) => {
     const purchase = purchases.find(p => p.id === purchaseId);

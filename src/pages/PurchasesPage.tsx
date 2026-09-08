@@ -16,6 +16,7 @@ import { Modal } from '../components/common/Modal';
 import { ComboboxInline } from '../components/common/ComboboxInline';
 import { QuickCreateSupplierModal } from '../components/quick-create/QuickCreateSupplierModal';
 import { QuickCreateProductModal } from '../components/quick-create/QuickCreateProductModal';
+import { ExcelExportButton } from '../components/common/ExcelExportButton';
 
 export const PurchasesPage: React.FC = () => {
   const {
@@ -301,6 +302,11 @@ export const PurchasesPage: React.FC = () => {
               <option key={s.id} value={s.id}>{s.nombre}</option>
             ))}
           </select>
+
+          <ExcelExportButton
+            filename={`Ordenes_de_Compra_${monthFilter}`}
+            title="Exportar órdenes de compra a Excel"
+          />
         </div>
       </div>
 

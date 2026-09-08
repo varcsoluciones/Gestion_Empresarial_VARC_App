@@ -12,8 +12,10 @@ import { SalesPage } from './pages/SalesPage';
 import { AccountingPage } from './pages/AccountingPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { useAutoTableResizer } from './hooks/useTableResizer';
 
 const AppContent: React.FC = () => {
+  useAutoTableResizer();
   const [currentTab, setCurrentTab] = useState<NavigationTab>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 

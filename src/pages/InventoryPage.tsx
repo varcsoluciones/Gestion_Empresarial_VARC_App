@@ -13,6 +13,7 @@ import {
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 import { ComboboxInline } from '../components/common/ComboboxInline';
+import { ExcelExportButton } from '../components/common/ExcelExportButton';
 
 export const InventoryPage: React.FC = () => {
   const {
@@ -276,6 +277,11 @@ export const InventoryPage: React.FC = () => {
               </select>
             </>
           )}
+
+          <ExcelExportButton
+            filename={activeView === 'kardex' ? `Kardex_Movimientos_${monthFilter}` : 'Existencias_Stock_Inventario'}
+            title={`Exportar ${activeView === 'kardex' ? 'kardex' : 'existencias de inventario'} a Excel`}
+          />
         </div>
       </div>
 

@@ -25,6 +25,7 @@ import { ComboboxInline } from '../components/common/ComboboxInline';
 import { QuickCreateCustomerModal } from '../components/quick-create/QuickCreateCustomerModal';
 import { QuickCreateProductModal } from '../components/quick-create/QuickCreateProductModal';
 import { DocumentPrintView } from '../components/print/DocumentPrintView';
+import { ExcelExportButton } from '../components/common/ExcelExportButton';
 
 interface DeficitItem {
   code: string;
@@ -571,6 +572,11 @@ export const SalesPage: React.FC = () => {
               </>
             )}
           </select>
+
+          <ExcelExportButton
+            filename={activeTab === 'invoices' ? `Facturas_de_Venta_${monthFilter}` : `Cotizaciones_de_Venta_${monthFilter}`}
+            title={`Exportar ${activeTab === 'invoices' ? 'facturas' : 'cotizaciones'} a Excel`}
+          />
         </div>
       </div>
 

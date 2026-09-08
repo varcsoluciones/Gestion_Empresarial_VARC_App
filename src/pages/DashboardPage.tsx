@@ -14,6 +14,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
+import { ExcelExportButton } from '../components/common/ExcelExportButton';
 import type { NavigationTab } from '../components/layout/Sidebar';
 
 interface DashboardPageProps {
@@ -209,13 +210,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
               </h2>
               <p className="card-subtitle">Productos que han alcanzado o bajado de su umbral crítico</p>
             </div>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={() => onNavigate('inventory')}
-            >
-              Ver Inventario &rarr;
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <ExcelExportButton filename="Alertas_Stock_Minimo" />
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => onNavigate('inventory')}
+              >
+                Ver Inventario &rarr;
+              </button>
+            </div>
           </div>
 
           {lowStockProducts.length === 0 ? (
@@ -274,13 +278,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
               </h2>
               <p className="card-subtitle">Actividad reciente de ventas y cobranza</p>
             </div>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={() => onNavigate('sales')}
-            >
-              Ver Todas &rarr;
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <ExcelExportButton filename="Ultimas_Facturas_Emitidas" />
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => onNavigate('sales')}
+              >
+                Ver Todas &rarr;
+              </button>
+            </div>
           </div>
 
           <div className="table-container" style={{ border: 'none', boxShadow: 'none' }}>
