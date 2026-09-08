@@ -220,7 +220,6 @@ export const QuickNavigationModal: React.FC<QuickNavigationModalProps> = ({
               placeholder="Buscar pestaña o función (ej. Kardex, Cotizador, Gastos, Clientes, Prorrateo, P&L)..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              autoFocus
             />
           </div>
 
