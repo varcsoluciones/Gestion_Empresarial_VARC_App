@@ -14,6 +14,7 @@ import {
 import { useERP } from '../../context/ERPContext';
 import { useTranslation } from '../../i18n/useTranslation';
 import { APP_NAME, APP_BRAND } from '../../config/version';
+import { AppLogo } from '../common/AppLogo';
 
 export type NavigationTab = 
   | 'dashboard' 
@@ -110,11 +111,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {!isCollapsed ? (
             <div className="brand-anchor-card">
               <div className="brand-icon-wrapper">
-                <img
-                  src="/apple-touch-icon.png"
-                  alt="Logo Gestor Modular"
-                  className="brand-icon-img"
-                />
+                <AppLogo size={26} color="#ffffff" />
               </div>
               <div className="brand-info">
                 <span className="brand-title">
@@ -128,11 +125,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           ) : (
             <div className="brand-anchor-card collapsed" title={`${APP_NAME} — ${APP_BRAND}`}>
               <div className="brand-icon-wrapper">
-                <img
-                  src="/apple-touch-icon.png"
-                  alt="Logo Gestor Modular"
-                  className="brand-icon-img"
-                />
+                <AppLogo size={26} color="#ffffff" />
               </div>
             </div>
           )}
