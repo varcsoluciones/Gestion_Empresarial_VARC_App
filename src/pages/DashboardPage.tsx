@@ -377,13 +377,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
               </div>
               <div style={{
                 padding: '0.25rem 0.55rem',
-                backgroundColor: totalUtilidadHist >= 0 ? 'var(--color-success-bg)' : 'var(--color-danger-bg)',
-                border: `1px solid ${totalUtilidadHist >= 0 ? 'var(--color-success)' : 'var(--color-danger)'}`,
+                backgroundColor: totalUtilidadHist >= 0 ? 'rgba(14, 165, 233, 0.12)' : 'var(--color-danger-bg)',
+                border: `1px solid ${totalUtilidadHist >= 0 ? 'rgba(14, 165, 233, 0.35)' : 'var(--color-danger)'}`,
                 borderRadius: 'var(--radius-sm)',
                 fontSize: '0.725rem'
               }}>
-                <span style={{ color: totalUtilidadHist >= 0 ? 'var(--color-success-text)' : 'var(--color-danger-text)' }}>Utilidad: </span>
-                <strong style={{ color: totalUtilidadHist >= 0 ? 'var(--color-success-text)' : 'var(--color-danger-text)' }}>
+                <span style={{ color: totalUtilidadHist >= 0 ? '#0284c7' : 'var(--color-danger-text)' }}>Utilidad: </span>
+                <strong style={{ color: totalUtilidadHist >= 0 ? '#0284c7' : 'var(--color-danger-text)' }}>
                   {formatCurrency(totalUtilidadHist)} ({margenPromedioHist.toFixed(0)}%)
                 </strong>
               </div>
