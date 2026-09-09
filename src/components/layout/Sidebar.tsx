@@ -107,61 +107,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
       <aside className={`app-sidebar ${isCollapsed ? 'collapsed' : ''} ${isOpenMobile ? 'open' : ''}`}>
         <div className="sidebar-header">
-          {!isCollapsed && (
-            <div className="brand-logo" style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-              <div
-                className="brand-icon"
-                style={{
-                  width: '46px',
-                  height: '46px',
-                  minWidth: '46px',
-                  minHeight: '46px',
-                  padding: '3px',
-                  overflow: 'hidden',
-                  background: '#ffffff',
-                  border: '1px solid rgba(0,0,0,0.12)',
-                  boxShadow: '0 3px 8px rgba(0,0,0,0.08)',
-                  borderRadius: '11px'
-                }}
-              >
+          {!isCollapsed ? (
+            <div className="brand-glass-card">
+              <div className="brand-icon-wrapper">
                 <img
                   src="/apple-touch-icon.png"
                   alt="Logo Gestor Modular"
-                  style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '8px' }}
+                  className="brand-icon-img"
                 />
               </div>
-              <div className="brand-info" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <span className="brand-title" style={{ fontSize: '0.95rem', fontWeight: 800, lineHeight: 1.2, letterSpacing: '-0.01em' }}>
+              <div className="brand-info">
+                <span className="brand-title">
                   {APP_NAME}
                 </span>
-                <span className="brand-subtitle" style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--color-accent)' }}>
+                <span className="brand-subtitle">
                   {APP_BRAND}
                 </span>
               </div>
             </div>
-          )}
-          {isCollapsed && (
-            <div
-              className="brand-icon"
-              style={{
-                margin: '0 auto',
-                width: '42px',
-                height: '42px',
-                minWidth: '42px',
-                minHeight: '42px',
-                padding: '3px',
-                overflow: 'hidden',
-                background: '#ffffff',
-                border: '1px solid rgba(0,0,0,0.12)',
-                boxShadow: '0 3px 8px rgba(0,0,0,0.08)',
-                borderRadius: '10px'
-              }}
-            >
-              <img
-                src="/apple-touch-icon.png"
-                alt="Logo Gestor Modular"
-                style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '7px' }}
-              />
+          ) : (
+            <div className="brand-glass-card collapsed" title={`${APP_NAME} — ${APP_BRAND}`}>
+              <div className="brand-icon-wrapper">
+                <img
+                  src="/apple-touch-icon.png"
+                  alt="Logo Gestor Modular"
+                  className="brand-icon-img"
+                />
+              </div>
             </div>
           )}
         </div>
@@ -181,12 +153,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 }}
                 title={isCollapsed ? item.label : undefined}
               >
-                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span className="nav-item-icon-wrapper">
                   {item.icon}
                 </span>
                 {!isCollapsed && (
                   <>
-                    <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>
+                    <span className="nav-item-label">{item.label}</span>
+                    {isActive && <span className="nav-item-dot" aria-hidden="true" />}
                     {item.badge !== undefined && (
                       <span className="nav-item-badge">
                         {item.badge}
@@ -199,18 +172,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
           })}
         </nav>
 
-      <div className="sidebar-footer">
-        <button
-          type="button"
-          className="btn-icon"
-          onClick={onToggleCollapse}
-          title={isCollapsed ? 'Expandir menú' : 'Colapsar menú'}
-          style={{ width: '100%', display: 'flex', justifyContent: 'center' }}
-        >
-          {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-        </button>
-      </div>
-    </aside>
+        <div className="sidebar-footer">
+          <button
+            type="button"
+            className="btn-icon sidebar-collapse-btn"
+            onClick={onToggleCollapse}
+            title={isCollapsed ? 'Expandir menú' : 'Colapsar menú'}
+            style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+          >
+            {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          </button>
+        </div>
+      </aside>
     </>
   );
 };
