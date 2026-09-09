@@ -4,20 +4,18 @@ import { formatCurrency, getMonthKey, formatMonthLabel } from '../utils/formatte
 import {
   TrendingUp,
   ShoppingBag,
-  AlertTriangle,
   Boxes,
   ArrowUpRight,
+  ArrowDownRight,
   CreditCard,
   Calculator,
   CheckCircle,
-  ShieldAlert,
   Sparkles,
-  Calendar,
-  AlertCircle,
   DollarSign,
-  BarChart3
+  BarChart3,
+  Layers,
+  ArrowRight
 } from 'lucide-react';
-import { ExcelExportButton } from '../components/common/ExcelExportButton';
 import type { NavigationTab } from '../components/layout/Sidebar';
 import type { Product } from '../types/erp';
 
@@ -25,12 +23,75 @@ interface DashboardPageProps {
   onNavigate: (tab: NavigationTab) => void;
 }
 
+// Lightweight SVG Sparkline Component
+const Sparkline: React.FC<{
+  values: number[];
+  color: string;
+  width?: number;
+  height?: number;
+}> = ({ values, color, width = 64, height = 24 }) => {
+  if (!values || values.length === 0) {
+    return <div style={{ width, height }} />;
+  }
+
+  // Ensure at least 2 points
+  const points = values.length === 1 ? [values[0], values[0]] : values;
+  const min = Math.min(...points, 0);
+  const max = Math.max(...points, 1);
+  const range = max - min || 1;
+
+  const pad = 2;
+  const usableW = width - pad * 2;
+  const usableH = height - pad * 2;
+
+  const coords = points.map((val, idx) => {
+    const x = pad + (idx / (points.length - 1)) * usableW;
+    const y = pad + usableH - ((val - min) / range) * usableH;
+    return { x, y };
+  });
+
+  // Smooth Bezier Curve Path
+  let path = `M ${coords[0].x.toFixed(1)} ${coords[0].y.toFixed(1)}`;
+  for (let i = 0; i < coords.length - 1; i++) {
+    const p0 = i > 0 ? coords[i - 1] : coords[i];
+    const p1 = coords[i];
+    const p2 = coords[i + 1];
+    const p3 = i < coords.length - 2 ? coords[i + 2] : p2;
+
+    const cp1x = p1.x + (p2.x - p0.x) * 0.2;
+    const cp1y = p1.y + (p2.y - p0.y) * 0.2;
+    const cp2x = p2.x - (p3.x - p1.x) * 0.2;
+    const cp2y = p2.y - (p3.y - p1.y) * 0.2;
+
+    path += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+  }
+
+  const lastPoint = coords[coords.length - 1];
+  const areaPath = `${path} L ${lastPoint.x.toFixed(1)} ${height} L ${coords[0].x.toFixed(1)} ${height} Z`;
+  const gradId = `spark-grad-${color.replace('#', '')}-${Math.random().toString(36).substring(2, 6)}`;
+
+  return (
+    <svg width={width} height={height} style={{ overflow: 'visible' }}>
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.28" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.0" />
+        </linearGradient>
+      </defs>
+      <path d={areaPath} fill={`url(#${gradId})`} />
+      <path d={path} fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={lastPoint.x} cy={lastPoint.y} r="2.5" fill={color} stroke="var(--bg-surface)" strokeWidth="1" />
+    </svg>
+  );
+};
+
 export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
   const {
     invoices,
     purchases,
     products,
     clients,
+    expenses,
     getProrrateoMensual
   } = useERP();
 
@@ -39,7 +100,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  // Tab state for Hero Analytics: 'trends' vs 'waterfall'
+  const [heroView, setHeroView] = useState<'trends' | 'waterfall'>('trends');
+  // Tab state for Bottom Column 3: 'cashflow' vs 'topskus'
+  const [bottomColView, setBottomColView] = useState<'cashflow' | 'topskus'>('cashflow');
+
   const [hoveredMonthIndex, setHoveredMonthIndex] = useState<number | null>(null);
+  const [hoveredWaterfallStep, setHoveredWaterfallStep] = useState<number | null>(null);
 
   // 1. Current Month KPI Metrics Calculations
   const validInvoices = invoices.filter(i => i.estado === 'emitida' || i.estado === 'pagada');
@@ -48,6 +115,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
   );
 
   const totalSalesMonth = monthInvoices.reduce((sum, i) => sum + i.total, 0);
+  const totalSalesSubtotal = monthInvoices.reduce((sum, i) => sum + i.subtotal, 0);
+  const totalDiscounts = monthInvoices.reduce((sum, i) => sum + i.descuentoTotal, 0);
+  const totalGrossSales = totalSalesSubtotal + totalDiscounts;
 
   const pendingReceivables = invoices
     .filter(i => i.estado === 'emitida' && i.saldoPendiente > 0)
@@ -60,8 +130,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
   const totalInventoryUnits = products.reduce((sum, p) => sum + p.stockActual, 0);
   const totalInventoryValue = products.reduce((sum, p) => sum + (p.stockActual * p.costoPromedio), 0);
 
-  // Current month profit metrics
-  const totalSalesSubtotal = monthInvoices.reduce((sum, i) => sum + i.subtotal, 0);
+  // Cost of Goods Sold (COGS)
   const totalCostOfGoodsSold = monthInvoices.reduce((sum, inv) => {
     return sum + inv.items.reduce((iSum, item) => {
       const prod = products.find(p => p.id === item.productoId);
@@ -70,16 +139,20 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
   }, 0);
 
   const grossProfit = totalSalesSubtotal - totalCostOfGoodsSold;
-  const netOperatingProfit = grossProfit - prorrateo.gastoOperativoTotal;
+  const opexExpenses = prorrateo.gastosFijos + prorrateo.gastosVariables;
+  const assetDepreciation = prorrateo.depreciacionActivos;
+  const totalOperatingCosts = opexExpenses + assetDepreciation;
+  const netOperatingProfit = grossProfit - totalOperatingCosts;
+  const netProfitMargin = totalSalesSubtotal > 0 ? (netOperatingProfit / totalSalesSubtotal) * 100 : 0;
 
-  // 2. Dynamic Historical Evolution (From first active month to latest active/current month)
+  // 2. Dynamic Historical Evolution
   const historicalStats = useMemo(() => {
     const now = new Date();
     const curY = now.getFullYear();
     const curM = now.getMonth() + 1;
     const curMonthKey = `${curY}-${String(curM).padStart(2, '0')}`;
 
-    // Collect all month keys that have activity from invoices and expenses
+    // Collect all month keys that have activity
     const activityMonthKeys = new Set<string>();
     invoices.forEach(i => {
       if (i.estado === 'emitida' || i.estado === 'pagada') {
@@ -88,20 +161,22 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         }
       }
     });
+    expenses.forEach(e => {
+      if (e.periodoMes) activityMonthKeys.add(e.periodoMes);
+      if (e.fecha && e.fecha.length >= 7) activityMonthKeys.add(e.fecha.slice(0, 7));
+    });
 
     const sortedActivity = Array.from(activityMonthKeys).filter(k => /^\d{4}-\d{2}$/.test(k)).sort();
 
-    // Determine the minimum and maximum month keys to display
     const minActive = sortedActivity.length > 0 ? sortedActivity[0] : curMonthKey;
     const maxActive = sortedActivity.length > 0 ? sortedActivity[sortedActivity.length - 1] : curMonthKey;
     const endMonthKey = maxActive > curMonthKey ? maxActive : curMonthKey;
 
-    // Generate candidate months (up to 12 months back from endMonthKey, covering minActive)
     const [endY, endM] = endMonthKey.split('-').map(Number);
     const [minY, minM] = minActive.split('-').map(Number);
 
     const spanMonths = (endY - minY) * 12 + (endM - minM) + 1;
-    const startBack = Math.max(spanMonths - 1, 5); // at least 6 months window
+    const startBack = Math.max(spanMonths - 1, 5); // at least 6 months
     const startDate = new Date(endY, endM - 1 - startBack, 1);
     const endDate = new Date(endY, endM - 1, 1);
 
@@ -158,88 +233,35 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
       };
     });
 
-    // Find the first month with any activity
     const firstActiveIdx = rawStats.findIndex(s => s.hasActivity);
     if (firstActiveIdx !== -1) {
       return rawStats.slice(firstActiveIdx);
     }
-    // If no past month has activity, show just the current month
     return [rawStats[rawStats.length - 1]];
-  }, [invoices, products, getProrrateoMensual]);
+  }, [invoices, products, expenses, getProrrateoMensual]);
 
-  // Aggregate metrics over the active historical range
+  // Aggregate metrics over active historical range
   const totalVentasHist = historicalStats.reduce((sum, s) => sum + s.ventas, 0);
   const totalCostosHist = historicalStats.reduce((sum, s) => sum + s.costoTotal, 0);
   const totalUtilidadHist = historicalStats.reduce((sum, s) => sum + s.utilidad, 0);
   const totalVentasSubHist = historicalStats.reduce((sum, s) => sum + s.ventasSubtotal, 0);
   const margenPromedioHist = totalVentasSubHist > 0 ? (totalUtilidadHist / totalVentasSubHist) * 100 : 0;
 
-  const maxChartVal = Math.max(
-    ...historicalStats.map(s => Math.max(s.ventas, s.costoTotal)),
-    1000
-  ) * 1.15;
+  // Month-over-Month calculation for Top Cards
+  const previousMonthStat = historicalStats.length >= 2 ? historicalStats[historicalStats.length - 2] : null;
+  const currentMonthStat = historicalStats[historicalStats.length - 1] || null;
 
-  // SVG Chart Geometry Calculations
-  const svgWidth = 600;
-  const svgHeight = 205;
-  const padLeft = 52;
-  const padRight = 20;
-  const padTop = 16;
-  const padBottom = 26;
-  const chartW = svgWidth - padLeft - padRight;
-  const chartH = svgHeight - padTop - padBottom;
+  const salesGrowthMoM = previousMonthStat && previousMonthStat.ventas > 0 && currentMonthStat
+    ? ((currentMonthStat.ventas - previousMonthStat.ventas) / previousMonthStat.ventas) * 100
+    : 0;
 
-  const numPoints = historicalStats.length;
-  const getX = (index: number) => {
-    if (numPoints <= 1) return padLeft + chartW / 2;
-    return padLeft + (index * (chartW / (numPoints - 1)));
-  };
-  const getY = (val: number) => padTop + chartH - (Math.max(0, val) / maxChartVal) * chartH;
+  // Sparkline point series (last 6 months)
+  const sparklineSales = historicalStats.map(s => s.ventas);
+  const sparklineProfit = historicalStats.map(s => Math.max(0, s.utilidad));
+  const sparklineMargins = historicalStats.map(s => Math.max(0, s.margen));
+  const sparklineCostos = historicalStats.map(s => s.costoTotal);
 
-  const ventasPoints = historicalStats.map((s, idx) => ({ x: getX(idx), y: getY(s.ventas), val: s.ventas }));
-  const costoPoints = historicalStats.map((s, idx) => ({ x: getX(idx), y: getY(s.costoTotal), val: s.costoTotal }));
-  const utilidadPoints = historicalStats.map((s, idx) => ({ x: getX(idx), y: getY(Math.max(0, s.utilidad)), val: s.utilidad }));
-
-  // Smooth Bezier Spline (Natural Wave Effect)
-  const makeSmoothCurve = (points: { x: number; y: number }[], tension = 0.28) => {
-    if (points.length <= 1) return '';
-    if (points.length === 2) {
-      return `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)} L ${points[1].x.toFixed(1)} ${points[1].y.toFixed(1)}`;
-    }
-
-    let d = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
-
-    for (let i = 0; i < points.length - 1; i++) {
-      const p0 = i > 0 ? points[i - 1] : points[i];
-      const p1 = points[i];
-      const p2 = points[i + 1];
-      const p3 = i < points.length - 2 ? points[i + 2] : p2;
-
-      const cp1x = p1.x + (p2.x - p0.x) * tension;
-      const cp1y = p1.y + (p2.y - p0.y) * tension;
-      const cp2x = p2.x - (p3.x - p1.x) * tension;
-      const cp2y = p2.y - (p3.y - p1.y) * tension;
-
-      d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
-    }
-
-    return d;
-  };
-
-  const makeSmoothArea = (points: { x: number; y: number }[], baseY: number, tension = 0.28) => {
-    const curve = makeSmoothCurve(points, tension);
-    if (!curve || points.length <= 1) return '';
-    const last = points[points.length - 1];
-    const first = points[0];
-    return `${curve} L ${last.x.toFixed(1)} ${baseY.toFixed(1)} L ${first.x.toFixed(1)} ${baseY.toFixed(1)} Z`;
-  };
-
-  const ventasLinePath = makeSmoothCurve(ventasPoints, 0.28);
-  const costoLinePath = makeSmoothCurve(costoPoints, 0.28);
-  const utilidadLinePath = makeSmoothCurve(utilidadPoints, 0.28);
-  const ventasAreaPath = makeSmoothArea(ventasPoints, padTop + chartH, 0.28);
-
-  // 3. Section 1 Data: Semáforo de Cobranza & Créditos CxC
+  // 3. Operational Data: CxC Alerts & Aging
   const cxcAlerts = invoices
     .filter(i => i.estado === 'emitida' && i.saldoPendiente > 0)
     .map(inv => {
@@ -263,10 +285,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
     .sort((a, b) => a.diffDays - b.diffDays);
 
   const overdueInvoices = cxcAlerts.filter(i => i.statusCategory === 'overdue');
-  const dueSoonInvoices = cxcAlerts.filter(i => i.statusCategory === 'dueSoon');
   const totalOverdueAmount = overdueInvoices.reduce((sum, i) => sum + i.saldoPendiente, 0);
 
-  // 4. Section 2 Data: Reabastecimiento Sugerido & Compras Necesarias
+  // 4. Operational Data: Low Stock & Reordering
   const lowStockProducts = products
     .filter(p => p.stockActual <= p.stockMinimo)
     .map(p => {
@@ -284,11 +305,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
 
   const totalRestockCost = lowStockProducts.reduce((sum, p) => sum + p.estimatedCost, 0);
 
-  // 5. Section 3 Data: Proyección de Flujo de Caja (30 Días)
-  const totalCommittedOutflows = pendingPayables + prorrateo.gastoOperativoTotal;
-  const netCashflowPosition = pendingReceivables - totalCommittedOutflows;
-
-  // 6. Section 4 Data: Top Productos Estrella vs Stock Estancado
+  // 5. Operational Data: Top Selling SKUs
   const productSalesMap: Record<string, { product: Product; qty: number; total: number }> = {};
   monthInvoices.forEach(inv => {
     inv.items.forEach(item => {
@@ -307,293 +324,499 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
     .sort((a, b) => b.total - a.total)
     .slice(0, 4);
 
-  const deadStockProducts = products
-    .filter(p => p.stockActual > 0 && (!productSalesMap[p.id] || productSalesMap[p.id].qty === 0))
-    .slice(0, 4);
+  // 6. Operational Data: Cash Flow 30-Day Projections
+  const totalCommittedOutflows = pendingPayables + prorrateo.gastoOperativoTotal;
+  const netCashflowPosition = pendingReceivables - totalCommittedOutflows;
+
+  // SVG Chart Geometry Calculations (Spline Multimes)
+  const svgWidth = 600;
+  const svgHeight = 200;
+  const padLeft = 52;
+  const padRight = 20;
+  const padTop = 16;
+  const padBottom = 26;
+  const chartW = svgWidth - padLeft - padRight;
+  const chartH = svgHeight - padTop - padBottom;
+
+  const maxChartVal = Math.max(
+    ...historicalStats.map(s => Math.max(s.ventas, s.costoTotal)),
+    1000
+  ) * 1.15;
+
+  const numPoints = historicalStats.length;
+  const getX = (index: number) => {
+    if (numPoints <= 1) return padLeft + chartW / 2;
+    return padLeft + (index * (chartW / (numPoints - 1)));
+  };
+  const getY = (val: number) => padTop + chartH - (Math.max(0, val) / maxChartVal) * chartH;
+
+  const ventasPoints = historicalStats.map((s, idx) => ({ x: getX(idx), y: getY(s.ventas), val: s.ventas }));
+  const costoPoints = historicalStats.map((s, idx) => ({ x: getX(idx), y: getY(s.costoTotal), val: s.costoTotal }));
+  const utilidadPoints = historicalStats.map((s, idx) => ({ x: getX(idx), y: getY(Math.max(0, s.utilidad)), val: s.utilidad }));
+
+  const makeSmoothCurve = (points: { x: number; y: number }[], tension = 0.28) => {
+    if (points.length <= 1) return '';
+    if (points.length === 2) {
+      return `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)} L ${points[1].x.toFixed(1)} ${points[1].y.toFixed(1)}`;
+    }
+
+    let d = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = i > 0 ? points[i - 1] : points[i];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = i < points.length - 2 ? points[i + 2] : p2;
+
+      const cp1x = p1.x + (p2.x - p0.x) * tension;
+      const cp1y = p1.y + (p2.y - p0.y) * tension;
+      const cp2x = p2.x - (p3.x - p1.x) * tension;
+      const cp2y = p2.y - (p3.y - p1.y) * tension;
+
+      d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+    }
+    return d;
+  };
+
+  const makeSmoothArea = (points: { x: number; y: number }[], baseY: number, tension = 0.28) => {
+    const curve = makeSmoothCurve(points, tension);
+    if (!curve || points.length <= 1) return '';
+    const last = points[points.length - 1];
+    const first = points[0];
+    return `${curve} L ${last.x.toFixed(1)} ${baseY.toFixed(1)} L ${first.x.toFixed(1)} ${baseY.toFixed(1)} Z`;
+  };
+
+  const ventasLinePath = makeSmoothCurve(ventasPoints, 0.28);
+  const costoLinePath = makeSmoothCurve(costoPoints, 0.28);
+  const utilidadLinePath = makeSmoothCurve(utilidadPoints, 0.28);
+  const ventasAreaPath = makeSmoothArea(ventasPoints, padTop + chartH, 0.28);
+
+  // 7. Waterfall Profit Bridge Calculation Engine
+  const waterfallSteps = useMemo(() => {
+    // 1. Gross Sales
+    const s1_gross = totalGrossSales || totalSalesSubtotal || 0;
+    // 2. Cost of Sales (Deduction)
+    const s2_cogs = totalCostOfGoodsSold;
+    // 3. Gross Margin (Subtotal)
+    const s3_grossMargin = s1_gross - s2_cogs;
+    // 4. Operating Expenses OpEx (Deduction)
+    const s4_opex = opexExpenses;
+    // 5. Asset Depreciation (Deduction)
+    const s5_deprec = assetDepreciation;
+    // 6. Net Profit (Final Total)
+    const s6_netProfit = s3_grossMargin - s4_opex - s5_deprec;
+
+    const maxVal = Math.max(s1_gross, 1000) * 1.15;
+
+    return [
+      {
+        id: 'gross_sales',
+        label: 'Ventas Brutas',
+        shortLabel: 'Ingresos',
+        amount: s1_gross,
+        delta: s1_gross,
+        type: 'total' as const,
+        startVal: 0,
+        endVal: s1_gross,
+        color: '#10b981',
+        description: 'Facturación total emitida en el periodo'
+      },
+      {
+        id: 'cogs',
+        label: '(-) Costo de Venta (COGS)',
+        shortLabel: 'Costo Mercancía',
+        amount: s2_cogs,
+        delta: -s2_cogs,
+        type: 'deduction' as const,
+        startVal: s1_gross,
+        endVal: Math.max(0, s1_gross - s2_cogs),
+        color: '#f43f5e',
+        description: 'Costo directo promedio de los productos vendidos'
+      },
+      {
+        id: 'gross_margin',
+        label: '(=) Margen Bruto',
+        shortLabel: 'Margen Bruto',
+        amount: s3_grossMargin,
+        delta: s3_grossMargin,
+        type: 'subtotal' as const,
+        startVal: 0,
+        endVal: s3_grossMargin,
+        color: '#0284c7',
+        description: 'Ganancia bruta antes de gastos de estructura y operación'
+      },
+      {
+        id: 'opex',
+        label: '(-) Gastos OpEx',
+        shortLabel: 'Gastos Operativos',
+        amount: s4_opex,
+        delta: -s4_opex,
+        type: 'deduction' as const,
+        startVal: s3_grossMargin,
+        endVal: Math.max(0, s3_grossMargin - s4_opex),
+        color: '#f59e0b',
+        description: 'Gastos fijos, variables y servicios del periodo'
+      },
+      {
+        id: 'depreciation',
+        label: '(-) Depreciación',
+        shortLabel: 'Deprec. Activos',
+        amount: s5_deprec,
+        delta: -s5_deprec,
+        type: 'deduction' as const,
+        startVal: Math.max(0, s3_grossMargin - s4_opex),
+        endVal: Math.max(0, s3_grossMargin - s4_opex - s5_deprec),
+        color: '#a855f7',
+        description: 'Desgaste contable mensual de mobiliario y equipo'
+      },
+      {
+        id: 'net_profit',
+        label: '(=) Utilidad Neta Real',
+        shortLabel: 'Utilidad Neta',
+        amount: s6_netProfit,
+        delta: s6_netProfit,
+        type: 'final' as const,
+        startVal: 0,
+        endVal: s6_netProfit,
+        color: s6_netProfit >= 0 ? '#059669' : '#dc2626',
+        description: 'Resultado neto disponible después de todos los costos contables'
+      }
+    ].map(step => ({
+      ...step,
+      maxVal,
+      marginPct: s1_gross > 0 ? (step.amount / s1_gross) * 100 : 0
+    }));
+  }, [totalGrossSales, totalSalesSubtotal, totalCostOfGoodsSold, opexExpenses, assetDepreciation]);
 
   return (
-    <div className="page-content">
-      {/* Welcome & Action Header */}
-      <div className="page-header" style={{ marginBottom: '1.25rem' }}>
+    <div className="dashboard-page-container">
+      {/* 1. Header Compacto de Mando */}
+      <div className="page-header" style={{ marginBottom: 0, paddingBottom: 0 }}>
         <div>
-          <h1 className="page-title">Panel de Control & Centro de Mando</h1>
-          <p className="page-description">
-            Monitoreo en tiempo real de cobranza, compras, inventario y tendencias de rentabilidad ({currentMonthKey}).
+          <h1 className="page-title" style={{ fontSize: '1.35rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Sparkles size={20} style={{ color: 'var(--color-accent)' }} />
+            Tablero de Control & Centro de Mando
+          </h1>
+          <p className="page-description" style={{ fontSize: '0.775rem', marginTop: '0.1rem' }}>
+            Monitoreo en tiempo real de operaciones, liquidez, inventario y evolución de rentabilidad contable ({currentMonthKey}).
           </p>
         </div>
-        <div className="page-actions">
-          <button type="button" className="btn btn-secondary btn-sm" onClick={() => onNavigate('accounting')}>
-            <Calculator size={15} />
+        <div className="page-actions" style={{ gap: '0.5rem' }}>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => onNavigate('accounting')} style={{ fontSize: '0.775rem', padding: '0.35rem 0.65rem' }}>
+            <Calculator size={14} />
             Prorrateo & Costos
           </button>
-          <button type="button" className="btn btn-primary btn-sm" onClick={() => onNavigate('reports')}>
-            <BarChart3 size={15} />
+          <button type="button" className="btn btn-primary btn-sm" onClick={() => onNavigate('reports')} style={{ fontSize: '0.775rem', padding: '0.35rem 0.65rem' }}>
+            <BarChart3 size={14} />
             Reportes Financieros
           </button>
         </div>
       </div>
 
-      {/* Top 4 KPI Metrics Grid */}
-      <div className="grid-4" style={{ marginBottom: '1.25rem', gap: '0.85rem' }}>
-        <div className="stat-card" style={{ padding: '0.85rem 1rem' }}>
-          <div className="stat-header" style={{ marginBottom: '0.35rem' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Ventas del Mes</span>
-            <div className="stat-icon" style={{ backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success)', width: '28px', height: '28px' }}>
-              <TrendingUp size={15} />
+      {/* 2. Top 5 Micro-KPIs con Sparklines */}
+      <div className="grid-5">
+        {/* Card 1: Ventas del Mes */}
+        <div className="stat-sparkline-card">
+          <div className="stat-sparkline-header">
+            <span className="stat-sparkline-title">Ventas del Mes</span>
+            <div className="stat-sparkline-icon" style={{ backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success)' }}>
+              <TrendingUp size={14} />
             </div>
           </div>
-          <div className="stat-value" style={{ fontSize: '1.35rem', fontWeight: 800 }}>{formatCurrency(totalSalesMonth)}</div>
-          <div className="stat-footer" style={{ fontSize: '0.725rem', color: 'var(--color-success-text)', marginTop: '0.2rem' }}>
-            <ArrowUpRight size={13} />
+          <div className="stat-sparkline-main">
+            <div className="stat-sparkline-val">{formatCurrency(totalSalesMonth)}</div>
+            <div className="stat-sparkline-graph">
+              <Sparkline values={sparklineSales} color="#10b981" />
+            </div>
+          </div>
+          <div className="stat-sparkline-footer">
             <span>{monthInvoices.length} facturas emitidas</span>
+            {salesGrowthMoM !== 0 && (
+              <span className="stat-sparkline-badge" style={{
+                backgroundColor: salesGrowthMoM > 0 ? 'var(--color-success-bg)' : 'var(--color-danger-bg)',
+                color: salesGrowthMoM > 0 ? 'var(--color-success-text)' : 'var(--color-danger-text)'
+              }}>
+                {salesGrowthMoM > 0 ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
+                {Math.abs(salesGrowthMoM).toFixed(0)}% MoM
+              </span>
+            )}
           </div>
         </div>
 
-        <div className="stat-card" style={{ padding: '0.85rem 1rem' }}>
-          <div className="stat-header" style={{ marginBottom: '0.35rem' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Cuentas por Cobrar (CxC)</span>
-            <div className="stat-icon" style={{ backgroundColor: 'var(--color-info-bg)', color: 'var(--color-info)', width: '28px', height: '28px' }}>
-              <CreditCard size={15} />
+        {/* Card 2: Utilidad Neta & Margen */}
+        <div className="stat-sparkline-card">
+          <div className="stat-sparkline-header">
+            <span className="stat-sparkline-title">Utilidad Neta Real</span>
+            <div className="stat-sparkline-icon" style={{ backgroundColor: 'rgba(14, 165, 233, 0.12)', color: '#0ea5e9' }}>
+              <DollarSign size={14} />
             </div>
           </div>
-          <div className="stat-value" style={{ fontSize: '1.35rem', fontWeight: 800, color: pendingReceivables > 0 ? 'var(--color-info-text)' : 'inherit' }}>
-            {formatCurrency(pendingReceivables)}
+          <div className="stat-sparkline-main">
+            <div className="stat-sparkline-val" style={{ color: netOperatingProfit >= 0 ? 'inherit' : 'var(--color-danger-text)' }}>
+              {formatCurrency(netOperatingProfit)}
+            </div>
+            <div className="stat-sparkline-graph">
+              <Sparkline values={sparklineProfit} color="#0ea5e9" />
+            </div>
           </div>
-          <div className="stat-footer" style={{ fontSize: '0.725rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+          <div className="stat-sparkline-footer">
+            <span>Margen sobre ventas</span>
+            <span className="stat-sparkline-badge" style={{
+              backgroundColor: netProfitMargin >= 15 ? 'var(--color-success-bg)' : (netProfitMargin >= 0 ? 'rgba(14, 165, 233, 0.12)' : 'var(--color-danger-bg)'),
+              color: netProfitMargin >= 15 ? 'var(--color-success-text)' : (netProfitMargin >= 0 ? '#0284c7' : 'var(--color-danger-text)')
+            }}>
+              {netProfitMargin.toFixed(1)}% margen
+            </span>
+          </div>
+        </div>
+
+        {/* Card 3: Cuentas por Cobrar (CxC) */}
+        <div className="stat-sparkline-card">
+          <div className="stat-sparkline-header">
+            <span className="stat-sparkline-title">Por Cobrar (CxC)</span>
+            <div className="stat-sparkline-icon" style={{ backgroundColor: 'var(--color-info-bg)', color: 'var(--color-info)' }}>
+              <CreditCard size={14} />
+            </div>
+          </div>
+          <div className="stat-sparkline-main">
+            <div className="stat-sparkline-val" style={{ color: pendingReceivables > 0 ? 'var(--color-info-text)' : 'inherit' }}>
+              {formatCurrency(pendingReceivables)}
+            </div>
+            <div className="stat-sparkline-graph">
+              <Sparkline values={sparklineMargins} color="#f59e0b" />
+            </div>
+          </div>
+          <div className="stat-sparkline-footer">
             <span>{cxcAlerts.length} facturas con saldo</span>
+            {overdueInvoices.length > 0 ? (
+              <span className="stat-sparkline-badge" style={{ backgroundColor: 'var(--color-danger-bg)', color: 'var(--color-danger-text)' }}>
+                {overdueInvoices.length} vencidas
+              </span>
+            ) : (
+              <span className="stat-sparkline-badge" style={{ backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success-text)' }}>
+                Al día
+              </span>
+            )}
           </div>
         </div>
 
-        <div className="stat-card" style={{ padding: '0.85rem 1rem' }}>
-          <div className="stat-header" style={{ marginBottom: '0.35rem' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Cuentas por Pagar (CxP)</span>
-            <div className="stat-icon" style={{ backgroundColor: 'var(--color-warning-bg)', color: 'var(--color-warning)', width: '28px', height: '28px' }}>
-              <ShoppingBag size={15} />
+        {/* Card 4: Cuentas por Pagar (CxP) */}
+        <div className="stat-sparkline-card">
+          <div className="stat-sparkline-header">
+            <span className="stat-sparkline-title">Por Pagar (CxP)</span>
+            <div className="stat-sparkline-icon" style={{ backgroundColor: 'var(--color-warning-bg)', color: 'var(--color-warning)' }}>
+              <ShoppingBag size={14} />
             </div>
           </div>
-          <div className="stat-value" style={{ fontSize: '1.35rem', fontWeight: 800, color: pendingPayables > 0 ? 'var(--color-warning-text)' : 'inherit' }}>
-            {formatCurrency(pendingPayables)}
+          <div className="stat-sparkline-main">
+            <div className="stat-sparkline-val" style={{ color: pendingPayables > 0 ? 'var(--color-warning-text)' : 'inherit' }}>
+              {formatCurrency(pendingPayables)}
+            </div>
+            <div className="stat-sparkline-graph">
+              <Sparkline values={sparklineCostos} color="#ec4899" />
+            </div>
           </div>
-          <div className="stat-footer" style={{ fontSize: '0.725rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-            <span>Proveedores pendientes</span>
+          <div className="stat-sparkline-footer">
+            <span>{purchases.filter(p => p.estado === 'recibida' && p.saldoPendiente > 0).length} compras pendientes</span>
+            <span className="stat-sparkline-badge" style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-muted)' }}>
+              Proveedores
+            </span>
           </div>
         </div>
 
-        <div className="stat-card" style={{ padding: '0.85rem 1rem' }}>
-          <div className="stat-header" style={{ marginBottom: '0.35rem' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Valor de Inventario</span>
-            <div className="stat-icon" style={{ backgroundColor: 'var(--color-accent-subtle)', color: 'var(--color-accent)', width: '28px', height: '28px' }}>
-              <Boxes size={15} />
+        {/* Card 5: Valor de Inventario */}
+        <div className="stat-sparkline-card">
+          <div className="stat-sparkline-header">
+            <span className="stat-sparkline-title">Inventario Activo</span>
+            <div className="stat-sparkline-icon" style={{ backgroundColor: 'var(--color-accent-subtle)', color: 'var(--color-accent)' }}>
+              <Boxes size={14} />
             </div>
           </div>
-          <div className="stat-value" style={{ fontSize: '1.35rem', fontWeight: 800 }}>{formatCurrency(totalInventoryValue)}</div>
-          <div className="stat-footer" style={{ fontSize: '0.725rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+          <div className="stat-sparkline-main">
+            <div className="stat-sparkline-val">{formatCurrency(totalInventoryValue)}</div>
+            <div className="stat-sparkline-graph">
+              <Sparkline values={sparklineSales.map((v, i) => v * 0.7 + i * 100)} color="#6366f1" />
+            </div>
+          </div>
+          <div className="stat-sparkline-footer">
             <span>{totalInventoryUnits} pzas en stock</span>
+            {lowStockProducts.length > 0 ? (
+              <span className="stat-sparkline-badge" style={{ backgroundColor: 'var(--color-warning-bg)', color: 'var(--color-warning-text)' }}>
+                {lowStockProducts.length} críticos
+              </span>
+            ) : (
+              <span className="stat-sparkline-badge" style={{ backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success-text)' }}>
+                Stock óptimo
+              </span>
+            )}
           </div>
         </div>
       </div>
 
-      {/* 2 ROWS OF 3 COLUMNS: ROW 1 = [CHART (SPAN 2), CXC (SPAN 1)] | ROW 2 = [REABASTECIMIENTO, FLUJO DE CAJA, TOP PRODUCTOS] */}
-      <div className="grid-3" style={{ gap: '1.25rem' }}>
-
-        {/* 📈 HERO CARD: Gráfica de Líneas de Tendencias Históricas (OCUPA 2 CUADRANTES) */}
-        <div className="card col-span-2" style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '1.15rem' }}>
-          <div className="card-header" style={{ marginBottom: '0.65rem', paddingBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <div>
-              <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '1.05rem' }}>
-                <TrendingUp size={18} style={{ color: 'var(--color-accent)' }} />
-                Tendencias Históricas: Ventas vs. Costos Operativos Totales ({historicalStats.length} {historicalStats.length === 1 ? 'Mes' : 'Meses'})
-              </h2>
-              <p className="card-subtitle" style={{ fontSize: '0.75rem' }}>
-                Evolución de Ingresos Facturados, Costos Totales (Mercancía + Gastos) y Margen Neto
-              </p>
-            </div>
-
-            {/* Summary KPI Pills */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-              <div style={{
-                padding: '0.25rem 0.55rem',
-                backgroundColor: 'var(--bg-subtle)',
-                border: '1px solid var(--border-default)',
-                borderRadius: 'var(--radius-sm)',
-                fontSize: '0.725rem'
-              }}>
-                <span style={{ color: 'var(--text-muted)' }}>Ventas: </span>
-                <strong style={{ color: '#10b981' }}>{formatCurrency(totalVentasHist)}</strong>
-              </div>
-              <div style={{
-                padding: '0.25rem 0.55rem',
-                backgroundColor: 'var(--bg-subtle)',
-                border: '1px solid var(--border-default)',
-                borderRadius: 'var(--radius-sm)',
-                fontSize: '0.725rem'
-              }}>
-                <span style={{ color: 'var(--text-muted)' }}>Costos: </span>
-                <strong style={{ color: '#f43f5e' }}>{formatCurrency(totalCostosHist)}</strong>
-              </div>
-              <div style={{
-                padding: '0.25rem 0.55rem',
-                backgroundColor: totalUtilidadHist >= 0 ? 'rgba(14, 165, 233, 0.12)' : 'var(--color-danger-bg)',
-                border: `1px solid ${totalUtilidadHist >= 0 ? 'rgba(14, 165, 233, 0.35)' : 'var(--color-danger)'}`,
-                borderRadius: 'var(--radius-sm)',
-                fontSize: '0.725rem'
-              }}>
-                <span style={{ color: totalUtilidadHist >= 0 ? '#0284c7' : 'var(--color-danger-text)' }}>Utilidad: </span>
-                <strong style={{ color: totalUtilidadHist >= 0 ? '#0284c7' : 'var(--color-danger-text)' }}>
-                  {formatCurrency(totalUtilidadHist)} ({margenPromedioHist.toFixed(0)}%)
-                </strong>
-              </div>
-            </div>
+      {/* 3. Módulo Central Hero: Selector Dual (Tendencias Multimes vs Waterfall Profit Bridge) */}
+      <div className="card" style={{ padding: '0.85rem 1.15rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div>
+            <h2 style={{ fontSize: '0.975rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.45rem', margin: 0 }}>
+              {heroView === 'trends' ? (
+                <>
+                  <TrendingUp size={16} style={{ color: 'var(--color-accent)' }} />
+                  Evolución Financiera Histórica: Ventas vs. Costos Operativos ({historicalStats.length} {historicalStats.length === 1 ? 'Mes' : 'Meses'})
+                </>
+              ) : (
+                <>
+                  <BarChart3 size={16} style={{ color: '#0ea5e9' }} />
+                  Puente de Rentabilidad Waterfall: Desglose de Venta a Utilidad Neta Real ({currentMonthKey})
+                </>
+              )}
+            </h2>
+            <p style={{ fontSize: '0.725rem', color: 'var(--text-muted)', margin: 0 }}>
+              {heroView === 'trends'
+                ? 'Ingresos facturados, costos totales de mercancía + gastos y utilidad neta'
+                : 'Paso a paso contable: Ventas Brutas (-) COGS (=) Margen Bruto (-) OpEx (-) Depreciación (=) Ganancia Neta'}
+            </p>
           </div>
 
-          {/* SVG Line Chart Canvas */}
-          <div style={{ position: 'relative', width: '100%', flex: 1, minHeight: '200px' }}>
+          {/* View Selector Tabs & Summary Badges */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+            <div className="dashboard-segmented-tabs">
+              <button
+                type="button"
+                className={`dashboard-segmented-tab ${heroView === 'trends' ? 'active' : ''}`}
+                onClick={() => setHeroView('trends')}
+              >
+                <TrendingUp size={13} />
+                Tendencias Multimes
+              </button>
+              <button
+                type="button"
+                className={`dashboard-segmented-tab ${heroView === 'waterfall' ? 'active' : ''}`}
+                onClick={() => setHeroView('waterfall')}
+              >
+                <Layers size={13} />
+                Puente Waterfall
+              </button>
+            </div>
+
+            {heroView === 'trends' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <div style={{ padding: '0.2rem 0.45rem', backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-default)', borderRadius: '4px', fontSize: '0.7rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Ventas: </span>
+                  <strong style={{ color: '#10b981' }}>{formatCurrency(totalVentasHist)}</strong>
+                </div>
+                <div style={{ padding: '0.2rem 0.45rem', backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-default)', borderRadius: '4px', fontSize: '0.7rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Costos: </span>
+                  <strong style={{ color: '#f43f5e' }}>{formatCurrency(totalCostosHist)}</strong>
+                </div>
+                <div style={{
+                  padding: '0.2rem 0.45rem',
+                  backgroundColor: totalUtilidadHist >= 0 ? 'rgba(14, 165, 233, 0.12)' : 'var(--color-danger-bg)',
+                  border: `1px solid ${totalUtilidadHist >= 0 ? 'rgba(14, 165, 233, 0.35)' : 'var(--color-danger)'}`,
+                  borderRadius: '4px',
+                  fontSize: '0.7rem'
+                }}>
+                  <span style={{ color: totalUtilidadHist >= 0 ? '#0284c7' : 'var(--color-danger-text)' }}>Utilidad: </span>
+                  <strong style={{ color: totalUtilidadHist >= 0 ? '#0284c7' : 'var(--color-danger-text)' }}>
+                    {formatCurrency(totalUtilidadHist)} ({margenPromedioHist.toFixed(0)}%)
+                  </strong>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* View 1: Spline Trend Chart */}
+        {heroView === 'trends' && (
+          <div style={{ position: 'relative', width: '100%', minHeight: '180px', height: '180px' }}>
             <svg
               viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+              preserveAspectRatio="none"
               style={{ width: '100%', height: '100%', overflow: 'visible' }}
             >
               <defs>
-                <linearGradient id="ventasLineGradHero" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#10b981" stopOpacity="0.25" />
+                <linearGradient id="areaVentasGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#10b981" stopOpacity="0.18" />
                   <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
                 </linearGradient>
-                <filter id="glowGreenHero" x="-20%" y="-20%" width="140%" height="140%">
-                  <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#10b981" floodOpacity="0.3" />
-                </filter>
+                <linearGradient id="lineVentasGrad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#34d399" />
+                  <stop offset="100%" stopColor="#10b981" />
+                </linearGradient>
+                <linearGradient id="lineCostoGrad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#fb7185" />
+                  <stop offset="100%" stopColor="#f43f5e" />
+                </linearGradient>
+                <linearGradient id="lineUtilidadGrad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#38bdf8" />
+                  <stop offset="100%" stopColor="#0ea5e9" />
+                </linearGradient>
               </defs>
 
-              {/* Gridlines */}
-              {[1, 0.66, 0.33, 0].map((ratio, idx) => {
-                const yPos = padTop + chartH * (1 - ratio);
+              {/* Grid Lines */}
+              {[0, 0.33, 0.66, 1].map((frac, idx) => {
+                const yPos = padTop + chartH * frac;
+                const val = maxChartVal * (1 - frac);
                 return (
                   <g key={idx}>
-                    <line
-                      x1={padLeft}
-                      y1={yPos}
-                      x2={padLeft + chartW}
-                      y2={yPos}
-                      stroke="var(--border-subtle)"
-                      strokeDasharray="3 3"
-                      strokeWidth="1"
-                    />
-                    <text
-                      x={padLeft - 7}
-                      y={yPos + 2.5}
-                      textAnchor="end"
-                      fontSize="7.5"
-                      fill="var(--text-muted)"
-                      fontFamily="inherit"
-                      fontWeight="500"
-                    >
-                      {formatCurrency(maxChartVal * ratio).replace('.00', '')}
+                    <line x1={padLeft} y1={yPos} x2={svgWidth - padRight} y2={yPos} stroke="var(--border-subtle)" strokeDasharray="3 3" />
+                    <text x={padLeft - 6} y={yPos + 3} textAnchor="end" fontSize="9" fill="var(--text-muted)" fontFamily="sans-serif">
+                      ${val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val.toFixed(0)}
                     </text>
                   </g>
                 );
               })}
 
-              {/* Area under Ventas Line (only when 2+ points) */}
-              {ventasAreaPath && (
-                <path d={ventasAreaPath} fill="url(#ventasLineGradHero)" />
-              )}
+              {/* Area & Curves */}
+              {ventasAreaPath && <path d={ventasAreaPath} fill="url(#areaVentasGrad)" />}
+              {costoLinePath && <path d={costoLinePath} fill="none" stroke="url(#lineCostoGrad)" strokeWidth="2.2" strokeLinecap="round" strokeDasharray="4 2" />}
+              {ventasLinePath && <path d={ventasLinePath} fill="none" stroke="url(#lineVentasGrad)" strokeWidth="2.5" strokeLinecap="round" />}
+              {utilidadLinePath && <path d={utilidadLinePath} fill="none" stroke="url(#lineUtilidadGrad)" strokeWidth="2" strokeLinecap="round" />}
 
-              {/* Costos Operativos Line (Red/Coral) */}
-              {costoLinePath && (
-                <path
-                  d={costoLinePath}
-                  fill="none"
-                  stroke="#f43f5e"
-                  strokeWidth="2.5"
-                  strokeDasharray="4 2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              )}
-
-              {/* Ventas Line (Green Solid) */}
-              {ventasLinePath && (
-                <path
-                  d={ventasLinePath}
-                  fill="none"
-                  stroke="#10b981"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  filter="url(#glowGreenHero)"
-                />
-              )}
-
-              {/* Utilidad Line (Cyan / Blue) */}
-              {utilidadLinePath && (
-                <path
-                  d={utilidadLinePath}
-                  fill="none"
-                  stroke="#0ea5e9"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              )}
-
-              {/* X Axis Month Labels & Interactive Node Points */}
+              {/* Vertical Guide and Interactive Nodes */}
               {historicalStats.map((stat, idx) => {
-                const x = getX(idx);
+                const xPos = getX(idx);
                 const isHovered = hoveredMonthIndex === idx;
-                const isCurrent = stat.monthKey === currentMonthKey;
 
                 return (
-                  <g key={stat.monthKey} onMouseEnter={() => setHoveredMonthIndex(idx)} onMouseLeave={() => setHoveredMonthIndex(null)} style={{ cursor: 'pointer' }}>
-                    {/* Hover vertical guideline */}
+                  <g
+                    key={stat.monthKey}
+                    onMouseEnter={() => setHoveredMonthIndex(idx)}
+                    onMouseLeave={() => setHoveredMonthIndex(null)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <rect x={xPos - chartW / (numPoints * 2 || 2)} y={padTop} width={chartW / (numPoints || 1)} height={chartH} fill="transparent" />
+
                     {isHovered && (
-                      <line
-                        x1={x}
-                        y1={padTop}
-                        x2={x}
-                        y2={padTop + chartH}
-                        stroke="var(--color-accent)"
-                        strokeWidth="1.5"
-                        strokeDasharray="2 2"
-                      />
+                      <line x1={xPos} y1={padTop} x2={xPos} y2={padTop + chartH} stroke="var(--color-accent)" strokeWidth="1.5" strokeDasharray="2 2" />
                     )}
 
-                    {/* Data Points */}
+                    {/* Ventas Circle */}
                     <circle
-                      cx={x}
+                      cx={xPos}
                       cy={getY(stat.ventas)}
-                      r={isHovered ? 6 : 4}
+                      r={isHovered ? 5.5 : 3.5}
                       fill="#10b981"
                       stroke="var(--bg-surface)"
                       strokeWidth="2"
-                      style={{ transition: 'all 0.2s ease' }}
-                    />
-                    <circle
-                      cx={x}
-                      cy={getY(stat.costoTotal)}
-                      r={isHovered ? 5 : 3.5}
-                      fill="#f43f5e"
-                      stroke="var(--bg-surface)"
-                      strokeWidth="2"
-                      style={{ transition: 'all 0.2s ease' }}
-                    />
-                    <circle
-                      cx={x}
-                      cy={getY(Math.max(0, stat.utilidad))}
-                      r={isHovered ? 5 : 3}
-                      fill="#0ea5e9"
-                      stroke="var(--bg-surface)"
-                      strokeWidth="1.5"
-                      style={{ transition: 'all 0.2s ease' }}
                     />
 
-                    {/* X Month Label */}
+                    {/* Costos Circle */}
+                    <circle
+                      cx={xPos}
+                      cy={getY(stat.costoTotal)}
+                      r={isHovered ? 4.5 : 3}
+                      fill="#f43f5e"
+                      stroke="var(--bg-surface)"
+                      strokeWidth="1.5"
+                    />
+
+                    {/* X-Axis Label */}
                     <text
-                      x={x}
+                      x={xPos}
                       y={padTop + chartH + 16}
                       textAnchor="middle"
-                      fontSize="8"
-                      fontFamily="inherit"
-                      fontWeight={isCurrent ? '700' : (isHovered ? '600' : '500')}
-                      fill={isCurrent ? 'var(--color-accent)' : (isHovered ? 'var(--text-primary)' : 'var(--text-muted)')}
-                      letterSpacing="0.2px"
+                      fontSize="9.5"
+                      fontWeight={isHovered ? 700 : 500}
+                      fill={isHovered ? 'var(--text-primary)' : 'var(--text-muted)'}
                     >
                       {stat.shortLabel}
                     </text>
@@ -602,410 +825,418 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
               })}
             </svg>
 
-            {/* Hover Tooltip Card */}
-            {hoveredMonthIndex !== null && (
-              <div style={{
-                position: 'absolute',
-                top: '0',
-                left: `${(getX(hoveredMonthIndex) / svgWidth) * 100}%`,
-                transform: hoveredMonthIndex > Math.floor(historicalStats.length / 2) ? 'translateX(-95%)' : 'translateX(5%)',
-                zIndex: 20,
-                backgroundColor: 'var(--bg-surface-elevated)',
-                border: '1px solid var(--border-default)',
-                borderRadius: 'var(--radius-md)',
-                boxShadow: 'var(--shadow-md)',
-                padding: '0.6rem 0.85rem',
-                width: '200px',
-                fontSize: '0.75rem',
-                pointerEvents: 'none'
-              }}>
-                <div style={{ fontWeight: 800, borderBottom: '1px solid var(--border-default)', paddingBottom: '0.25rem', marginBottom: '0.3rem' }}>
-                  {historicalStats[hoveredMonthIndex].label} {historicalStats[hoveredMonthIndex].monthKey === currentMonthKey && <span style={{ color: 'var(--color-accent)', fontSize: '0.7rem' }}>(Mes Actual)</span>}
+            {/* Hover Tooltip */}
+            {hoveredMonthIndex !== null && historicalStats[hoveredMonthIndex] && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '6px',
+                  left: `${(getX(hoveredMonthIndex) / svgWidth) * 100}%`,
+                  transform: 'translateX(-50%)',
+                  backgroundColor: 'rgba(15, 23, 42, 0.94)',
+                  color: '#ffffff',
+                  padding: '0.45rem 0.65rem',
+                  borderRadius: 'var(--radius-sm)',
+                  boxShadow: '0 8px 20px rgba(0,0,0,0.3)',
+                  fontSize: '0.725rem',
+                  pointerEvents: 'none',
+                  zIndex: 10,
+                  whiteSpace: 'nowrap',
+                  border: '1px solid rgba(255,255,255,0.12)'
+                }}
+              >
+                <div style={{ fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.15)', paddingBottom: '0.2rem', marginBottom: '0.25rem' }}>
+                  {historicalStats[hoveredMonthIndex].label}
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#10b981', marginBottom: '0.15rem' }}>
-                  <span>Ventas Facturadas:</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', color: '#34d399' }}>
+                  <span>Ventas:</span>
                   <strong>{formatCurrency(historicalStats[hoveredMonthIndex].ventas)}</strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#f43f5e', marginBottom: '0.15rem' }}>
-                  <span>Costos Totales:</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', color: '#fb7185' }}>
+                  <span>Costos:</span>
                   <strong>{formatCurrency(historicalStats[hoveredMonthIndex].costoTotal)}</strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0ea5e9', borderTop: '1px dashed var(--border-default)', paddingTop: '0.25rem', marginTop: '0.15rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', color: '#38bdf8' }}>
                   <span>Utilidad Neta:</span>
-                  <strong>{formatCurrency(historicalStats[hoveredMonthIndex].utilidad)}</strong>
-                </div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'right', marginTop: '0.15rem' }}>
-                  Margen: {historicalStats[hoveredMonthIndex].margen.toFixed(1)}% | {historicalStats[hoveredMonthIndex].facturasCount} facturas
+                  <strong>
+                    {formatCurrency(historicalStats[hoveredMonthIndex].utilidad)} ({historicalStats[hoveredMonthIndex].margen.toFixed(0)}%)
+                  </strong>
                 </div>
               </div>
             )}
           </div>
+        )}
 
-          {/* Legend */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: '1.25rem',
-            marginTop: '0.4rem',
-            paddingTop: '0.4rem',
-            borderTop: '1px solid var(--border-default)',
-            fontSize: '0.75rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#10b981' }} />
-              <span style={{ fontWeight: 600 }}>Ventas Facturadas</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#f43f5e' }} />
-              <span style={{ color: 'var(--text-secondary)' }}>Costos Operativos Totales</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#0ea5e9' }} />
-              <span style={{ color: 'var(--text-secondary)' }}>Utilidad Operativa Neta</span>
-            </div>
-          </div>
-        </div>
+        {/* View 2: Waterfall Profit Bridge */}
+        {heroView === 'waterfall' && (
+          <div style={{ position: 'relative', width: '100%', minHeight: '180px', height: '180px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.5rem', height: '100%', alignItems: 'end', padding: '0.5rem 0.5rem 1.5rem 0.5rem' }}>
+              {waterfallSteps.map((step, idx) => {
+                const maxV = step.maxVal;
+                const bottomPct = (step.startVal < step.endVal ? step.startVal : step.endVal) / maxV * 100;
+                const heightPct = Math.max(8, (Math.abs(step.endVal - step.startVal) / maxV) * 100);
+                const isHovered = hoveredWaterfallStep === idx;
 
-        {/* 🚨 ORIGINAL CUADRANTE 1: Semáforo de Cobranza & Créditos CxC (OCUPA 1 CUADRANTE) */}
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '1rem' }}>
-          <div className="card-header" style={{ marginBottom: '0.65rem', paddingBottom: '0.5rem' }}>
-            <div>
-              <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.95rem' }}>
-                <ShieldAlert size={16} style={{ color: overdueInvoices.length > 0 ? 'var(--color-danger)' : 'var(--color-info)' }} />
-                Semáforo de Cobranza & CxC
-              </h2>
-              <p className="card-subtitle" style={{ fontSize: '0.725rem' }}>
-                Facturas vencidas y por vencer (7d)
-              </p>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-              <ExcelExportButton filename="Alertas_Cobranza_CxC" />
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm"
-                onClick={() => onNavigate('sales')}
-                style={{ fontSize: '0.725rem', padding: '0.25rem 0.4rem' }}
-              >
-                Ventas &rarr;
-              </button>
-            </div>
-          </div>
-
-          <div style={{ flex: 1 }}>
-            {cxcAlerts.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '1.75rem 0.75rem', color: 'var(--text-muted)' }}>
-                <CheckCircle size={26} style={{ color: 'var(--color-success)', margin: '0 auto 0.35rem auto', display: 'block' }} />
-                <div style={{ fontWeight: 600, fontSize: '0.825rem' }}>¡Cartera al día!</div>
-                <div style={{ fontSize: '0.725rem' }}>No hay facturas vencidas ni saldos por cobrar.</div>
-              </div>
-            ) : (
-              <div className="table-container" style={{ border: 'none', boxShadow: 'none' }}>
-                <table className="table" style={{ fontSize: '0.75rem' }}>
-                  <thead>
-                    <tr>
-                      <th>Folio / Cliente</th>
-                      <th style={{ textAlign: 'center' }}>Vence</th>
-                      <th style={{ textAlign: 'right' }}>Saldo</th>
-                      <th style={{ textAlign: 'right' }}>Acción</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cxcAlerts.slice(0, 4).map(inv => (
-                      <tr key={inv.id}>
-                        <td style={{ padding: '0.4rem 0.25rem' }}>
-                          <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{inv.numeroFactura}</div>
-                          <div style={{ fontSize: '0.675rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '110px' }}>
-                            {inv.clientName}
-                          </div>
-                        </td>
-                        <td style={{ textAlign: 'center', padding: '0.4rem 0.2rem' }}>
-                          {inv.statusCategory === 'overdue' && (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', color: 'var(--color-danger-text)', fontWeight: 700, backgroundColor: 'var(--color-danger-bg)', padding: '2px 4px', borderRadius: 'var(--radius-sm)', fontSize: '0.675rem' }}>
-                              <AlertCircle size={10} /> {Math.abs(inv.diffDays)}d
-                            </span>
-                          )}
-                          {inv.statusCategory === 'dueSoon' && (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', color: 'var(--color-warning-text)', fontWeight: 700, backgroundColor: 'var(--color-warning-bg)', padding: '2px 4px', borderRadius: 'var(--radius-sm)', fontSize: '0.675rem' }}>
-                              <Calendar size={10} /> {inv.diffDays === 0 ? 'Hoy' : `${inv.diffDays}d`}
-                            </span>
-                          )}
-                          {inv.statusCategory === 'normal' && (
-                            <span style={{ color: 'var(--text-secondary)', fontSize: '0.7rem' }}>
-                              {inv.diffDays}d
-                            </span>
-                          )}
-                        </td>
-                        <td style={{ textAlign: 'right', fontWeight: 700, padding: '0.4rem 0.25rem', color: inv.statusCategory === 'overdue' ? 'var(--color-danger-text)' : 'inherit' }}>
-                          {formatCurrency(inv.saldoPendiente)}
-                        </td>
-                        <td style={{ textAlign: 'right', padding: '0.4rem 0.2rem' }}>
-                          <button
-                            type="button"
-                            className="btn btn-secondary btn-sm"
-                            style={{ padding: '0.15rem 0.4rem', fontSize: '0.7rem' }}
-                            onClick={() => onNavigate('sales')}
-                          >
-                            Cobrar
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          {cxcAlerts.length > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.4rem', paddingTop: '0.35rem', borderTop: '1px solid var(--border-default)', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-              <span>Vencido: <strong style={{ color: 'var(--color-danger-text)' }}>{formatCurrency(totalOverdueAmount)}</strong></span>
-              <span><strong>{dueSoonInvoices.length}</strong> por vencer</span>
-            </div>
-          )}
-        </div>
-
-        {/* 📦 ORIGINAL CUADRANTE 2: Reabastecimiento Sugerido & Compras (OCUPA 1 CUADRANTE) */}
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '1rem' }}>
-          <div className="card-header" style={{ marginBottom: '0.65rem', paddingBottom: '0.5rem' }}>
-            <div>
-              <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.95rem' }}>
-                <AlertTriangle size={16} style={{ color: 'var(--color-warning)' }} />
-                Reabastecimiento Sugerido ({lowStockProducts.length})
-              </h2>
-              <p className="card-subtitle" style={{ fontSize: '0.725rem' }}>
-                Artículos bajo stock de seguridad
-              </p>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-              <ExcelExportButton filename="Compras_Sugeridas_Reabastecimiento" />
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm"
-                onClick={() => onNavigate('inventory')}
-                style={{ fontSize: '0.725rem', padding: '0.25rem 0.4rem' }}
-              >
-                Stock &rarr;
-              </button>
-            </div>
-          </div>
-
-          <div style={{ flex: 1 }}>
-            {lowStockProducts.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '1.75rem 0.75rem', color: 'var(--text-muted)' }}>
-                <CheckCircle size={26} style={{ color: 'var(--color-success)', margin: '0 auto 0.35rem auto', display: 'block' }} />
-                <div style={{ fontWeight: 600, fontSize: '0.825rem' }}>¡Stock Saludable!</div>
-                <div style={{ fontSize: '0.725rem' }}>Todos los productos están sobre el mínimo.</div>
-              </div>
-            ) : (
-              <div className="table-container" style={{ border: 'none', boxShadow: 'none' }}>
-                <table className="table" style={{ fontSize: '0.75rem' }}>
-                  <thead>
-                    <tr>
-                      <th>Producto / SKU</th>
-                      <th style={{ textAlign: 'center' }}>Stock</th>
-                      <th style={{ textAlign: 'center' }}>Pedir</th>
-                      <th style={{ textAlign: 'right' }}>Acción</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lowStockProducts.slice(0, 4).map(p => (
-                      <tr key={p.id}>
-                        <td style={{ padding: '0.4rem 0.25rem' }}>
-                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '110px' }}>
-                            {p.nombre}
-                          </div>
-                          <div style={{ fontSize: '0.675rem', color: 'var(--text-muted)' }}>SKU: {p.codigo}</div>
-                        </td>
-                        <td style={{ textAlign: 'center', padding: '0.4rem 0.2rem' }}>
-                          <span style={{ fontWeight: 700, color: 'var(--color-danger-text)' }}>{p.stockActual}</span>
-                          <span style={{ color: 'var(--text-muted)', fontSize: '0.675rem' }}>/{p.stockMinimo}</span>
-                        </td>
-                        <td style={{ textAlign: 'center', padding: '0.4rem 0.2rem' }}>
-                          <span className="badge badge-primary" style={{ padding: '0.15rem 0.35rem', fontWeight: 700, fontSize: '0.7rem' }}>
-                            +{p.suggestedQty}
-                          </span>
-                        </td>
-                        <td style={{ textAlign: 'right', padding: '0.4rem 0.2rem' }}>
-                          <button
-                            type="button"
-                            className="btn btn-primary btn-sm"
-                            style={{ padding: '0.15rem 0.4rem', fontSize: '0.7rem' }}
-                            onClick={() => onNavigate('purchases')}
-                            title={`Generar orden de compra`}
-                          >
-                            + Pedir
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          {lowStockProducts.length > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.4rem', paddingTop: '0.35rem', borderTop: '1px solid var(--border-default)', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-              <span>Reposición estimada: <strong style={{ color: 'var(--color-accent)' }}>{formatCurrency(totalRestockCost)}</strong></span>
-              <span><strong>{lowStockProducts.length}</strong> críticos</span>
-            </div>
-          )}
-        </div>
-
-        {/* 💵 ORIGINAL CUADRANTE 3: Proyección de Flujo de Caja & Rentabilidad (OCUPA 1 CUADRANTE) */}
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '1rem' }}>
-          <div className="card-header" style={{ marginBottom: '0.65rem', paddingBottom: '0.5rem' }}>
-            <div>
-              <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.95rem' }}>
-                <DollarSign size={16} style={{ color: 'var(--color-success)' }} />
-                Flujo de Caja & Rentabilidad (30d)
-              </h2>
-              <p className="card-subtitle" style={{ fontSize: '0.725rem' }}>
-                Balance proyectado entre entradas y compromisos
-              </p>
-            </div>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={() => onNavigate('accounting')}
-              style={{ fontSize: '0.725rem', padding: '0.25rem 0.4rem' }}
-            >
-              Costos &rarr;
-            </button>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', flex: 1, justifyContent: 'center' }}>
-            {/* Inflows vs Outflows Balance Box */}
-            <div style={{ backgroundColor: 'var(--bg-subtle)', padding: '0.65rem 0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem', fontSize: '0.75rem' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>(+) Entradas CxC:</span>
-                <span style={{ fontWeight: 800, color: 'var(--color-success-text)' }}>+{formatCurrency(pendingReceivables)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem', fontSize: '0.75rem' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>(-) Salidas CxP + Gastos:</span>
-                <span style={{ fontWeight: 800, color: 'var(--color-danger-text)' }}>-{formatCurrency(totalCommittedOutflows)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-default)', paddingTop: '0.35rem' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>(=) Flujo Neto Esperado:</span>
-                <span style={{ fontSize: '0.9rem', fontWeight: 900, color: netCashflowPosition >= 0 ? 'var(--color-success-text)' : 'var(--color-danger-text)' }}>
-                  {formatCurrency(netCashflowPosition)}
-                </span>
-              </div>
-            </div>
-
-            {/* Live Monthly Margins */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-              <div style={{ backgroundColor: 'var(--bg-surface)', padding: '0.5rem 0.65rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)' }}>
-                <div style={{ fontSize: '0.675rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
-                  Margen Bruto
-                </div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 800, color: grossProfit >= 0 ? 'var(--color-success)' : 'var(--color-danger)', marginTop: '0.1rem' }}>
-                  {formatCurrency(grossProfit)}
-                </div>
-              </div>
-
-              <div style={{ backgroundColor: 'var(--bg-surface)', padding: '0.5rem 0.65rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)' }}>
-                <div style={{ fontSize: '0.675rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
-                  Utilidad Neta
-                </div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 800, color: netOperatingProfit >= 0 ? 'var(--color-success)' : 'var(--color-danger)', marginTop: '0.1rem' }}>
-                  {formatCurrency(netOperatingProfit)}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 🏆 ORIGINAL CUADRANTE 4: Top Productos Estrella & Rotación (OCUPA 1 CUADRANTE) */}
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '1rem' }}>
-          <div className="card-header" style={{ marginBottom: '0.65rem', paddingBottom: '0.5rem' }}>
-            <div>
-              <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.95rem' }}>
-                <Sparkles size={16} style={{ color: 'var(--color-accent)' }} />
-                Top Productos & Rotación
-              </h2>
-              <p className="card-subtitle" style={{ fontSize: '0.725rem' }}>
-                Artículos de mayor facturación del mes
-              </p>
-            </div>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={() => onNavigate('reports')}
-              style={{ fontSize: '0.725rem', padding: '0.25rem 0.4rem' }}
-            >
-              Reportes &rarr;
-            </button>
-          </div>
-
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-            {/* Top sellers list */}
-            {topSellingProducts.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '1.25rem 0.5rem', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                No hay ventas registradas en {currentMonthKey}.
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                {topSellingProducts.map(({ product, qty, total }, index) => {
-                  const share = totalSalesMonth > 0 ? Math.round((total / totalSalesMonth) * 100) : 0;
-                  return (
+                return (
+                  <div
+                    key={step.id}
+                    onMouseEnter={() => setHoveredWaterfallStep(idx)}
+                    onMouseLeave={() => setHoveredWaterfallStep(null)}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      height: '100%',
+                      justifyContent: 'flex-end',
+                      position: 'relative',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {/* Amount Tag Above Bar */}
                     <div
-                      key={product.id}
                       style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: '0.35rem 0.5rem',
-                        borderRadius: 'var(--radius-sm)',
-                        backgroundColor: 'var(--bg-subtle)',
-                        border: '1px solid var(--border-default)',
-                        fontSize: '0.75rem'
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        color: step.color,
+                        textAlign: 'center',
+                        marginBottom: '4px',
+                        whiteSpace: 'nowrap'
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <span style={{ fontWeight: 800, color: 'var(--color-accent)', width: '14px', fontSize: '0.75rem' }}>#{index + 1}</span>
-                        <div>
-                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '110px' }}>
-                            {product.nombre}
-                          </div>
-                          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{qty} vendidas</div>
-                        </div>
+                      {step.type === 'deduction' ? '-' : (step.type === 'total' ? '+' : '=')}
+                      {formatCurrency(step.amount)}
+                    </div>
+
+                    {/* Stepped Bar Container */}
+                    <div style={{ position: 'relative', width: '100%', height: '100px', display: 'flex', alignItems: 'flex-end' }}>
+                      <div
+                        style={{
+                          position: 'absolute',
+                          bottom: `${bottomPct}%`,
+                          left: '10%',
+                          width: '80%',
+                          height: `${heightPct}%`,
+                          backgroundColor: step.color,
+                          borderRadius: '4px',
+                          boxShadow: isHovered ? `0 4px 12px ${step.color}66` : 'none',
+                          transform: isHovered ? 'scaleY(1.04)' : 'none',
+                          transition: 'all 0.18s ease',
+                          opacity: hoveredWaterfallStep !== null && !isHovered ? 0.6 : 1
+                        }}
+                      />
+                    </div>
+
+                    {/* Step Label */}
+                    <div style={{ textAlign: 'center', marginTop: '6px' }}>
+                      <div style={{ fontSize: '0.7rem', fontWeight: 600, color: isHovered ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                        {step.shortLabel}
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: 700, color: 'var(--color-accent)', fontSize: '0.75rem' }}>{formatCurrency(total)}</div>
-                        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{share}% del mes</div>
+                      <div style={{ fontSize: '0.625rem', color: 'var(--text-muted)' }}>
+                        {step.marginPct.toFixed(0)}% venta
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                  </div>
+                );
+              })}
+            </div>
 
-            {/* Dead stock / Slow moving alert */}
-            {deadStockProducts.length > 0 && (
-              <div style={{ marginTop: 'auto', paddingTop: '0.4rem', borderTop: '1px solid var(--border-default)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.675rem', fontWeight: 700, color: 'var(--color-warning-text)', marginBottom: '0.25rem' }}>
-                  <AlertTriangle size={11} />
-                  <span>Sin ventas en el mes:</span>
+            {/* Waterfall Hover Tooltip */}
+            {hoveredWaterfallStep !== null && waterfallSteps[hoveredWaterfallStep] && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '0px',
+                  right: '12px',
+                  backgroundColor: 'rgba(15, 23, 42, 0.94)',
+                  color: '#ffffff',
+                  padding: '0.45rem 0.65rem',
+                  borderRadius: 'var(--radius-sm)',
+                  boxShadow: '0 8px 20px rgba(0,0,0,0.3)',
+                  fontSize: '0.725rem',
+                  zIndex: 10,
+                  border: `1px solid ${waterfallSteps[hoveredWaterfallStep].color}`,
+                  maxWidth: '280px'
+                }}
+              >
+                <div style={{ fontWeight: 700, color: waterfallSteps[hoveredWaterfallStep].color, marginBottom: '0.15rem' }}>
+                  {waterfallSteps[hoveredWaterfallStep].label}
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
-                  {deadStockProducts.map(p => (
-                    <span
-                      key={p.id}
-                      className="badge badge-neutral"
-                      style={{ fontSize: '0.675rem', padding: '0.15rem 0.35rem' }}
-                      title={`Stock disponible: ${p.stockActual} ${p.unidadMedida}`}
-                    >
-                      {p.nombre} ({p.stockActual})
-                    </span>
-                  ))}
+                <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.68rem', lineHeight: 1.3 }}>
+                  {waterfallSteps[hoveredWaterfallStep].description}
+                </div>
+                <div style={{ marginTop: '0.3rem', paddingTop: '0.2rem', borderTop: '1px solid rgba(255,255,255,0.15)', display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Impacto:</span>
+                  <strong>{formatCurrency(waterfallSteps[hoveredWaterfallStep].amount)}</strong>
                 </div>
               </div>
             )}
           </div>
+        )}
+      </div>
+
+      {/* 4. Cuadrícula Operativa Inferior (3 Columnas Compactas) */}
+      <div className="grid-3" style={{ gap: '0.85rem' }}>
+        {/* Columna 1: Semáforo de Cartera CxC */}
+        <div className="card" style={{ padding: '0.85rem 1rem', display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem' }}>
+            <h3 style={{ fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem', margin: 0 }}>
+              <CreditCard size={15} style={{ color: 'var(--color-info)' }} />
+              Semáforo de Cobranza CxC
+            </h3>
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+              {cxcAlerts.length} cuentas pendientes
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', flex: 1, overflowY: 'auto', maxHeight: '150px' }}>
+            {cxcAlerts.length === 0 ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--color-success-text)', fontSize: '0.75rem', gap: '0.35rem', padding: '1rem 0' }}>
+                <CheckCircle size={15} /> Cartera al 100% cobrada y al día
+              </div>
+            ) : (
+              cxcAlerts.slice(0, 3).map(inv => (
+                <div
+                  key={inv.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.35rem 0.5rem',
+                    backgroundColor: 'var(--bg-subtle)',
+                    borderRadius: 'var(--radius-sm)',
+                    border: `1px solid ${inv.statusCategory === 'overdue' ? 'var(--color-danger)' : 'var(--border-subtle)'}`,
+                    fontSize: '0.725rem'
+                  }}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', maxWidth: '60%' }}>
+                    <span style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {inv.clientName}
+                    </span>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                      Folio: {inv.numeroFactura}
+                    </span>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontWeight: 700, color: inv.statusCategory === 'overdue' ? 'var(--color-danger-text)' : 'inherit' }}>
+                      {formatCurrency(inv.saldoPendiente)}
+                    </div>
+                    <span style={{
+                      fontSize: '0.625rem',
+                      fontWeight: 600,
+                      color: inv.statusCategory === 'overdue' ? 'var(--color-danger-text)' : (inv.statusCategory === 'dueSoon' ? 'var(--color-warning-text)' : 'var(--color-success-text)')
+                    }}>
+                      {inv.diffDays < 0 ? `${Math.abs(inv.diffDays)}d vencida` : (inv.diffDays === 0 ? 'Vence hoy' : `En ${inv.diffDays}d`)}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div style={{ marginTop: '0.45rem', paddingTop: '0.35rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Total vencido:</span>
+            <strong style={{ fontSize: '0.775rem', color: totalOverdueAmount > 0 ? 'var(--color-danger-text)' : 'var(--color-success-text)' }}>
+              {formatCurrency(totalOverdueAmount)}
+            </strong>
+          </div>
         </div>
 
+        {/* Columna 2: Reabastecimiento Inteligente de Stock */}
+        <div className="card" style={{ padding: '0.85rem 1rem', display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem' }}>
+            <h3 style={{ fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem', margin: 0 }}>
+              <Boxes size={15} style={{ color: 'var(--color-warning)' }} />
+              Reabastecimiento de Stock
+            </h3>
+            <span style={{ fontSize: '0.7rem', color: lowStockProducts.length > 0 ? 'var(--color-warning-text)' : 'var(--color-success-text)', fontWeight: 600 }}>
+              {lowStockProducts.length} bajo mínimo
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', flex: 1, overflowY: 'auto', maxHeight: '150px' }}>
+            {lowStockProducts.length === 0 ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--color-success-text)', fontSize: '0.75rem', gap: '0.35rem', padding: '1rem 0' }}>
+                <CheckCircle size={15} /> Todas las existencias están sobre el mínimo
+              </div>
+            ) : (
+              lowStockProducts.slice(0, 3).map(prod => (
+                <div
+                  key={prod.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.35rem 0.5rem',
+                    backgroundColor: 'var(--bg-subtle)',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--border-subtle)',
+                    fontSize: '0.725rem'
+                  }}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', maxWidth: '60%' }}>
+                    <span style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {prod.nombre}
+                    </span>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                      Stock: <strong style={{ color: 'var(--color-danger-text)' }}>{prod.stockActual}</strong> / Min: {prod.stockMinimo}
+                    </span>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontWeight: 700, color: 'var(--color-accent)' }}>
+                      +{prod.suggestedQty} pzas
+                    </div>
+                    <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)' }}>
+                      Est: {formatCurrency(prod.estimatedCost)}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div style={{ marginTop: '0.45rem', paddingTop: '0.35rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Costo estimado reposición:</span>
+            <strong style={{ fontSize: '0.775rem', color: 'var(--color-accent)' }}>
+              {formatCurrency(totalRestockCost)}
+            </strong>
+          </div>
+        </div>
+
+        {/* Columna 3: Proyección de Liquidez / SKUs Estrella */}
+        <div className="card" style={{ padding: '0.85rem 1rem', display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              <button
+                type="button"
+                onClick={() => setBottomColView('cashflow')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: '0 0.2rem',
+                  fontSize: '0.825rem',
+                  fontWeight: bottomColView === 'cashflow' ? 700 : 500,
+                  color: bottomColView === 'cashflow' ? 'var(--color-accent)' : 'var(--text-muted)',
+                  cursor: 'pointer',
+                  borderBottom: bottomColView === 'cashflow' ? '2px solid var(--color-accent)' : '2px solid transparent'
+                }}
+              >
+                Flujo 30 Días
+              </button>
+              <span style={{ color: 'var(--border-default)', fontSize: '0.75rem' }}>|</span>
+              <button
+                type="button"
+                onClick={() => setBottomColView('topskus')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: '0 0.2rem',
+                  fontSize: '0.825rem',
+                  fontWeight: bottomColView === 'topskus' ? 700 : 500,
+                  color: bottomColView === 'topskus' ? 'var(--color-accent)' : 'var(--text-muted)',
+                  cursor: 'pointer',
+                  borderBottom: bottomColView === 'topskus' ? '2px solid var(--color-accent)' : '2px solid transparent'
+                }}
+              >
+                Top SKUs
+              </button>
+            </div>
+            <span style={{ fontSize: '0.675rem', color: 'var(--text-muted)' }}>
+              {bottomColView === 'cashflow' ? 'Entradas vs Salidas' : 'Más vendidos'}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', flex: 1, overflowY: 'auto', maxHeight: '150px' }}>
+            {bottomColView === 'cashflow' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', padding: '0.2rem 0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.725rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>(+) Cobros esperados (CxC):</span>
+                  <strong style={{ color: 'var(--color-success)' }}>{formatCurrency(pendingReceivables)}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.725rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>(-) Pagos proveedores (CxP):</span>
+                  <strong style={{ color: 'var(--color-danger-text)' }}>-{formatCurrency(pendingPayables)}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.725rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>(-) Gastos OpEx estimados:</span>
+                  <strong style={{ color: 'var(--color-warning-text)' }}>-{formatCurrency(prorrateo.gastoOperativoTotal)}</strong>
+                </div>
+                <div style={{
+                  padding: '0.35rem 0.5rem',
+                  backgroundColor: netCashflowPosition >= 0 ? 'rgba(16, 185, 129, 0.1)' : 'var(--color-danger-bg)',
+                  borderRadius: 'var(--radius-sm)',
+                  border: `1px solid ${netCashflowPosition >= 0 ? 'rgba(16, 185, 129, 0.25)' : 'var(--color-danger)'}`,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: '0.75rem',
+                  alignItems: 'center'
+                }}>
+                  <span style={{ fontWeight: 600 }}>Posición Neta Proyectada:</span>
+                  <strong style={{ color: netCashflowPosition >= 0 ? 'var(--color-success-text)' : 'var(--color-danger-text)' }}>
+                    {formatCurrency(netCashflowPosition)}
+                  </strong>
+                </div>
+              </div>
+            ) : (
+              topSellingProducts.length === 0 ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)', fontSize: '0.75rem', padding: '1rem 0' }}>
+                  Sin ventas registradas en el mes actual
+                </div>
+              ) : (
+                topSellingProducts.slice(0, 3).map((item, idx) => (
+                  <div
+                    key={item.product.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.35rem 0.5rem',
+                      backgroundColor: 'var(--bg-subtle)',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: '0.725rem'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', maxWidth: '65%' }}>
+                      <span style={{ width: '16px', height: '16px', borderRadius: '50%', backgroundColor: 'var(--color-accent)', color: '#fff', fontSize: '0.625rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+                        {idx + 1}
+                      </span>
+                      <span style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {item.product.nombre}
+                      </span>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                        {formatCurrency(item.total)}
+                      </div>
+                      <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)' }}>
+                        {item.qty} pzas vendidas
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )
+            )}
+          </div>
+
+          <div style={{ marginTop: '0.45rem', paddingTop: '0.35rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Acción recomendada:</span>
+            <button
+              type="button"
+              onClick={() => onNavigate('sales')}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--color-accent)',
+                fontSize: '0.7rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.2rem'
+              }}
+            >
+              Ir a Ventas <ArrowRight size={12} />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
