@@ -43,7 +43,7 @@ export function parseDateSafe(dateString?: string): Date | null {
   const str = String(dateString).trim();
   if (!str) return null;
 
-  // Handle YYYY-MM-DD explicitly to prevent UTC midnight shifts on negative timezones (e.g. America/Mexico, Costa Rica)
+  // 1. Handle YYYY-MM-DD explicitly to prevent UTC midnight shifts
   const dateOnlyMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (dateOnlyMatch) {
     const year = parseInt(dateOnlyMatch[1], 10);
@@ -52,9 +52,10 @@ export function parseDateSafe(dateString?: string): Date | null {
     return new Date(year, month, day, 12, 0, 0); // Noon local avoids all boundary shift issues
   }
 
-  // Handle YYYY-MM-DDTHH:mm... strings without timezone
+  // 2. Handle any ISO datetime string (with or without 'Z' or timezone offset) by extracting YYYY, MM, DD, HH, mm, ss directly
+  // This completely prevents UTC-to-local midnight day-loss (e.g. 2026-10-01T00:00:00.000Z becoming Sep 30 in UTC-6)
   const dateTimeMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/);
-  if (dateTimeMatch && !str.endsWith('Z') && !str.includes('+') && !str.match(/-\d{2}:\d{2}$/)) {
+  if (dateTimeMatch) {
     const year = parseInt(dateTimeMatch[1], 10);
     const month = parseInt(dateTimeMatch[2], 10) - 1;
     const day = parseInt(dateTimeMatch[3], 10);
@@ -64,7 +65,7 @@ export function parseDateSafe(dateString?: string): Date | null {
     return new Date(year, month, day, hour, minute, second);
   }
 
-  // Handle date-time strings with timezone
+  // Fallback
   const d = new Date(str);
   if (isNaN(d.getTime())) return null;
   return d;

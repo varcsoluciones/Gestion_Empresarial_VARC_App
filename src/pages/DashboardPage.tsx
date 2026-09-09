@@ -44,7 +44,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
   // 1. Current Month KPI Metrics Calculations
   const validInvoices = invoices.filter(i => i.estado === 'emitida' || i.estado === 'pagada');
   const monthInvoices = validInvoices.filter(i =>
-    i.fechaEmision.startsWith(currentMonthKey) || i.emitidaFecha?.startsWith(currentMonthKey)
+    i.fechaEmision.startsWith(currentMonthKey)
   );
 
   const totalSalesMonth = monthInvoices.reduce((sum, i) => sum + i.total, 0);
@@ -72,22 +72,52 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
   const grossProfit = totalSalesSubtotal - totalCostOfGoodsSold;
   const netOperatingProfit = grossProfit - prorrateo.gastoOperativoTotal;
 
-  // 2. Dynamic Historical Evolution (From first active month to current month)
+  // 2. Dynamic Historical Evolution (From first active month to latest active/current month)
   const historicalStats = useMemo(() => {
-    // Generate candidate months up to 12 months in the past
-    const candidateMonths: string[] = [];
     const now = new Date();
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
+    const curY = now.getFullYear();
+    const curM = now.getMonth() + 1;
+    const curMonthKey = `${curY}-${String(curM).padStart(2, '0')}`;
+
+    // Collect all month keys that have activity from invoices and expenses
+    const activityMonthKeys = new Set<string>();
+    invoices.forEach(i => {
+      if (i.estado === 'emitida' || i.estado === 'pagada') {
+        if (i.fechaEmision && i.fechaEmision.length >= 7) {
+          activityMonthKeys.add(i.fechaEmision.slice(0, 7));
+        }
+      }
+    });
+
+    const sortedActivity = Array.from(activityMonthKeys).filter(k => /^\d{4}-\d{2}$/.test(k)).sort();
+
+    // Determine the minimum and maximum month keys to display
+    const minActive = sortedActivity.length > 0 ? sortedActivity[0] : curMonthKey;
+    const maxActive = sortedActivity.length > 0 ? sortedActivity[sortedActivity.length - 1] : curMonthKey;
+    const endMonthKey = maxActive > curMonthKey ? maxActive : curMonthKey;
+
+    // Generate candidate months (up to 12 months back from endMonthKey, covering minActive)
+    const [endY, endM] = endMonthKey.split('-').map(Number);
+    const [minY, minM] = minActive.split('-').map(Number);
+
+    const spanMonths = (endY - minY) * 12 + (endM - minM) + 1;
+    const startBack = Math.max(spanMonths - 1, 5); // at least 6 months window
+    const startDate = new Date(endY, endM - 1 - startBack, 1);
+    const endDate = new Date(endY, endM - 1, 1);
+
+    const candidateMonths: string[] = [];
+    let curr = new Date(startDate);
+    while (curr <= endDate) {
+      const y = curr.getFullYear();
+      const m = String(curr.getMonth() + 1).padStart(2, '0');
       candidateMonths.push(`${y}-${m}`);
+      curr = new Date(curr.getFullYear(), curr.getMonth() + 1, 1);
     }
 
     const rawStats = candidateMonths.map(mKey => {
       const mInvoices = invoices.filter(i =>
         (i.estado === 'emitida' || i.estado === 'pagada') &&
-        (i.fechaEmision.startsWith(mKey) || i.emitidaFecha?.startsWith(mKey))
+        (i.fechaEmision.startsWith(mKey))
       );
       const ventas = mInvoices.reduce((sum, i) => sum + i.total, 0);
       const ventasSubtotal = mInvoices.reduce((sum, i) => sum + i.subtotal, 0);

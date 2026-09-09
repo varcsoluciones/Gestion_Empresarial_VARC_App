@@ -84,7 +84,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
   // 1. Calculations for P&L (Estado de Resultados)
   const monthInvoices = invoices.filter(i =>
     (i.estado === 'emitida' || i.estado === 'pagada') &&
-    (i.fechaEmision.startsWith(selectedMonth) || i.emitidaFecha?.startsWith(selectedMonth))
+    (i.fechaEmision.startsWith(selectedMonth))
   );
 
   const totalGrossSales = monthInvoices.reduce((sum, i) => sum + (i.subtotal + i.descuentoTotal), 0);

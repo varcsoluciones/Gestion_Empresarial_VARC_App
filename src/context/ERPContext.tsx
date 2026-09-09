@@ -961,7 +961,6 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const client = clients.find(c => c.id === quote.clienteId);
     const tipoPago = client?.tipoPago || 'contado';
     const numFactura = generateDocNumber('FA', invoices);
-    const now = new Date().toISOString();
 
     const invoiceItems = quote.items.map(item => ({
       id: `fitem-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
@@ -975,16 +974,18 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       subtotal: item.subtotal
     }));
 
+    const emissionDate = getTodayLocalDateString();
+
     const newInvoice: Invoice = {
       id: numFactura,
       numeroFactura: numFactura,
       cotizacionIdOrigen: quote.id,
       clienteId: quote.clienteId,
-      fechaEmision: getTodayLocalDateString(),
+      fechaEmision: emissionDate,
       fechaVencimiento: getFutureLocalDateString(client?.diasCredito || 0),
       tipoPago: tipoPago,
       estado: directIssue ? (quote.total <= 0 ? 'pagada' : 'emitida') : 'borrador',
-      emitidaFecha: directIssue ? now : undefined,
+      emitidaFecha: directIssue ? emissionDate : undefined,
       items: invoiceItems,
       subtotal: quote.subtotal,
       descuentoTotal: quote.descuentoTotal,
@@ -997,7 +998,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
 
     if (directIssue) {
-      applyInvoiceStockDeduction(newInvoice, now);
+      applyInvoiceStockDeduction(newInvoice, emissionDate);
     }
 
     setInvoices(prev => [newInvoice, ...prev]);
@@ -1009,21 +1010,22 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Actions: Facturación (Invoices & CxC)
   const createInvoice = (data: Omit<Invoice, 'id' | 'numeroFactura' | 'saldoPendiente' | 'pagos'>): Invoice => {
     const num = generateDocNumber('FA', invoices);
-    const now = new Date().toISOString();
+    const emissionDate = data.fechaEmision || getTodayLocalDateString();
     const isDirectEmit = data.estado === 'emitida';
 
     const newInvoice: Invoice = {
       ...data,
       id: num,
       numeroFactura: num,
+      fechaEmision: emissionDate,
       saldoPendiente: data.total,
       pagos: [],
       estado: isDirectEmit ? (data.total <= 0 ? 'pagada' : 'emitida') : 'borrador',
-      emitidaFecha: isDirectEmit ? now : undefined
+      emitidaFecha: isDirectEmit ? (data.emitidaFecha || emissionDate) : undefined
     };
 
     if (isDirectEmit) {
-      applyInvoiceStockDeduction(newInvoice, now);
+      applyInvoiceStockDeduction(newInvoice, emissionDate);
     }
 
     setInvoices(prev => [newInvoice, ...prev]);
@@ -1036,13 +1038,13 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return;
     }
 
-    const now = new Date().toISOString();
-    applyInvoiceStockDeduction(invoice, now);
+    const emissionDate = invoice.fechaEmision || getTodayLocalDateString();
+    applyInvoiceStockDeduction(invoice, emissionDate);
 
     setInvoices(prev => prev.map(inv => inv.id === invoiceId ? {
       ...inv,
       estado: inv.saldoPendiente <= 0 ? 'pagada' : 'emitida',
-      emitidaFecha: now
+      emitidaFecha: emissionDate
     } : inv));
   };
 
@@ -1424,7 +1426,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const validInvoices = invoices.filter(inv => 
       (inv.estado === 'emitida' || inv.estado === 'pagada') && 
-      (inv.fechaEmision.startsWith(mesKey) || inv.emitidaFecha?.startsWith(mesKey))
+      (inv.fechaEmision.startsWith(mesKey))
     );
 
     // Unidades vendidas en el periodo
