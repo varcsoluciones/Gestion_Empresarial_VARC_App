@@ -37,7 +37,7 @@ const accents: { key: AccentColor; name: string; hex: string; description: strin
   { key: 'teal', name: 'Turquesa Apple', hex: '#00c7be', description: 'Balanceado, sobrio y limpio' },
   { key: 'green', name: 'Verde Esmeralda', hex: '#16a34a', description: 'Positivo, financiero y rentable' },
   { key: 'forest', name: 'Verde Bosque / Pino', hex: '#047857', description: 'Sobrio, ejecutivo y natural' },
-  { key: 'yellow', name: 'Amarillo Dorado', hex: '#ca8a04', description: 'Cálido, brillante y enérgico' },
+  { key: 'yellow', name: 'Amarillo Solar / Oro', hex: '#eab308', description: 'Vibrante, luminoso, cálido y de alta energía' },
   { key: 'orange', name: 'Naranja Ámbar', hex: '#ea580c', description: 'Dinámico, proactivo y comercial' },
   { key: 'wine', name: 'Rojo Vino / Borgoña', hex: '#be123c', description: 'Rojo vino refinado, intenso y vibrante' },
   { key: 'coffee', name: 'Café Moka / Espresso', hex: '#6c4a38', description: 'Café tostado cálido, acogedor y artesanal' },
