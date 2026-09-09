@@ -127,6 +127,35 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
     1000
   ) * 1.15;
 
+  // SVG Chart Geometry Calculations
+  const svgWidth = 500;
+  const svgHeight = 200;
+  const padLeft = 45;
+  const padRight = 20;
+  const padTop = 20;
+  const padBottom = 30;
+  const chartW = svgWidth - padLeft - padRight;
+  const chartH = svgHeight - padTop - padBottom;
+
+  const getX = (index: number) => padLeft + (index * (chartW / Math.max(1, historicalStats.length - 1)));
+  const getY = (val: number) => padTop + chartH - (Math.max(0, val) / maxChartVal) * chartH;
+
+  const ventasPoints = historicalStats.map((s, idx) => ({ x: getX(idx), y: getY(s.ventas), val: s.ventas }));
+  const costoPoints = historicalStats.map((s, idx) => ({ x: getX(idx), y: getY(s.costoTotal), val: s.costoTotal }));
+  const utilidadPoints = historicalStats.map((s, idx) => ({ x: getX(idx), y: getY(Math.max(0, s.utilidad)), val: s.utilidad }));
+
+  const makePath = (points: { x: number; y: number }[]) => {
+    return points.reduce((acc, p, idx) => `${acc} ${idx === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`, '');
+  };
+
+  const ventasLinePath = makePath(ventasPoints);
+  const costoLinePath = makePath(costoPoints);
+  const utilidadLinePath = makePath(utilidadPoints);
+
+  const ventasAreaPath = ventasPoints.length > 0
+    ? `${ventasLinePath} L ${ventasPoints[ventasPoints.length - 1].x.toFixed(1)} ${(padTop + chartH).toFixed(1)} L ${ventasPoints[0].x.toFixed(1)} ${(padTop + chartH).toFixed(1)} Z`
+    : '';
+
   // 3. Section 1 Data: Semáforo de Cobranza & Créditos CxC
   const cxcAlerts = invoices
     .filter(i => i.estado === 'emitida' && i.saldoPendiente > 0)
@@ -205,7 +234,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         <div>
           <h1 className="page-title">Panel de Control & Centro de Mando</h1>
           <p className="page-description">
-            Monitoreo en tiempo real de cobranza, compras, inventario y evolución de rentabilidad ({currentMonthKey}).
+            Monitoreo en tiempo real de cobranza, compras, inventario y tendencias de rentabilidad ({currentMonthKey}).
           </p>
         </div>
         <div className="page-actions">
@@ -280,336 +309,278 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* HERO SECTION: 📊 Gráfico Histórico de Ventas vs Costos Operativos (Últimos 6 Meses) */}
-      <div className="card" style={{ marginBottom: '1.25rem', padding: '1.25rem' }}>
-        {/* Header with Title and Summary Badges */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          flexWrap: 'wrap',
-          gap: '1rem',
-          marginBottom: '1.25rem',
-          paddingBottom: '0.85rem',
-          borderBottom: '1px solid var(--border-default)'
-        }}>
-          <div>
-            <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.15rem' }}>
-              <BarChart3 size={20} style={{ color: 'var(--color-accent)' }} />
-              Evolución Histórica: Ventas vs. Costos Operativos Totales (6 Meses)
-            </h2>
-            <p className="card-subtitle" style={{ fontSize: '0.8rem', marginTop: '0.2rem' }}>
-              Comparativa mensual entre Ingresos Facturados, Estructura de Costos (Costo Mercancía + Gastos Operativos) y Margen Neto.
-            </p>
-          </div>
+      {/* 4 STRATEGIC OPERATIONAL QUADRANTS (2x2 GRID) */}
+      <div className="grid-2" style={{ gap: '1.25rem' }}>
 
-          {/* 6-Month Summary KPI Pills */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-            <div style={{
-              padding: '0.4rem 0.75rem',
-              backgroundColor: 'var(--bg-subtle)',
-              border: '1px solid var(--border-default)',
-              borderRadius: 'var(--radius-md)',
-              fontSize: '0.75rem'
-            }}>
-              <span style={{ color: 'var(--text-muted)' }}>Ventas (6M): </span>
-              <strong style={{ color: 'var(--color-success)', fontSize: '0.85rem' }}>{formatCurrency(totalVentas6M)}</strong>
-            </div>
-
-            <div style={{
-              padding: '0.4rem 0.75rem',
-              backgroundColor: 'var(--bg-subtle)',
-              border: '1px solid var(--border-default)',
-              borderRadius: 'var(--radius-md)',
-              fontSize: '0.75rem'
-            }}>
-              <span style={{ color: 'var(--text-muted)' }}>Costos Totales (6M): </span>
-              <strong style={{ color: 'var(--color-danger-text)', fontSize: '0.85rem' }}>{formatCurrency(totalCostos6M)}</strong>
-            </div>
-
-            <div style={{
-              padding: '0.4rem 0.75rem',
-              backgroundColor: totalUtilidad6M >= 0 ? 'var(--color-success-bg)' : 'var(--color-danger-bg)',
-              border: `1px solid ${totalUtilidad6M >= 0 ? 'var(--color-success)' : 'var(--color-danger)'}`,
-              borderRadius: 'var(--radius-md)',
-              fontSize: '0.75rem'
-            }}>
-              <span style={{ color: totalUtilidad6M >= 0 ? 'var(--color-success-text)' : 'var(--color-danger-text)' }}>Utilidad Neta: </span>
-              <strong style={{ color: totalUtilidad6M >= 0 ? 'var(--color-success-text)' : 'var(--color-danger-text)', fontSize: '0.85rem' }}>
-                {formatCurrency(totalUtilidad6M)} ({margenPromedio6M.toFixed(1)}%)
-              </strong>
-            </div>
-          </div>
-        </div>
-
-        {/* Visual Chart Canvas */}
-        <div style={{ position: 'relative', width: '100%', minHeight: '260px', padding: '0.5rem 0' }}>
-          {/* Subtle Gridlines Background */}
-          <div style={{
-            position: 'absolute',
-            inset: '0 0 45px 0',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            pointerEvents: 'none',
-            zIndex: 0
-          }}>
-            {[1, 0.75, 0.5, 0.25, 0].map((ratio, idx) => (
-              <div key={idx} style={{
-                display: 'flex',
-                alignItems: 'center',
-                width: '100%',
-                borderBottom: '1px dashed var(--border-subtle)'
-              }}>
-                <span style={{
-                  fontSize: '0.65rem',
-                  color: 'var(--text-muted)',
-                  width: '65px',
-                  textAlign: 'right',
-                  paddingRight: '8px',
-                  userSelect: 'none'
-                }}>
-                  {formatCurrency(maxChartVal * ratio)}
-                </span>
-                <div style={{ flex: 1 }} />
-              </div>
-            ))}
-          </div>
-
-          {/* Month Columns Grid */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: `repeat(${historicalStats.length}, 1fr)`,
-            gap: '1rem',
-            height: '220px',
-            marginLeft: '70px',
-            position: 'relative',
-            zIndex: 1
-          }}>
-            {historicalStats.map((stat, index) => {
-              const isHovered = hoveredMonthIndex === index;
-              const isCurrent = stat.monthKey === currentMonthKey;
-
-              const ventasHeightPercent = maxChartVal > 0 ? Math.min(100, Math.max(4, (stat.ventas / maxChartVal) * 100)) : 4;
-              const costoHeightPercent = maxChartVal > 0 ? Math.min(100, Math.max(4, (stat.costoTotal / maxChartVal) * 100)) : 4;
-              
-              // Proportion of COGS vs OPEX within the Cost bar
-              const cogsPercent = stat.costoTotal > 0 ? (stat.cogs / stat.costoTotal) * 100 : 50;
-              const opexPercent = stat.costoTotal > 0 ? (stat.opex / stat.costoTotal) * 100 : 50;
-
-              return (
-                <div
-                  key={stat.monthKey}
-                  onMouseEnter={() => setHoveredMonthIndex(index)}
-                  onMouseLeave={() => setHoveredMonthIndex(null)}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'flex-end',
-                    height: '100%',
-                    position: 'relative',
-                    cursor: 'pointer',
-                    padding: '0.25rem',
-                    borderRadius: 'var(--radius-md)',
-                    backgroundColor: isHovered ? 'var(--bg-surface-hover)' : (isCurrent ? 'var(--color-accent-subtle)' : 'transparent'),
-                    border: isCurrent ? '1px solid var(--color-accent)' : '1px solid transparent',
-                    transition: 'all var(--transition-fast)'
-                  }}
-                >
-                  {/* Floating Tooltip on Hover */}
-                  {isHovered && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '-12px',
-                      transform: 'translateY(-100%)',
-                      zIndex: 20,
-                      backgroundColor: 'var(--bg-surface-elevated)',
-                      border: '1px solid var(--border-default)',
-                      borderRadius: 'var(--radius-md)',
-                      boxShadow: 'var(--shadow-lg)',
-                      padding: '0.65rem 0.85rem',
-                      width: '210px',
-                      fontSize: '0.75rem',
-                      pointerEvents: 'none',
-                      color: 'var(--text-primary)'
-                    }}>
-                      <div style={{ fontWeight: 800, fontSize: '0.8rem', marginBottom: '0.35rem', borderBottom: '1px solid var(--border-default)', paddingBottom: '0.25rem' }}>
-                        {stat.label} {isCurrent && <span style={{ color: 'var(--color-accent)', fontSize: '0.7rem' }}>(Mes Actual)</span>}
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
-                        <span style={{ color: 'var(--color-success)' }}>● Ventas Totales:</span>
-                        <strong>{formatCurrency(stat.ventas)}</strong>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem', paddingLeft: '0.5rem', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                        <span>Costo Mercancía (COGS):</span>
-                        <span>{formatCurrency(stat.cogs)}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem', paddingLeft: '0.5rem', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                        <span>Gastos Operativos (OPEX):</span>
-                        <span>{formatCurrency(stat.opex)}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', borderTop: '1px dashed var(--border-default)', paddingTop: '0.25rem' }}>
-                        <span style={{ color: 'var(--color-danger-text)' }}>● Costo Total:</span>
-                        <strong>{formatCurrency(stat.costoTotal)}</strong>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-default)', paddingTop: '0.25rem', marginTop: '0.15rem' }}>
-                        <span style={{ fontWeight: 700, color: stat.utilidad >= 0 ? 'var(--color-success-text)' : 'var(--color-danger-text)' }}>
-                          (=) Utilidad Operativa:
-                        </span>
-                        <strong style={{ color: stat.utilidad >= 0 ? 'var(--color-success-text)' : 'var(--color-danger-text)' }}>
-                          {formatCurrency(stat.utilidad)}
-                        </strong>
-                      </div>
-                      <div style={{ fontSize: '0.7rem', textAlign: 'right', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
-                        Margen: {stat.margen.toFixed(1)}% | {stat.facturasCount} ventas
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Dual Paired Bars Container */}
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'flex-end',
-                    gap: '6px',
-                    height: '180px',
-                    width: '100%',
-                    justifyContent: 'center'
-                  }}>
-                    {/* Bar 1: Ventas (Emerald Gradient) */}
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'flex-end',
-                      height: '100%',
-                      width: '28px'
-                    }}>
-                      <div
-                        style={{
-                          width: '100%',
-                          height: `${ventasHeightPercent}%`,
-                          background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)',
-                          borderRadius: '4px 4px 0 0',
-                          boxShadow: isHovered ? '0 0 10px rgba(16, 185, 129, 0.4)' : 'none',
-                          transition: 'height 0.3s ease, transform 0.2s ease',
-                          transform: isHovered ? 'scaleY(1.02)' : 'none',
-                          position: 'relative'
-                        }}
-                        title={`Ventas: ${formatCurrency(stat.ventas)}`}
-                      />
-                    </div>
-
-                    {/* Bar 2: Costos Operativos Totales (Stacked COGS + OPEX) */}
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'flex-end',
-                      height: '100%',
-                      width: '28px'
-                    }}>
-                      <div
-                        style={{
-                          width: '100%',
-                          height: `${costoHeightPercent}%`,
-                          borderRadius: '4px 4px 0 0',
-                          display: 'flex',
-                          flexDirection: 'column-reverse',
-                          overflow: 'hidden',
-                          boxShadow: isHovered ? '0 0 10px rgba(239, 68, 68, 0.4)' : 'none',
-                          transition: 'height 0.3s ease, transform 0.2s ease',
-                          transform: isHovered ? 'scaleY(1.02)' : 'none'
-                        }}
-                        title={`Costos Totales: ${formatCurrency(stat.costoTotal)} (Mercancía: ${formatCurrency(stat.cogs)}, Gastos: ${formatCurrency(stat.opex)})`}
-                      >
-                        {/* OPEX portion (Purple/Pink tone) */}
-                        <div style={{
-                          height: `${opexPercent}%`,
-                          background: 'linear-gradient(180deg, #a855f7 0%, #9333ea 100%)',
-                          width: '100%'
-                        }} />
-                        {/* COGS portion (Coral / Amber tone) */}
-                        <div style={{
-                          height: `${cogsPercent}%`,
-                          background: 'linear-gradient(180deg, #f97316 0%, #ea580c 100%)',
-                          width: '100%'
-                        }} />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Month Label & Utility Sub-badge */}
-                  <div style={{ marginTop: '0.4rem', textAlign: 'center', width: '100%' }}>
-                    <div style={{
-                      fontSize: '0.75rem',
-                      fontWeight: isCurrent ? 800 : 600,
-                      color: isCurrent ? 'var(--color-accent)' : 'var(--text-primary)'
-                    }}>
-                      {stat.shortLabel}
-                    </div>
-                    <div style={{
-                      fontSize: '0.675rem',
-                      fontWeight: 700,
-                      color: stat.utilidad >= 0 ? 'var(--color-success)' : 'var(--color-danger)',
-                      marginTop: '0.1rem'
-                    }}>
-                      {stat.utilidad >= 0 ? `+${stat.margen.toFixed(0)}%` : `${stat.margen.toFixed(0)}%`}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Legend Footer */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: '1.5rem',
-          flexWrap: 'wrap',
-          marginTop: '0.85rem',
-          paddingTop: '0.65rem',
-          borderTop: '1px solid var(--border-default)',
-          fontSize: '0.75rem'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)' }} />
-            <span style={{ fontWeight: 600 }}>Ventas Facturadas</span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'linear-gradient(180deg, #f97316 0%, #ea580c 100%)' }} />
-            <span style={{ color: 'var(--text-secondary)' }}>Costo de Mercancía (COGS)</span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'linear-gradient(180deg, #a855f7 0%, #9333ea 100%)' }} />
-            <span style={{ color: 'var(--text-secondary)' }}>Gastos Operativos (OPEX Prorrateado)</span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-success)' }} />
-            <span style={{ color: 'var(--text-muted)' }}>% Margen Neto Mensual</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 3 COMPACT OPERATIONAL COLUMNS BELOW */}
-      <div className="grid-3" style={{ gap: '1.25rem' }}>
-
-        {/* COLUMN 1: 🚨 Semáforo de Cobranza & Créditos CxC */}
+        {/* QUADRANT 1: 📈 Gráfica de Línea de Tendencias Históricas (6 Meses) */}
         <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '1rem' }}>
           <div className="card-header" style={{ marginBottom: '0.65rem', paddingBottom: '0.5rem' }}>
             <div>
-              <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.95rem' }}>
-                <ShieldAlert size={16} style={{ color: overdueInvoices.length > 0 ? 'var(--color-danger)' : 'var(--color-info)' }} />
-                Cobranza & Créditos CxC
+              <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '1rem' }}>
+                <TrendingUp size={17} style={{ color: 'var(--color-accent)' }} />
+                Tendencias Históricas (6 Meses)
               </h2>
-              <p className="card-subtitle" style={{ fontSize: '0.725rem' }}>
-                Facturas vencidas y créditos en riesgo
+              <p className="card-subtitle" style={{ fontSize: '0.75rem' }}>
+                Ventas vs Costos Operativos Totales y Margen
+              </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+              <div style={{
+                padding: '0.2rem 0.45rem',
+                backgroundColor: 'var(--bg-subtle)',
+                border: '1px solid var(--border-default)',
+                borderRadius: 'var(--radius-sm)',
+                fontSize: '0.7rem'
+              }}>
+                <span style={{ color: 'var(--text-muted)' }}>Ventas: </span>
+                <strong style={{ color: '#10b981' }}>{formatCurrency(totalVentas6M)}</strong>
+              </div>
+              <div style={{
+                padding: '0.2rem 0.45rem',
+                backgroundColor: 'var(--bg-subtle)',
+                border: '1px solid var(--border-default)',
+                borderRadius: 'var(--radius-sm)',
+                fontSize: '0.7rem'
+              }}>
+                <span style={{ color: 'var(--text-muted)' }}>Costos: </span>
+                <strong style={{ color: '#f43f5e' }}>{formatCurrency(totalCostos6M)}</strong>
+              </div>
+              <div style={{
+                padding: '0.2rem 0.45rem',
+                backgroundColor: totalUtilidad6M >= 0 ? 'var(--color-success-bg)' : 'var(--color-danger-bg)',
+                border: `1px solid ${totalUtilidad6M >= 0 ? 'var(--color-success)' : 'var(--color-danger)'}`,
+                borderRadius: 'var(--radius-sm)',
+                fontSize: '0.7rem'
+              }}>
+                <span style={{ color: totalUtilidad6M >= 0 ? 'var(--color-success-text)' : 'var(--color-danger-text)' }}>Utilidad: </span>
+                <strong style={{ color: totalUtilidad6M >= 0 ? 'var(--color-success-text)' : 'var(--color-danger-text)' }}>
+                  {formatCurrency(totalUtilidad6M)} ({margenPromedio6M.toFixed(0)}%)
+                </strong>
+              </div>
+            </div>
+          </div>
+
+          {/* SVG Line Chart */}
+          <div style={{ position: 'relative', width: '100%', flex: 1, minHeight: '195px' }}>
+            <svg
+              viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+              style={{ width: '100%', height: '100%', overflow: 'visible' }}
+            >
+              <defs>
+                <linearGradient id="ventasLineGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#10b981" stopOpacity="0.25" />
+                  <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                </linearGradient>
+                <filter id="glowGreen" x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#10b981" floodOpacity="0.3" />
+                </filter>
+              </defs>
+
+              {/* Gridlines */}
+              {[1, 0.66, 0.33, 0].map((ratio, idx) => {
+                const yPos = padTop + chartH * (1 - ratio);
+                return (
+                  <g key={idx}>
+                    <line
+                      x1={padLeft}
+                      y1={yPos}
+                      x2={padLeft + chartW}
+                      y2={yPos}
+                      stroke="var(--border-subtle)"
+                      strokeDasharray="3 3"
+                      strokeWidth="1"
+                    />
+                    <text
+                      x={padLeft - 6}
+                      y={yPos + 3}
+                      textAnchor="end"
+                      fontSize="9"
+                      fill="var(--text-muted)"
+                    >
+                      {formatCurrency(maxChartVal * ratio).replace('.00', '')}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* Area under Ventas Line */}
+              {ventasAreaPath && (
+                <path d={ventasAreaPath} fill="url(#ventasLineGrad)" />
+              )}
+
+              {/* Costos Operativos Line (Red/Coral) */}
+              <path
+                d={costoLinePath}
+                fill="none"
+                stroke="#f43f5e"
+                strokeWidth="2.5"
+                strokeDasharray="4 2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+
+              {/* Ventas Line (Green Solid) */}
+              <path
+                d={ventasLinePath}
+                fill="none"
+                stroke="#10b981"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                filter="url(#glowGreen)"
+              />
+
+              {/* Utilidad Line (Cyan / Blue) */}
+              <path
+                d={utilidadLinePath}
+                fill="none"
+                stroke="#0ea5e9"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+
+              {/* X Axis Month Labels & Interactive Columns */}
+              {historicalStats.map((stat, idx) => {
+                const x = getX(idx);
+                const isHovered = hoveredMonthIndex === idx;
+                const isCurrent = stat.monthKey === currentMonthKey;
+
+                return (
+                  <g key={stat.monthKey} onMouseEnter={() => setHoveredMonthIndex(idx)} onMouseLeave={() => setHoveredMonthIndex(null)} style={{ cursor: 'pointer' }}>
+                    {/* Hover vertical bar */}
+                    {isHovered && (
+                      <line
+                        x1={x}
+                        y1={padTop}
+                        x2={x}
+                        y2={padTop + chartH}
+                        stroke="var(--color-accent)"
+                        strokeWidth="1.5"
+                        strokeDasharray="2 2"
+                      />
+                    )}
+
+                    {/* Data Points */}
+                    <circle
+                      cx={x}
+                      cy={getY(stat.ventas)}
+                      r={isHovered ? 6 : 4}
+                      fill="#10b981"
+                      stroke="var(--bg-surface)"
+                      strokeWidth="2"
+                      style={{ transition: 'all 0.2s ease' }}
+                    />
+                    <circle
+                      cx={x}
+                      cy={getY(stat.costoTotal)}
+                      r={isHovered ? 5 : 3.5}
+                      fill="#f43f5e"
+                      stroke="var(--bg-surface)"
+                      strokeWidth="2"
+                      style={{ transition: 'all 0.2s ease' }}
+                    />
+                    <circle
+                      cx={x}
+                      cy={getY(Math.max(0, stat.utilidad))}
+                      r={isHovered ? 5 : 3}
+                      fill="#0ea5e9"
+                      stroke="var(--bg-surface)"
+                      strokeWidth="1.5"
+                      style={{ transition: 'all 0.2s ease' }}
+                    />
+
+                    {/* X Month Label */}
+                    <text
+                      x={x}
+                      y={padTop + chartH + 18}
+                      textAnchor="middle"
+                      fontSize="10"
+                      fontWeight={isCurrent ? '800' : (isHovered ? '700' : '500')}
+                      fill={isCurrent ? 'var(--color-accent)' : (isHovered ? 'var(--text-primary)' : 'var(--text-secondary)')}
+                    >
+                      {stat.shortLabel}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
+
+            {/* Hover Tooltip Overlay */}
+            {hoveredMonthIndex !== null && (
+              <div style={{
+                position: 'absolute',
+                top: '0',
+                left: `${(getX(hoveredMonthIndex) / svgWidth) * 100}%`,
+                transform: hoveredMonthIndex > 3 ? 'translateX(-95%)' : 'translateX(5%)',
+                zIndex: 20,
+                backgroundColor: 'var(--bg-surface-elevated)',
+                border: '1px solid var(--border-default)',
+                borderRadius: 'var(--radius-md)',
+                boxShadow: 'var(--shadow-md)',
+                padding: '0.5rem 0.75rem',
+                width: '185px',
+                fontSize: '0.725rem',
+                pointerEvents: 'none'
+              }}>
+                <div style={{ fontWeight: 800, borderBottom: '1px solid var(--border-default)', paddingBottom: '0.2rem', marginBottom: '0.25rem' }}>
+                  {historicalStats[hoveredMonthIndex].label}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#10b981', marginBottom: '0.15rem' }}>
+                  <span>Ventas:</span>
+                  <strong>{formatCurrency(historicalStats[hoveredMonthIndex].ventas)}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#f43f5e', marginBottom: '0.15rem' }}>
+                  <span>Costos Totales:</span>
+                  <strong>{formatCurrency(historicalStats[hoveredMonthIndex].costoTotal)}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0ea5e9', borderTop: '1px dashed var(--border-default)', paddingTop: '0.2rem', marginTop: '0.15rem' }}>
+                  <span>Utilidad Neta:</span>
+                  <strong>{formatCurrency(historicalStats[hoveredMonthIndex].utilidad)}</strong>
+                </div>
+                <div style={{ fontSize: '0.675rem', color: 'var(--text-muted)', textAlign: 'right', marginTop: '0.1rem' }}>
+                  Margen: {historicalStats[hoveredMonthIndex].margen.toFixed(1)}%
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Legend */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '1rem',
+            marginTop: '0.4rem',
+            paddingTop: '0.4rem',
+            borderTop: '1px solid var(--border-default)',
+            fontSize: '0.725rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+              <span style={{ fontWeight: 600 }}>Ventas</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#f43f5e' }} />
+              <span style={{ color: 'var(--text-secondary)' }}>Costos Operativos</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#0ea5e9' }} />
+              <span style={{ color: 'var(--text-secondary)' }}>Utilidad Neta</span>
+            </div>
+          </div>
+        </div>
+
+        {/* QUADRANT 2: 🚨 Semáforo de Cobranza & Créditos CxC */}
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '1rem' }}>
+          <div className="card-header" style={{ marginBottom: '0.65rem', paddingBottom: '0.5rem' }}>
+            <div>
+              <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '1rem' }}>
+                <ShieldAlert size={17} style={{ color: overdueInvoices.length > 0 ? 'var(--color-danger)' : 'var(--color-info)' }} />
+                Semáforo de Cobranza & Créditos CxC
+              </h2>
+              <p className="card-subtitle" style={{ fontSize: '0.75rem' }}>
+                Facturas vencidas y créditos por cobrar en 7 días
               </p>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
@@ -618,7 +589,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                 type="button"
                 className="btn btn-ghost btn-sm"
                 onClick={() => onNavigate('sales')}
-                style={{ fontSize: '0.725rem', padding: '0.25rem 0.4rem' }}
+                style={{ fontSize: '0.75rem', padding: '0.25rem 0.45rem' }}
               >
                 Ventas &rarr;
               </button>
@@ -627,10 +598,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
 
           <div style={{ flex: 1 }}>
             {cxcAlerts.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '1.75rem 0.75rem', color: 'var(--text-muted)' }}>
-                <CheckCircle size={26} style={{ color: 'var(--color-success)', margin: '0 auto 0.35rem auto', display: 'block' }} />
-                <div style={{ fontWeight: 600, fontSize: '0.825rem' }}>¡Cartera al día!</div>
-                <div style={{ fontSize: '0.725rem' }}>No hay facturas pendientes por cobrar.</div>
+              <div style={{ textAlign: 'center', padding: '2rem 0.75rem', color: 'var(--text-muted)' }}>
+                <CheckCircle size={28} style={{ color: 'var(--color-success)', margin: '0 auto 0.35rem auto', display: 'block' }} />
+                <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>¡Cartera al día!</div>
+                <div style={{ fontSize: '0.75rem' }}>No hay facturas vencidas ni saldos pendientes por cobrar.</div>
               </div>
             ) : (
               <div className="table-container" style={{ border: 'none', boxShadow: 'none' }}>
@@ -639,44 +610,44 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                     <tr>
                       <th>Folio / Cliente</th>
                       <th style={{ textAlign: 'center' }}>Vence</th>
-                      <th style={{ textAlign: 'right' }}>Saldo</th>
+                      <th style={{ textAlign: 'right' }}>Saldo CxC</th>
                       <th style={{ textAlign: 'right' }}>Acción</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {cxcAlerts.slice(0, 4).map(inv => (
+                    {cxcAlerts.slice(0, 5).map(inv => (
                       <tr key={inv.id}>
-                        <td style={{ padding: '0.4rem 0.3rem' }}>
+                        <td style={{ padding: '0.45rem 0.3rem' }}>
                           <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{inv.numeroFactura}</div>
-                          <div style={{ fontSize: '0.675rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '110px' }}>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px' }}>
                             {inv.clientName}
                           </div>
                         </td>
-                        <td style={{ textAlign: 'center', padding: '0.4rem 0.2rem' }}>
+                        <td style={{ textAlign: 'center', padding: '0.45rem 0.2rem' }}>
                           {inv.statusCategory === 'overdue' && (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', color: 'var(--color-danger-text)', fontWeight: 700, backgroundColor: 'var(--color-danger-bg)', padding: '2px 4px', borderRadius: 'var(--radius-sm)', fontSize: '0.675rem' }}>
-                              <AlertCircle size={10} /> {Math.abs(inv.diffDays)}d
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--color-danger-text)', fontWeight: 700, backgroundColor: 'var(--color-danger-bg)', padding: '2px 5px', borderRadius: 'var(--radius-sm)', fontSize: '0.7rem' }}>
+                              <AlertCircle size={11} /> {Math.abs(inv.diffDays)}d vencida
                             </span>
                           )}
                           {inv.statusCategory === 'dueSoon' && (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', color: 'var(--color-warning-text)', fontWeight: 700, backgroundColor: 'var(--color-warning-bg)', padding: '2px 4px', borderRadius: 'var(--radius-sm)', fontSize: '0.675rem' }}>
-                              <Calendar size={10} /> {inv.diffDays === 0 ? 'Hoy' : `${inv.diffDays}d`}
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--color-warning-text)', fontWeight: 700, backgroundColor: 'var(--color-warning-bg)', padding: '2px 5px', borderRadius: 'var(--radius-sm)', fontSize: '0.7rem' }}>
+                              <Calendar size={11} /> {inv.diffDays === 0 ? 'Hoy' : `${inv.diffDays}d`}
                             </span>
                           )}
                           {inv.statusCategory === 'normal' && (
-                            <span style={{ color: 'var(--text-secondary)', fontSize: '0.7rem' }}>
-                              {inv.diffDays}d
+                            <span style={{ color: 'var(--text-secondary)', fontSize: '0.725rem' }}>
+                              En {inv.diffDays}d
                             </span>
                           )}
                         </td>
-                        <td style={{ textAlign: 'right', fontWeight: 700, padding: '0.4rem 0.3rem', color: inv.statusCategory === 'overdue' ? 'var(--color-danger-text)' : 'inherit' }}>
+                        <td style={{ textAlign: 'right', fontWeight: 700, padding: '0.45rem 0.3rem', color: inv.statusCategory === 'overdue' ? 'var(--color-danger-text)' : 'inherit' }}>
                           {formatCurrency(inv.saldoPendiente)}
                         </td>
-                        <td style={{ textAlign: 'right', padding: '0.4rem 0.2rem' }}>
+                        <td style={{ textAlign: 'right', padding: '0.45rem 0.2rem' }}>
                           <button
                             type="button"
                             className="btn btn-secondary btn-sm"
-                            style={{ padding: '0.15rem 0.4rem', fontSize: '0.7rem' }}
+                            style={{ padding: '0.2rem 0.5rem', fontSize: '0.725rem' }}
                             onClick={() => onNavigate('sales')}
                           >
                             Cobrar
@@ -691,23 +662,23 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
           </div>
 
           {cxcAlerts.length > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', paddingTop: '0.4rem', borderTop: '1px solid var(--border-default)', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-              <span>Vencido: <strong style={{ color: 'var(--color-danger-text)' }}>{formatCurrency(totalOverdueAmount)}</strong></span>
-              <span>{dueSoonInvoices.length} por vencer</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', paddingTop: '0.4rem', borderTop: '1px solid var(--border-default)', fontSize: '0.725rem', color: 'var(--text-muted)' }}>
+              <span>Vencido en riesgo: <strong style={{ color: 'var(--color-danger-text)' }}>{formatCurrency(totalOverdueAmount)}</strong></span>
+              <span><strong>{dueSoonInvoices.length}</strong> facturas por vencer</span>
             </div>
           )}
         </div>
 
-        {/* COLUMN 2: 📦 Reabastecimiento Sugerido & Compras */}
+        {/* QUADRANT 3: 📦 Reabastecimiento Sugerido & Compras */}
         <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '1rem' }}>
           <div className="card-header" style={{ marginBottom: '0.65rem', paddingBottom: '0.5rem' }}>
             <div>
-              <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.95rem' }}>
-                <AlertTriangle size={16} style={{ color: 'var(--color-warning)' }} />
-                Reabastecimiento ({lowStockProducts.length})
+              <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '1rem' }}>
+                <AlertTriangle size={17} style={{ color: 'var(--color-warning)' }} />
+                Reabastecimiento Sugerido & Compras ({lowStockProducts.length})
               </h2>
-              <p className="card-subtitle" style={{ fontSize: '0.725rem' }}>
-                Artículos bajo stock de seguridad
+              <p className="card-subtitle" style={{ fontSize: '0.75rem' }}>
+                Productos bajo el umbral mínimo con cálculo de compra sugerida
               </p>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
@@ -716,19 +687,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                 type="button"
                 className="btn btn-ghost btn-sm"
                 onClick={() => onNavigate('inventory')}
-                style={{ fontSize: '0.725rem', padding: '0.25rem 0.4rem' }}
+                style={{ fontSize: '0.75rem', padding: '0.25rem 0.45rem' }}
               >
-                Stock &rarr;
+                Inventario &rarr;
               </button>
             </div>
           </div>
 
           <div style={{ flex: 1 }}>
             {lowStockProducts.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '1.75rem 0.75rem', color: 'var(--text-muted)' }}>
-                <CheckCircle size={26} style={{ color: 'var(--color-success)', margin: '0 auto 0.35rem auto', display: 'block' }} />
-                <div style={{ fontWeight: 600, fontSize: '0.825rem' }}>¡Stock Saludable!</div>
-                <div style={{ fontSize: '0.725rem' }}>Todos los productos están sobre el mínimo.</div>
+              <div style={{ textAlign: 'center', padding: '2rem 0.75rem', color: 'var(--text-muted)' }}>
+                <CheckCircle size={28} style={{ color: 'var(--color-success)', margin: '0 auto 0.35rem auto', display: 'block' }} />
+                <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>¡Stock Saludable!</div>
+                <div style={{ fontSize: '0.75rem' }}>Todos los productos están por encima de su mínimo.</div>
               </div>
             ) : (
               <div className="table-container" style={{ border: 'none', boxShadow: 'none' }}>
@@ -736,38 +707,38 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                   <thead>
                     <tr>
                       <th>Producto / SKU</th>
-                      <th style={{ textAlign: 'center' }}>Stock</th>
-                      <th style={{ textAlign: 'center' }}>Pedir</th>
+                      <th style={{ textAlign: 'center' }}>Stock / Mín</th>
+                      <th style={{ textAlign: 'center' }}>Sugerido</th>
                       <th style={{ textAlign: 'right' }}>Acción</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {lowStockProducts.slice(0, 4).map(p => (
+                    {lowStockProducts.slice(0, 5).map(p => (
                       <tr key={p.id}>
-                        <td style={{ padding: '0.4rem 0.3rem' }}>
-                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '110px' }}>
+                        <td style={{ padding: '0.45rem 0.3rem' }}>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px' }}>
                             {p.nombre}
                           </div>
-                          <div style={{ fontSize: '0.675rem', color: 'var(--text-muted)' }}>SKU: {p.codigo}</div>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>SKU: {p.codigo}</div>
                         </td>
-                        <td style={{ textAlign: 'center', padding: '0.4rem 0.2rem' }}>
+                        <td style={{ textAlign: 'center', padding: '0.45rem 0.2rem' }}>
                           <span style={{ fontWeight: 700, color: 'var(--color-danger-text)' }}>{p.stockActual}</span>
-                          <span style={{ color: 'var(--text-muted)', fontSize: '0.675rem' }}>/{p.stockMinimo}</span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}> / {p.stockMinimo}</span>
                         </td>
-                        <td style={{ textAlign: 'center', padding: '0.4rem 0.2rem' }}>
-                          <span className="badge badge-primary" style={{ padding: '0.15rem 0.35rem', fontWeight: 700, fontSize: '0.7rem' }}>
-                            +{p.suggestedQty}
+                        <td style={{ textAlign: 'center', padding: '0.45rem 0.2rem' }}>
+                          <span className="badge badge-primary" style={{ padding: '0.15rem 0.4rem', fontWeight: 700, fontSize: '0.725rem' }}>
+                            +{p.suggestedQty} {p.unidadMedida}
                           </span>
                         </td>
-                        <td style={{ textAlign: 'right', padding: '0.4rem 0.2rem' }}>
+                        <td style={{ textAlign: 'right', padding: '0.45rem 0.2rem' }}>
                           <button
                             type="button"
                             className="btn btn-primary btn-sm"
-                            style={{ padding: '0.15rem 0.4rem', fontSize: '0.7rem' }}
+                            style={{ padding: '0.2rem 0.5rem', fontSize: '0.725rem' }}
                             onClick={() => onNavigate('purchases')}
-                            title={`Generar orden de compra`}
+                            title={`Generar orden de compra por ${p.suggestedQty} piezas`}
                           >
-                            + Pedir
+                            + Comprar
                           </button>
                         </td>
                       </tr>
@@ -779,30 +750,30 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
           </div>
 
           {lowStockProducts.length > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', paddingTop: '0.4rem', borderTop: '1px solid var(--border-default)', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', paddingTop: '0.4rem', borderTop: '1px solid var(--border-default)', fontSize: '0.725rem', color: 'var(--text-muted)' }}>
               <span>Inversión reposición: <strong style={{ color: 'var(--color-accent)' }}>{formatCurrency(totalRestockCost)}</strong></span>
-              <span>{lowStockProducts.length} críticos</span>
+              <span><strong>{lowStockProducts.length}</strong> artículos críticos</span>
             </div>
           )}
         </div>
 
-        {/* COLUMN 3: 🏆 Top Ventas & Flujo de Caja */}
+        {/* QUADRANT 4: 🏆 Top Productos & Proyección de Flujo de Caja (30 Días) */}
         <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '1rem' }}>
           <div className="card-header" style={{ marginBottom: '0.65rem', paddingBottom: '0.5rem' }}>
             <div>
-              <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.95rem' }}>
-                <Sparkles size={16} style={{ color: 'var(--color-accent)' }} />
-                Top Productos & Liquidez
+              <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '1rem' }}>
+                <Sparkles size={17} style={{ color: 'var(--color-accent)' }} />
+                Top Productos & Flujo de Caja
               </h2>
-              <p className="card-subtitle" style={{ fontSize: '0.725rem' }}>
-                Rotación de catálogo y posición a 30 días
+              <p className="card-subtitle" style={{ fontSize: '0.75rem' }}>
+                Productos estrella de mayor rotación y posición de liquidez a 30 días
               </p>
             </div>
             <button
               type="button"
               className="btn btn-ghost btn-sm"
               onClick={() => onNavigate('reports')}
-              style={{ fontSize: '0.725rem', padding: '0.25rem 0.4rem' }}
+              style={{ fontSize: '0.75rem', padding: '0.25rem 0.45rem' }}
             >
               Reportes &rarr;
             </button>
@@ -825,23 +796,23 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        padding: '0.35rem 0.5rem',
+                        padding: '0.35rem 0.55rem',
                         borderRadius: 'var(--radius-sm)',
                         backgroundColor: 'var(--bg-subtle)',
                         border: '1px solid var(--border-default)',
-                        fontSize: '0.75rem'
+                        fontSize: '0.775rem'
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <span style={{ fontWeight: 800, color: 'var(--color-accent)', width: '14px', fontSize: '0.75rem' }}>#{index + 1}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span style={{ fontWeight: 800, color: 'var(--color-accent)', width: '16px', fontSize: '0.775rem' }}>#{index + 1}</span>
                         <div>
-                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '160px' }}>
                             {product.nombre}
                           </div>
-                          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{qty} vendidas ({share}%)</div>
+                          <div style={{ fontSize: '0.675rem', color: 'var(--text-muted)' }}>{qty} vendidas ({share}% del mes)</div>
                         </div>
                       </div>
-                      <div style={{ fontWeight: 700, color: 'var(--color-accent)', fontSize: '0.775rem' }}>
+                      <div style={{ fontWeight: 700, color: 'var(--color-accent)', fontSize: '0.8rem' }}>
                         {formatCurrency(total)}
                       </div>
                     </div>
@@ -852,26 +823,26 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
 
             {/* Dead stock warning pill */}
             {deadStockProducts.length > 0 && (
-              <div style={{ fontSize: '0.675rem', color: 'var(--color-warning-text)', display: 'flex', alignItems: 'center', gap: '0.3rem', backgroundColor: 'var(--color-warning-bg)', padding: '0.25rem 0.4rem', borderRadius: 'var(--radius-sm)' }}>
-                <AlertTriangle size={11} />
-                <span>Sin ventas: {deadStockProducts.map(p => p.nombre).slice(0, 2).join(', ')}...</span>
+              <div style={{ fontSize: '0.7rem', color: 'var(--color-warning-text)', display: 'flex', alignItems: 'center', gap: '0.35rem', backgroundColor: 'var(--color-warning-bg)', padding: '0.25rem 0.45rem', borderRadius: 'var(--radius-sm)' }}>
+                <AlertTriangle size={12} />
+                <span>Inventario sin rotación en el mes: {deadStockProducts.map(p => p.nombre).slice(0, 2).join(', ')}</span>
               </div>
             )}
 
-            {/* Cash Flow Position Mini Card */}
+            {/* Cash Flow Position Mini Card (30 Days) */}
             <div style={{
               marginTop: 'auto',
-              padding: '0.6rem 0.75rem',
+              padding: '0.65rem 0.85rem',
               backgroundColor: 'var(--bg-subtle)',
               borderRadius: 'var(--radius-md)',
               border: '1px solid var(--border-default)'
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '0.2rem' }}>
-                <span>(+) Entradas CxC:</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.725rem', color: 'var(--text-secondary)', marginBottom: '0.2rem' }}>
+                <span>(+) Entradas proyectadas (CxC):</span>
                 <strong style={{ color: 'var(--color-success)' }}>+{formatCurrency(pendingReceivables)}</strong>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
-                <span>(-) Salidas CxP + Gastos:</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.725rem', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
+                <span>(-) Salidas comprometidas (CxP + Gastos):</span>
                 <strong style={{ color: 'var(--color-danger-text)' }}>-{formatCurrency(totalCommittedOutflows)}</strong>
               </div>
               <div style={{
@@ -879,11 +850,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 borderTop: '1px solid var(--border-default)',
-                paddingTop: '0.3rem'
+                paddingTop: '0.35rem'
               }}>
-                <span style={{ fontSize: '0.725rem', fontWeight: 700 }}>Flujo Neto (30d):</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>Posición Neta de Liquidez:</span>
                 <span style={{
-                  fontSize: '0.85rem',
+                  fontSize: '0.9rem',
                   fontWeight: 900,
                   color: netCashflowPosition >= 0 ? 'var(--color-success)' : 'var(--color-danger)'
                 }}>

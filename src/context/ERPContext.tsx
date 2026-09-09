@@ -1415,16 +1415,10 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       .filter(e => e.tipo === 'variable')
       .reduce((sum, e) => sum + e.monto, 0);
 
-    // Depreciación del periodo (toma los registros contables DE... del mes o calcula sobre activos si no hay registros)
-    const deprFromExpenses = monthExpenses
-      .filter(e => e.categoria === 'Depreciación de Activos' || e.codigoContable?.startsWith('DE'))
+    // Depreciación del periodo (toma exclusivamente los registros contables de depreciación posteados en este mes)
+    const depreciacionActivos = monthExpenses
+      .filter(e => (e.categoria === 'Depreciación de Activos' || e.codigoContable?.startsWith('DE') || e.esDepreciacionDeActivoId) && !e.anulado)
       .reduce((sum, e) => sum + e.monto, 0);
-
-    const depreciacionActivos = deprFromExpenses > 0
-      ? deprFromExpenses
-      : fixedAssets
-          .filter(a => a.activoEstado === 'activo')
-          .reduce((sum, a) => sum + a.depreciacionMensual, 0);
 
     const gastoOperativoTotal = gastosFijos + gastosVariables + depreciacionActivos;
 
