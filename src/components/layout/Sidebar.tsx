@@ -108,7 +108,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <aside className={`app-sidebar ${isCollapsed ? 'collapsed' : ''} ${isOpenMobile ? 'open' : ''}`}>
         <div className="sidebar-header">
           {!isCollapsed ? (
-            <div className="brand-glass-card">
+            <div className="brand-anchor-card">
               <div className="brand-icon-wrapper">
                 <img
                   src="/apple-touch-icon.png"
@@ -126,7 +126,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
             </div>
           ) : (
-            <div className="brand-glass-card collapsed" title={`${APP_NAME} — ${APP_BRAND}`}>
+            <div className="brand-anchor-card collapsed" title={`${APP_NAME} — ${APP_BRAND}`}>
               <div className="brand-icon-wrapper">
                 <img
                   src="/apple-touch-icon.png"
