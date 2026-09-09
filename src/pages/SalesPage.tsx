@@ -581,7 +581,8 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
           onClick={() => { setActiveTab('invoices'); setSearchTerm(''); }}
         >
           <TrendingUp size={16} />
-          Facturas de Venta ({invoices.length})
+          <span>Facturas de Venta</span>
+          <span className="tab-badge">{invoices.length}</span>
         </button>
         <button
           type="button"
@@ -589,7 +590,8 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
           onClick={() => { setActiveTab('quotes'); setSearchTerm(''); }}
         >
           <FileText size={16} />
-          Cotizaciones ({quotes.length})
+          <span>Cotizaciones</span>
+          <span className="tab-badge">{quotes.length}</span>
         </button>
       </div>
 

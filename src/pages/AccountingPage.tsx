@@ -338,7 +338,7 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
           onClick={() => setActiveTab('prorrateo')}
         >
           <Layers size={16} />
-          {t.accounting.tabProrrateo}
+          <span>{t.accounting.tabProrrateo}</span>
         </button>
         <button
           type="button"
@@ -346,7 +346,8 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
           onClick={() => setActiveTab('expenses')}
         >
           <DollarSign size={16} />
-          {t.accounting.tabExpenses} ({filteredExpenses.length})
+          <span>{t.accounting.tabExpenses}</span>
+          <span className="tab-badge">{filteredExpenses.length}</span>
         </button>
         <button
           type="button"
@@ -354,7 +355,8 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
           onClick={() => setActiveTab('assets')}
         >
           <HardDrive size={16} />
-          {t.accounting.tabAssets} ({fixedAssets.length})
+          <span>{t.accounting.tabAssets}</span>
+          <span className="tab-badge">{fixedAssets.length}</span>
         </button>
       </div>
 

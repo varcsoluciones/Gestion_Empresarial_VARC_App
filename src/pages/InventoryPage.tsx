@@ -356,7 +356,8 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
           onClick={() => setActiveView('kardex')}
         >
           <Layers size={16} />
-          Kardex de Movimientos ({filteredMovements.length})
+          <span>Kardex de Movimientos</span>
+          <span className="tab-badge">{filteredMovements.length}</span>
         </button>
         <button
           type="button"
@@ -364,7 +365,8 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
           onClick={() => setActiveView('stock')}
         >
           <Boxes size={16} />
-          Existencias & Variantes por Producto ({filteredStockProducts.length})
+          <span>Existencias & Variantes por Producto</span>
+          <span className="tab-badge">{filteredStockProducts.length}</span>
         </button>
       </div>
 

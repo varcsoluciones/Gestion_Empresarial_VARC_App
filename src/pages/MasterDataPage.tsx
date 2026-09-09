@@ -410,7 +410,8 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
           onClick={() => { setActiveTab('products'); setSearchTerm(''); }}
         >
           <Package size={16} />
-          Productos & Variantes ({products.length})
+          <span>Productos & Variantes</span>
+          <span className="tab-badge">{products.length}</span>
         </button>
         <button
           type="button"
@@ -418,7 +419,8 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
           onClick={() => { setActiveTab('clients'); setSearchTerm(''); }}
         >
           <Users size={16} />
-          Clientes ({clients.length})
+          <span>Clientes</span>
+          <span className="tab-badge">{clients.length}</span>
         </button>
         <button
           type="button"
@@ -426,7 +428,8 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
           onClick={() => { setActiveTab('suppliers'); setSearchTerm(''); }}
         >
           <Truck size={16} />
-          Proveedores ({suppliers.length})
+          <span>Proveedores</span>
+          <span className="tab-badge">{suppliers.length}</span>
         </button>
         <button
           type="button"
@@ -434,7 +437,8 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
           onClick={() => { setActiveTab('categories'); setSearchTerm(''); }}
         >
           <Tags size={16} />
-          Categorías ({categories.length})
+          <span>Categorías</span>
+          <span className="tab-badge">{categories.length}</span>
         </button>
       </div>
 
