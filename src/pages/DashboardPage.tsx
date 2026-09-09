@@ -151,11 +151,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
 
   // SVG Chart Geometry Calculations
   const svgWidth = 600;
-  const svgHeight = 210;
-  const padLeft = 50;
-  const padRight = 25;
-  const padTop = 20;
-  const padBottom = 30;
+  const svgHeight = 205;
+  const padLeft = 52;
+  const padRight = 20;
+  const padTop = 16;
+  const padBottom = 26;
   const chartW = svgWidth - padLeft - padRight;
   const chartH = svgHeight - padTop - padBottom;
 
@@ -170,18 +170,44 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
   const costoPoints = historicalStats.map((s, idx) => ({ x: getX(idx), y: getY(s.costoTotal), val: s.costoTotal }));
   const utilidadPoints = historicalStats.map((s, idx) => ({ x: getX(idx), y: getY(Math.max(0, s.utilidad)), val: s.utilidad }));
 
-  const makePath = (points: { x: number; y: number }[]) => {
+  // Smooth Bezier Spline (Natural Wave Effect)
+  const makeSmoothCurve = (points: { x: number; y: number }[], tension = 0.28) => {
     if (points.length <= 1) return '';
-    return points.reduce((acc, p, idx) => `${acc} ${idx === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`, '');
+    if (points.length === 2) {
+      return `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)} L ${points[1].x.toFixed(1)} ${points[1].y.toFixed(1)}`;
+    }
+
+    let d = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
+
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = i > 0 ? points[i - 1] : points[i];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = i < points.length - 2 ? points[i + 2] : p2;
+
+      const cp1x = p1.x + (p2.x - p0.x) * tension;
+      const cp1y = p1.y + (p2.y - p0.y) * tension;
+      const cp2x = p2.x - (p3.x - p1.x) * tension;
+      const cp2y = p2.y - (p3.y - p1.y) * tension;
+
+      d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+    }
+
+    return d;
   };
 
-  const ventasLinePath = makePath(ventasPoints);
-  const costoLinePath = makePath(costoPoints);
-  const utilidadLinePath = makePath(utilidadPoints);
+  const makeSmoothArea = (points: { x: number; y: number }[], baseY: number, tension = 0.28) => {
+    const curve = makeSmoothCurve(points, tension);
+    if (!curve || points.length <= 1) return '';
+    const last = points[points.length - 1];
+    const first = points[0];
+    return `${curve} L ${last.x.toFixed(1)} ${baseY.toFixed(1)} L ${first.x.toFixed(1)} ${baseY.toFixed(1)} Z`;
+  };
 
-  const ventasAreaPath = ventasPoints.length > 1
-    ? `${ventasLinePath} L ${ventasPoints[ventasPoints.length - 1].x.toFixed(1)} ${(padTop + chartH).toFixed(1)} L ${ventasPoints[0].x.toFixed(1)} ${(padTop + chartH).toFixed(1)} Z`
-    : '';
+  const ventasLinePath = makeSmoothCurve(ventasPoints, 0.28);
+  const costoLinePath = makeSmoothCurve(costoPoints, 0.28);
+  const utilidadLinePath = makeSmoothCurve(utilidadPoints, 0.28);
+  const ventasAreaPath = makeSmoothArea(ventasPoints, padTop + chartH, 0.28);
 
   // 3. Section 1 Data: Semáforo de Cobranza & Créditos CxC
   const cxcAlerts = invoices
@@ -421,11 +447,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                       strokeWidth="1"
                     />
                     <text
-                      x={padLeft - 6}
-                      y={yPos + 3}
+                      x={padLeft - 7}
+                      y={yPos + 2.5}
                       textAnchor="end"
-                      fontSize="9"
+                      fontSize="7.5"
                       fill="var(--text-muted)"
+                      fontFamily="inherit"
+                      fontWeight="500"
                     >
                       {formatCurrency(maxChartVal * ratio).replace('.00', '')}
                     </text>
@@ -501,7 +529,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                     <circle
                       cx={x}
                       cy={getY(stat.ventas)}
-                      r={isHovered ? 6.5 : 4.5}
+                      r={isHovered ? 6 : 4}
                       fill="#10b981"
                       stroke="var(--bg-surface)"
                       strokeWidth="2"
@@ -510,7 +538,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                     <circle
                       cx={x}
                       cy={getY(stat.costoTotal)}
-                      r={isHovered ? 5.5 : 4}
+                      r={isHovered ? 5 : 3.5}
                       fill="#f43f5e"
                       stroke="var(--bg-surface)"
                       strokeWidth="2"
@@ -519,7 +547,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                     <circle
                       cx={x}
                       cy={getY(Math.max(0, stat.utilidad))}
-                      r={isHovered ? 5.5 : 3.5}
+                      r={isHovered ? 5 : 3}
                       fill="#0ea5e9"
                       stroke="var(--bg-surface)"
                       strokeWidth="1.5"
@@ -529,11 +557,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                     {/* X Month Label */}
                     <text
                       x={x}
-                      y={padTop + chartH + 18}
+                      y={padTop + chartH + 16}
                       textAnchor="middle"
-                      fontSize="10"
-                      fontWeight={isCurrent ? '800' : (isHovered ? '700' : '500')}
-                      fill={isCurrent ? 'var(--color-accent)' : (isHovered ? 'var(--text-primary)' : 'var(--text-secondary)')}
+                      fontSize="8"
+                      fontFamily="inherit"
+                      fontWeight={isCurrent ? '700' : (isHovered ? '600' : '500')}
+                      fill={isCurrent ? 'var(--color-accent)' : (isHovered ? 'var(--text-primary)' : 'var(--text-muted)')}
+                      letterSpacing="0.2px"
                     >
                       {stat.shortLabel}
                     </text>
