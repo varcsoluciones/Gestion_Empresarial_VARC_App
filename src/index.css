@@ -445,9 +445,6 @@ body {
 .app-sidebar {
   width: 260px;
   background-color: var(--bg-sidebar);
-  background-image: 
-    radial-gradient(ellipse 130% 90% at -10% -5%, var(--color-accent-subtle) 0%, transparent 68%),
-    radial-gradient(circle at 100% 100%, var(--color-accent-subtle) 0%, transparent 45%);
   border-right: 1px solid var(--border-default);
   display: flex;
   flex-direction: column;
@@ -458,7 +455,6 @@ body {
   transition: width var(--transition-normal), transform var(--transition-normal);
   z-index: 40;
   position: relative;
-  overflow: hidden;
 }
 
 .app-sidebar.collapsed {
@@ -474,19 +470,17 @@ body {
   position: relative;
 }
 
-/* Glassmorphic Brand Card */
+/* Brand Card with Solid Accent Color */
 .brand-glass-card {
   display: flex;
   align-items: center;
   gap: 0.85rem;
   width: 100%;
-  padding: 0.65rem 0.8rem;
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.9);
+  padding: 0.75rem 0.85rem;
+  background-color: var(--color-accent);
   border-radius: var(--radius-lg);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04), 0 0 14px var(--color-accent-glow);
+  box-shadow: 0 4px 14px var(--color-accent-glow);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   transition: all var(--transition-normal);
 }
 
@@ -497,22 +491,21 @@ body {
 }
 
 [data-theme="dark"] .brand-glass-card {
-  background: rgba(30, 41, 59, 0.6);
-  border-color: rgba(255, 255, 255, 0.09);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.28), 0 0 16px var(--color-accent-glow);
+  background-color: var(--color-accent);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 18px var(--color-accent-glow);
 }
 
 .brand-icon-wrapper {
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 2px;
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  min-height: 42px;
+  padding: 3px;
   overflow: hidden;
   background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06);
-  border-radius: 11px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -528,13 +521,13 @@ body {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .brand-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
 }
 
@@ -542,7 +535,7 @@ body {
   font-weight: 800;
   font-size: 0.95rem;
   letter-spacing: -0.02em;
-  color: var(--text-primary);
+  color: #ffffff;
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
@@ -550,10 +543,11 @@ body {
 }
 
 .brand-subtitle {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  color: var(--color-accent);
-  letter-spacing: -0.01em;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -598,14 +592,10 @@ body {
 }
 
 .nav-item:hover {
-  background-color: rgba(255, 255, 255, 0.65);
+  background-color: var(--bg-surface-hover);
   color: var(--text-primary);
   transform: translateX(3px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
-}
-
-[data-theme="dark"] .nav-item:hover {
-  background-color: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
 }
 
 .nav-item.active {
@@ -690,17 +680,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-
-[data-theme="dark"] .sidebar-footer {
-  background: rgba(15, 23, 42, 0.4);
+  background-color: var(--bg-sidebar);
 }
 
 .sidebar-collapse-btn {
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--bg-surface);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
   padding: 0.45rem;
@@ -708,14 +692,10 @@ body {
 }
 
 .sidebar-collapse-btn:hover {
-  background: var(--bg-surface);
+  background: var(--bg-surface-hover);
   color: var(--color-accent);
   border-color: var(--color-accent);
   box-shadow: 0 2px 8px var(--color-accent-glow);
-}
-
-[data-theme="dark"] .sidebar-collapse-btn {
-  background: rgba(30, 41, 59, 0.6);
 }
 
 /* Main Content Area */
