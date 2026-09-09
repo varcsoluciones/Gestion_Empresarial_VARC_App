@@ -3,7 +3,6 @@ import { useERP } from '../context/ERPContext';
 import { formatCurrency, formatDateTime, getMonthKey } from '../utils/formatters';
 import {
   BarChart3,
-  Calendar,
   FileSpreadsheet,
   TrendingUp,
   Printer,
@@ -24,6 +23,7 @@ import { Badge } from '../components/common/Badge';
 import { ExcelExportButton } from '../components/common/ExcelExportButton';
 import { ComboboxInline } from '../components/common/ComboboxInline';
 import { SortableTh } from '../components/common/SortableTh';
+import { PeriodSelector } from '../components/common/PeriodSelector';
 import { useTableSort } from '../hooks/useTableSort';
 import type { ExcelColumnDefinition } from '../utils/excelExport';
 
@@ -47,6 +47,19 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
 
   const [selectedMonth, setSelectedMonth] = useState(getMonthKey());
   const [activeReport, setActiveReport] = useState<'pnl' | 'balance' | 'sales' | 'costs' | 'profitability'>(initialReport || 'pnl');
+
+  const availableMonths = useMemo(() => {
+    const set = new Set<string>();
+    invoices.forEach(i => {
+      if (i.fechaEmision) set.add(i.fechaEmision.slice(0, 7));
+      if (i.emitidaFecha) set.add(i.emitidaFecha.slice(0, 7));
+    });
+    expenses.forEach(e => {
+      if (e.periodoMes) set.add(e.periodoMes);
+      if (e.fecha) set.add(e.fecha.slice(0, 7));
+    });
+    return Array.from(set).filter(Boolean);
+  }, [invoices, expenses]);
 
   React.useEffect(() => {
     if (initialReport) {
@@ -512,54 +525,12 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
             Estado de resultados (P&L), balance general, ventas detalladas y reporte de absorción de costos.
           </p>
         </div>
-        <div className="page-actions">
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              backgroundColor: 'var(--bg-surface)',
-              padding: '0.35rem 0.75rem',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--border-default)',
-              cursor: 'pointer',
-              userSelect: 'none'
-            }}
-            onClick={(e) => {
-              const input = e.currentTarget.querySelector('input');
-              if (input) {
-                if ('showPicker' in input && typeof (input as any).showPicker === 'function') {
-                  try {
-                    (input as any).showPicker();
-                  } catch {
-                    input.focus();
-                  }
-                } else {
-                  input.focus();
-                }
-              }
-            }}
-            title="Haz clic para seleccionar el periodo contable"
-          >
-            <Calendar size={15} style={{ color: 'var(--text-muted)' }} />
-            <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>Periodo:</span>
-            <input
-              type="month"
-              style={{
-                border: 'none',
-                background: 'none',
-                color: 'var(--text-primary)',
-                fontFamily: 'var(--font-sans)',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                outline: 'none',
-                cursor: 'pointer'
-              }}
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
+        <div className="page-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <PeriodSelector
+            value={selectedMonth}
+            onChange={setSelectedMonth}
+            availableMonths={availableMonths}
+          />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <button type="button" className="btn btn-secondary btn-sm" onClick={handlePrintReport}>

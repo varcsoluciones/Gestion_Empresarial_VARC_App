@@ -10,7 +10,6 @@ import {
   PieChart,
   HardDrive,
   TrendingDown,
-  Calendar,
   Layers,
   Sparkles,
   ShieldCheck,
@@ -26,6 +25,8 @@ import { ExcelExportButton } from '../components/common/ExcelExportButton';
 import { SortableTh } from '../components/common/SortableTh';
 import { ComboboxInline } from '../components/common/ComboboxInline';
 import { useTableSort } from '../hooks/useTableSort';
+
+import { PeriodSelector } from '../components/common/PeriodSelector';
 
 interface AccountingPageProps {
   initialTab?: 'prorrateo' | 'expenses' | 'assets';
@@ -48,6 +49,10 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
 
   const [selectedMonth, setSelectedMonth] = useState(getMonthKey());
   const [activeTab, setActiveTab] = useState<'prorrateo' | 'expenses' | 'assets'>(initialTab || 'prorrateo');
+
+  const availableMonths = React.useMemo(() => {
+    return Array.from(new Set(expenses.map(e => e.periodoMes || (e.fecha && e.fecha.slice(0, 7))))).filter(Boolean);
+  }, [expenses]);
 
   React.useEffect(() => {
     if (initialTab) {
@@ -198,54 +203,12 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
           </p>
         </div>
 
-        <div className="page-actions">
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              backgroundColor: 'var(--bg-surface)',
-              padding: '0.35rem 0.75rem',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--border-default)',
-              cursor: 'pointer',
-              userSelect: 'none'
-            }}
-            onClick={(e) => {
-              const input = e.currentTarget.querySelector('input');
-              if (input) {
-                if ('showPicker' in input && typeof (input as any).showPicker === 'function') {
-                  try {
-                    (input as any).showPicker();
-                  } catch {
-                    input.focus();
-                  }
-                } else {
-                  input.focus();
-                }
-              }
-            }}
-            title="Haz clic para seleccionar el periodo contable"
-          >
-            <Calendar size={15} style={{ color: 'var(--text-muted)' }} />
-            <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>Periodo:</span>
-            <input
-              type="month"
-              style={{
-                border: 'none',
-                background: 'none',
-                color: 'var(--text-primary)',
-                fontFamily: 'var(--font-sans)',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                outline: 'none',
-                cursor: 'pointer'
-              }}
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
+        <div className="page-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <PeriodSelector
+            value={selectedMonth}
+            onChange={setSelectedMonth}
+            availableMonths={availableMonths}
+          />
 
           {activeTab === 'expenses' && (
             <button type="button" className="btn btn-primary btn-sm" onClick={() => setIsExpenseModalOpen(true)}>
