@@ -382,48 +382,55 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
         </div>
 
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap' }}>
-          <select
-            className="form-select"
-            style={{ width: 'auto' }}
+          <ComboboxInline
+            options={[
+              { id: 'all', label: 'Todos los productos' },
+              ...products.map(p => ({
+                id: p.id,
+                label: p.nombre,
+                sublabel: `SKU: ${p.codigo}`
+              }))
+            ]}
             value={selectedProductFilter}
-            onChange={(e) => setSelectedProductFilter(e.target.value)}
-          >
-            <option value="all">Todos los productos</option>
-            {products.map(p => (
-              <option key={p.id} value={p.id}>{p.nombre} ({p.codigo})</option>
-            ))}
-          </select>
+            onChange={setSelectedProductFilter}
+            placeholder="Todos los productos"
+            searchPlaceholder="Buscar producto o SKU..."
+            buttonStyle={{ minWidth: '220px' }}
+          />
 
           {activeView === 'kardex' && (
             <>
-              <select
-                className="form-select"
-                style={{ width: 'auto' }}
+              <ComboboxInline
+                options={[
+                  { id: 'all', label: 'Todos los meses' },
+                  ...availableMonths.map(mKey => ({
+                    id: mKey,
+                    label: formatMonthLabel(mKey)
+                  }))
+                ]}
                 value={monthFilter}
-                onChange={(e) => setMonthFilter(e.target.value)}
-              >
-                <option value="all">Todos los meses</option>
-                {availableMonths.map(mKey => (
-                  <option key={mKey} value={mKey}>
-                    {formatMonthLabel(mKey)}
-                  </option>
-                ))}
-              </select>
+                onChange={setMonthFilter}
+                placeholder="Todos los meses"
+                hideSearch={true}
+                buttonStyle={{ minWidth: '160px' }}
+              />
 
-              <select
-                className="form-select"
-                style={{ width: 'auto' }}
+              <ComboboxInline
+                options={[
+                  { id: 'all', label: 'Todos los tipos de movimiento' },
+                  { id: 'INVENTARIO_INICIAL', label: 'Carga Inventario Inicial' },
+                  { id: 'ENTRADA_COMPRA', label: 'Entrada por Compra' },
+                  { id: 'SALIDA_VENTA', label: 'Salida por Venta' },
+                  { id: 'AJUSTE_MANUAL', label: 'Ajuste Manual' },
+                  { id: 'ANULACION_COMPRA', label: 'Anulación Compra' },
+                  { id: 'ANULACION_VENTA', label: 'Anulación Venta' },
+                ]}
                 value={selectedTypeFilter}
-                onChange={(e) => setSelectedTypeFilter(e.target.value)}
-              >
-                <option value="all">Todos los tipos de movimiento</option>
-                <option value="INVENTARIO_INICIAL">Carga Inventario Inicial</option>
-                <option value="ENTRADA_COMPRA">Entrada por Compra</option>
-                <option value="SALIDA_VENTA">Salida por Venta</option>
-                <option value="AJUSTE_MANUAL">Ajuste Manual</option>
-                <option value="ANULACION_COMPRA">Anulación Compra</option>
-                <option value="ANULACION_VENTA">Anulación Venta</option>
-              </select>
+                onChange={setSelectedTypeFilter}
+                placeholder="Todos los tipos"
+                hideSearch={true}
+                buttonStyle={{ minWidth: '210px' }}
+              />
             </>
           )}
 
@@ -1049,14 +1056,17 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
             <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1.4fr 0.8fr', gap: '1rem' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Tipo de Ajuste</label>
-                <select
-                  className="form-select"
+                <ComboboxInline
+                  options={[
+                    { id: 'incremento', label: '+ Entrada / Aumento (Sobrante, Conteo)' },
+                    { id: 'decremento', label: '- Salida / Disminución (Merma, Daño, Pérdida)' },
+                  ]}
                   value={adjTipo}
-                  onChange={(e) => setAdjTipo(e.target.value as any)}
-                >
-                  <option value="incremento">+ Entrada / Aumento (Sobrante, Conteo)</option>
-                  <option value="decremento">- Salida / Disminución (Merma, Daño, Pérdida)</option>
-                </select>
+                  onChange={(val) => setAdjTipo(val as any)}
+                  placeholder="Seleccionar tipo..."
+                  hideSearch={true}
+                  buttonStyle={{ width: '100%' }}
+                />
               </div>
 
               <div className="form-group" style={{ marginBottom: 0 }}>

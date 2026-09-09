@@ -25,6 +25,7 @@ import {
   SlidersHorizontal
 } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
+import { ComboboxInline } from '../components/common/ComboboxInline';
 import { formatDateTime } from '../utils/formatters';
 import { validateAndParseBackupJSON, type FullERPData } from '../utils/backupExportUtils';
 import { APP_NAME, APP_BRAND, APP_VERSION } from '../config/version';
@@ -402,18 +403,18 @@ export const SettingsPage: React.FC = () => {
                   <DollarSign size={15} style={{ color: 'var(--color-accent)' }} />
                   {t.settings.currencyLabel} <span className="form-label-required">*</span>
                 </label>
-                <select
-                  className="form-control"
+                <ComboboxInline
+                  options={AMERICAS_CURRENCIES.map((curr) => ({
+                    id: curr.code,
+                    label: curr.name[lang] || curr.name.es,
+                    sublabel: `${curr.code} (${curr.symbol})`
+                  }))}
                   value={formData.moneda}
-                  onChange={(e) => handleCurrencySelect(e.target.value)}
-                  style={{ fontWeight: 600 }}
-                >
-                  {AMERICAS_CURRENCIES.map((curr) => (
-                    <option key={curr.code} value={curr.code}>
-                      {curr.name[lang] || curr.name.es}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => handleCurrencySelect(val)}
+                  placeholder="Seleccionar moneda..."
+                  searchPlaceholder="Buscar moneda o país..."
+                  buttonStyle={{ width: '100%', fontWeight: 600 }}
+                />
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
                   {t.settings.currencyHelp} (Símbolo activo: <strong>{formData.monedaSimbolo}</strong>)
                 </span>
@@ -425,18 +426,17 @@ export const SettingsPage: React.FC = () => {
                   <Languages size={15} style={{ color: 'var(--color-accent)' }} />
                   {t.settings.languageLabel} <span className="form-label-required">*</span>
                 </label>
-                <select
-                  className="form-control"
+                <ComboboxInline
+                  options={APP_LANGUAGES.map((langOpt) => ({
+                    id: langOpt.code,
+                    label: `${langOpt.name} (${langOpt.shortCode})`
+                  }))}
                   value={formData.idioma}
-                  onChange={(e) => handleLanguageSelect(e.target.value as AppLanguage)}
-                  style={{ fontWeight: 600 }}
-                >
-                  {APP_LANGUAGES.map((langOpt) => (
-                    <option key={langOpt.code} value={langOpt.code}>
-                      {langOpt.name} ({langOpt.shortCode})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => handleLanguageSelect(val as AppLanguage)}
+                  placeholder="Seleccionar idioma..."
+                  hideSearch={true}
+                  buttonStyle={{ width: '100%', fontWeight: 600 }}
+                />
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
                   {t.settings.languageHelp}
                 </span>
@@ -463,16 +463,18 @@ export const SettingsPage: React.FC = () => {
                   <SlidersHorizontal size={15} style={{ color: 'var(--color-accent)' }} />
                   {t.settings.prorrateoSection}
                 </label>
-                <select
-                  className="form-control"
+                <ComboboxInline
+                  options={[
+                    { id: 'costo_material', label: t.settings.ruleMaterialTitle },
+                    { id: 'valor_venta', label: t.settings.rulePriceTitle },
+                    { id: 'unidades_iguales', label: t.settings.ruleUnitsTitle },
+                  ]}
                   value={formData.criterioProrrateoDefecto}
-                  onChange={(e) => setFormData({ ...formData, criterioProrrateoDefecto: e.target.value as any })}
-                  style={{ fontWeight: 600 }}
-                >
-                  <option value="costo_material">{t.settings.ruleMaterialTitle}</option>
-                  <option value="valor_venta">{t.settings.rulePriceTitle}</option>
-                  <option value="unidades_iguales">{t.settings.ruleUnitsTitle}</option>
-                </select>
+                  onChange={(val) => setFormData({ ...formData, criterioProrrateoDefecto: val as any })}
+                  placeholder="Seleccionar regla..."
+                  hideSearch={true}
+                  buttonStyle={{ width: '100%', fontWeight: 600 }}
+                />
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
                   {formData.criterioProrrateoDefecto === 'costo_material' && t.settings.ruleMaterialDesc}
                   {formData.criterioProrrateoDefecto === 'valor_venta' && t.settings.rulePriceDesc}

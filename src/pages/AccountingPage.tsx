@@ -24,6 +24,7 @@ import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 import { ExcelExportButton } from '../components/common/ExcelExportButton';
 import { SortableTh } from '../components/common/SortableTh';
+import { ComboboxInline } from '../components/common/ComboboxInline';
 import { useTableSort } from '../hooks/useTableSort';
 
 interface AccountingPageProps {
@@ -1126,34 +1127,40 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
             </div>
             <div className="form-group">
               <label className="form-label">Tipo de Gasto</label>
-              <select
-                className="form-select"
+              <ComboboxInline
+                options={[
+                  { id: 'fijo', label: 'Gasto Fijo (Mensual Recurrente)' },
+                  { id: 'variable', label: 'Gasto Variable' },
+                ]}
                 value={expTipo}
-                onChange={(e) => setExpTipo(e.target.value as ExpenseType)}
-              >
-                <option value="fijo">Gasto Fijo (Mensual Recurrente)</option>
-                <option value="variable">Gasto Variable</option>
-              </select>
+                onChange={(val) => setExpTipo(val as ExpenseType)}
+                placeholder="Seleccionar tipo..."
+                hideSearch={true}
+                buttonStyle={{ width: '100%' }}
+              />
             </div>
           </div>
 
           <div className="form-row">
             <div className="form-group">
               <label className="form-label">Categoría</label>
-              <select
-                className="form-select"
+              <ComboboxInline
+                options={[
+                  { id: 'Renta & Local', label: 'Renta & Local' },
+                  { id: 'Servicios Básicos', label: 'Servicios Básicos (Luz, Agua, Internet)' },
+                  { id: 'Nómina & Sueldos', label: 'Nómina & Sueldos' },
+                  { id: 'Marketing & Publicidad', label: 'Marketing & Publicidad' },
+                  { id: 'Empaques & Logística', label: 'Empaques & Logística' },
+                  { id: 'Software & Mantenimiento', label: 'Software & Mantenimiento' },
+                  { id: 'Honorarios & Contador', label: 'Honorarios & Contador' },
+                  { id: 'Otros Gastos', label: 'Otros Gastos' },
+                ]}
                 value={expCategoria}
-                onChange={(e) => setExpCategoria(e.target.value)}
-              >
-                <option value="Renta & Local">Renta & Local</option>
-                <option value="Servicios Básicos">Servicios Básicos (Luz, Agua, Internet)</option>
-                <option value="Nómina & Sueldos">Nómina & Sueldos</option>
-                <option value="Marketing & Publicidad">Marketing & Publicidad</option>
-                <option value="Empaques & Logística">Empaques & Logística</option>
-                <option value="Software & Mantenimiento">Software & Mantenimiento</option>
-                <option value="Honorarios & Contador">Honorarios & Contador</option>
-                <option value="Otros Gastos">Otros Gastos</option>
-              </select>
+                onChange={(val) => setExpCategoria(val)}
+                placeholder="Seleccionar categoría..."
+                hideSearch={true}
+                buttonStyle={{ width: '100%' }}
+              />
             </div>
 
             <div className="form-group">
@@ -1232,19 +1239,22 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
           <div className="form-row">
             <div className="form-group">
               <label className="form-label">Categoría del Activo</label>
-              <select
-                className="form-select"
+              <ComboboxInline
+                options={[
+                  { id: 'Equipo de Cómputo', label: 'Equipo de Cómputo' },
+                  { id: 'Maquinaria y Equipo', label: 'Maquinaria y Equipo' },
+                  { id: 'Mobiliario y Enseres', label: 'Mobiliario y Enseres' },
+                  { id: 'Equipo de Transporte', label: 'Equipo de Transporte' },
+                  { id: 'Herramientas y Utillaje', label: 'Herramientas y Utillaje' },
+                  { id: 'Edificaciones e Instalaciones', label: 'Edificaciones e Instalaciones' },
+                  { id: 'Otros Activos Fijos', label: 'Otros Activos Fijos' },
+                ]}
                 value={astCategoria}
-                onChange={(e) => setAstCategoria(e.target.value)}
-              >
-                <option value="Equipo de Cómputo">Equipo de Cómputo</option>
-                <option value="Maquinaria y Equipo">Maquinaria y Equipo</option>
-                <option value="Mobiliario y Enseres">Mobiliario y Enseres</option>
-                <option value="Equipo de Transporte">Equipo de Transporte</option>
-                <option value="Herramientas y Utillaje">Herramientas y Utillaje</option>
-                <option value="Edificaciones e Instalaciones">Edificaciones e Instalaciones</option>
-                <option value="Otros Activos Fijos">Otros Activos Fijos</option>
-              </select>
+                onChange={(val) => setAstCategoria(val)}
+                placeholder="Seleccionar categoría..."
+                hideSearch={true}
+                buttonStyle={{ width: '100%' }}
+              />
             </div>
 
             <div className="form-group">

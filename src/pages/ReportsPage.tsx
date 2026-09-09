@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { ExcelExportButton } from '../components/common/ExcelExportButton';
+import { ComboboxInline } from '../components/common/ComboboxInline';
 import { SortableTh } from '../components/common/SortableTh';
 import { useTableSort } from '../hooks/useTableSort';
 import type { ExcelColumnDefinition } from '../utils/excelExport';
@@ -559,7 +560,6 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <ExcelExportButton filename={`Reporte_${activeReport.toUpperCase()}_${selectedMonth}`} />
             <button type="button" className="btn btn-secondary btn-sm" onClick={handlePrintReport}>
               <Printer size={15} />
               Imprimir Reporte
@@ -1499,19 +1499,18 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
                 />
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: 'auto' }}>
-                <Filter size={15} style={{ color: 'var(--text-muted)' }} />
-                <select
-                  className="form-select"
-                  style={{ width: 'auto', minWidth: '180px' }}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: 'auto', minWidth: '220px' }}>
+                <Filter size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                <ComboboxInline
+                  options={[
+                    { id: 'all', label: 'Todas las Categorías' },
+                    ...categories.map(c => ({ id: c.nombre, label: c.nombre }))
+                  ]}
                   value={profitabilityCategoryFilter}
-                  onChange={(e) => setProfitabilityCategoryFilter(e.target.value)}
-                >
-                  <option value="all">Todas las Categorías</option>
-                  {categories.map(c => (
-                    <option key={c.id} value={c.nombre}>{c.nombre}</option>
-                  ))}
-                </select>
+                  onChange={setProfitabilityCategoryFilter}
+                  containerStyle={{ width: '100%' }}
+                  hideSearch={true}
+                />
               </div>
             </div>
 

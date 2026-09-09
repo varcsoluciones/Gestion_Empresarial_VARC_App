@@ -607,43 +607,41 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
         </div>
 
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap' }}>
-          <select
-            className="form-select"
-            style={{ width: 'auto' }}
+          <ComboboxInline
+            options={[
+              { id: 'all', label: 'Todos los meses' },
+              ...(activeTab === 'invoices' ? availableInvoiceMonths : availableQuoteMonths).map(m => ({
+                id: m,
+                label: formatMonthLabel(m)
+              }))
+            ]}
             value={monthFilter}
-            onChange={(e) => setMonthFilter(e.target.value)}
-          >
-            <option value="all">Todos los meses</option>
-            {(activeTab === 'invoices' ? availableInvoiceMonths : availableQuoteMonths).map(m => (
-              <option key={m} value={m}>
-                {formatMonthLabel(m)}
-              </option>
-            ))}
-          </select>
+            onChange={setMonthFilter}
+            placeholder="Todos los meses"
+            hideSearch={true}
+            buttonStyle={{ minWidth: '160px' }}
+          />
 
-          <select
-            className="form-select"
-            style={{ width: 'auto' }}
+          <ComboboxInline
+            options={activeTab === 'invoices' ? [
+              { id: 'all', label: 'Todos los estados' },
+              { id: 'borrador', label: 'Borrador' },
+              { id: 'emitida', label: 'Emitida (Pendiente de Pago)' },
+              { id: 'pagada', label: 'Pagada' },
+              { id: 'anulada', label: 'Anulada' }
+            ] : [
+              { id: 'all', label: 'Todos los estados' },
+              { id: 'pendiente', label: 'Pendiente' },
+              { id: 'aprobada', label: 'Facturada / Aprobada' },
+              { id: 'vencida', label: 'Vencida' },
+              { id: 'rechazada', label: 'Rechazada' }
+            ]}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all">Todos los estados</option>
-            {activeTab === 'invoices' ? (
-              <>
-                <option value="borrador">Borrador</option>
-                <option value="emitida">Emitida (Pendiente de Pago)</option>
-                <option value="pagada">Pagada</option>
-                <option value="anulada">Anulada</option>
-              </>
-            ) : (
-              <>
-                <option value="pendiente">Pendiente</option>
-                <option value="aprobada">Facturada / Aprobada</option>
-                <option value="vencida">Vencida</option>
-                <option value="rechazada">Rechazada</option>
-              </>
-            )}
-          </select>
+            onChange={setStatusFilter}
+            placeholder="Todos los estados"
+            hideSearch={true}
+            buttonStyle={{ minWidth: '180px' }}
+          />
 
           <ExcelExportButton
             filename={activeTab === 'invoices' ? `Facturas_de_Venta_${monthFilter}` : `Cotizaciones_de_Venta_${monthFilter}`}
@@ -745,8 +743,8 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
                     <React.Fragment key={inv.id}>
                       <tr
                         style={{
-                          backgroundColor: hasPendingBalance ? 'rgba(239, 68, 68, 0.04)' : undefined,
-                          borderLeft: hasPendingBalance ? '3px solid var(--color-warning)' : '3px solid transparent'
+                          backgroundColor: hasPendingBalance ? 'var(--color-accent-subtle)' : undefined,
+                          borderLeft: hasPendingBalance ? '3px solid var(--color-accent)' : '3px solid transparent'
                         }}
                       >
                         <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
@@ -1178,14 +1176,17 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
 
             <div className="form-group" style={{ flex: 1 }}>
               <label className="form-label">Condición de Pago</label>
-              <select
-                className="form-select"
+              <ComboboxInline
+                options={[
+                  { id: 'contado', label: 'Contado' },
+                  { id: 'credito', label: 'Crédito' },
+                ]}
                 value={formTipoPago}
-                onChange={(e) => setFormTipoPago(e.target.value as PaymentTerm)}
-              >
-                <option value="contado">Contado</option>
-                <option value="credito">Crédito</option>
-              </select>
+                onChange={(val) => setFormTipoPago(val as PaymentTerm)}
+                placeholder="Seleccionar condición..."
+                hideSearch={true}
+                buttonStyle={{ width: '100%' }}
+              />
             </div>
 
             <div className="form-group" style={{ flex: 1 }}>
@@ -1761,16 +1762,19 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
           <div className="form-row">
             <div className="form-group">
               <label className="form-label">Método de Pago</label>
-              <select
-                className="form-select"
+              <ComboboxInline
+                options={[
+                  { id: 'transferencia', label: 'Transferencia Electrónica' },
+                  { id: 'efectivo', label: 'Efectivo' },
+                  { id: 'tarjeta', label: 'Tarjeta Bancaria' },
+                  { id: 'cheque', label: 'Cheque' },
+                ]}
                 value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-              >
-                <option value="transferencia">Transferencia Electrónica</option>
-                <option value="efectivo">Efectivo</option>
-                <option value="tarjeta">Tarjeta Bancaria</option>
-                <option value="cheque">Cheque</option>
-              </select>
+                onChange={(val) => setPaymentMethod(val as PaymentMethod)}
+                placeholder="Seleccionar método..."
+                hideSearch={true}
+                buttonStyle={{ width: '100%' }}
+              />
             </div>
 
             <div className="form-group">

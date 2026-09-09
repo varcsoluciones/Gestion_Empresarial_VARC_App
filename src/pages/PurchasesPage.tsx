@@ -316,44 +316,51 @@ export const PurchasesPage: React.FC = () => {
         </div>
 
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap' }}>
-          <select
-            className="form-select"
-            style={{ width: 'auto' }}
+          <ComboboxInline
+            options={[
+              { id: 'all', label: 'Todos los meses' },
+              ...availableMonths.map(mKey => ({
+                id: mKey,
+                label: formatMonthLabel(mKey)
+              }))
+            ]}
             value={monthFilter}
-            onChange={(e) => setMonthFilter(e.target.value)}
-          >
-            <option value="all">Todos los meses</option>
-            {availableMonths.map(mKey => (
-              <option key={mKey} value={mKey}>
-                {formatMonthLabel(mKey)}
-              </option>
-            ))}
-          </select>
+            onChange={setMonthFilter}
+            placeholder="Todos los meses"
+            hideSearch={true}
+            buttonStyle={{ minWidth: '160px' }}
+          />
 
-          <select
-            className="form-select"
-            style={{ width: 'auto' }}
+          <ComboboxInline
+            options={[
+              { id: 'all', label: 'Todos los estados' },
+              { id: 'borrador', label: 'Borrador' },
+              { id: 'recibida', label: 'Recibida (En Almacén)' },
+              { id: 'pagada', label: 'Pagada Totalmente' },
+              { id: 'anulada', label: 'Anulada' }
+            ]}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all">Todos los estados</option>
-            <option value="borrador">Borrador</option>
-            <option value="recibida">Recibida (En Almacén)</option>
-            <option value="pagada">Pagada Totalmente</option>
-            <option value="anulada">Anulada</option>
-          </select>
+            onChange={setStatusFilter}
+            placeholder="Todos los estados"
+            hideSearch={true}
+            buttonStyle={{ minWidth: '170px' }}
+          />
 
-          <select
-            className="form-select"
-            style={{ width: 'auto' }}
+          <ComboboxInline
+            options={[
+              { id: 'all', label: 'Todos los proveedores' },
+              ...suppliers.map(s => ({
+                id: s.id,
+                label: s.nombre,
+                sublabel: s.identificacionFiscal
+              }))
+            ]}
             value={selectedSupplierFilter}
-            onChange={(e) => setSelectedSupplierFilter(e.target.value)}
-          >
-            <option value="all">Todos los proveedores</option>
-            {suppliers.map(s => (
-              <option key={s.id} value={s.id}>{s.nombre}</option>
-            ))}
-          </select>
+            onChange={setSelectedSupplierFilter}
+            placeholder="Todos los proveedores"
+            searchPlaceholder="Buscar proveedor..."
+            buttonStyle={{ minWidth: '200px' }}
+          />
 
           <ExcelExportButton
             filename={`Ordenes_de_Compra_${monthFilter}`}
@@ -454,8 +461,8 @@ export const PurchasesPage: React.FC = () => {
                   <React.Fragment key={p.id}>
                     <tr
                       style={{
-                        backgroundColor: hasPendingBalance ? 'rgba(239, 68, 68, 0.04)' : undefined,
-                        borderLeft: hasPendingBalance ? '3px solid var(--color-warning)' : '3px solid transparent'
+                        backgroundColor: hasPendingBalance ? 'var(--color-accent-subtle)' : undefined,
+                        borderLeft: hasPendingBalance ? '3px solid var(--color-accent)' : '3px solid transparent'
                       }}
                     >
                       <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
@@ -1123,16 +1130,19 @@ export const PurchasesPage: React.FC = () => {
           <div className="form-row">
             <div className="form-group">
               <label className="form-label">Método de Pago</label>
-              <select
-                className="form-select"
+              <ComboboxInline
+                options={[
+                  { id: 'transferencia', label: 'Transferencia Electrónica' },
+                  { id: 'efectivo', label: 'Efectivo' },
+                  { id: 'tarjeta', label: 'Tarjeta Bancaria' },
+                  { id: 'cheque', label: 'Cheque' },
+                ]}
                 value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-              >
-                <option value="transferencia">Transferencia Electrónica</option>
-                <option value="efectivo">Efectivo</option>
-                <option value="tarjeta">Tarjeta Bancaria</option>
-                <option value="cheque">Cheque</option>
-              </select>
+                onChange={(val) => setPaymentMethod(val as PaymentMethod)}
+                placeholder="Seleccionar método..."
+                hideSearch={true}
+                buttonStyle={{ width: '100%' }}
+              />
             </div>
 
             <div className="form-group">

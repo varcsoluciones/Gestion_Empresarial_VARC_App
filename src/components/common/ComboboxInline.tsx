@@ -20,6 +20,10 @@ interface ComboboxInlineProps {
   quickCreateLabel?: string;
   disabled?: boolean;
   hideSearch?: boolean;
+  containerStyle?: React.CSSProperties;
+  buttonStyle?: React.CSSProperties;
+  dropdownStyle?: React.CSSProperties;
+  className?: string;
 }
 
 export const ComboboxInline: React.FC<ComboboxInlineProps> = ({
@@ -33,7 +37,11 @@ export const ComboboxInline: React.FC<ComboboxInlineProps> = ({
   onOpenQuickCreateModal,
   quickCreateLabel = '+ Crear nuevo',
   disabled = false,
-  hideSearch
+  hideSearch,
+  containerStyle,
+  buttonStyle,
+  dropdownStyle,
+  className = ''
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -73,7 +81,7 @@ export const ComboboxInline: React.FC<ComboboxInlineProps> = ({
   };
 
   return (
-    <div className="combobox-container" ref={containerRef}>
+    <div className={`combobox-container ${className}`.trim()} ref={containerRef} style={containerStyle}>
       <button
         type="button"
         className="form-control"
@@ -83,7 +91,8 @@ export const ComboboxInline: React.FC<ComboboxInlineProps> = ({
           justifyContent: 'space-between',
           textAlign: 'left',
           cursor: disabled ? 'not-allowed' : 'pointer',
-          opacity: disabled ? 0.6 : 1
+          opacity: disabled ? 0.6 : 1,
+          ...buttonStyle
         }}
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
@@ -106,7 +115,7 @@ export const ComboboxInline: React.FC<ComboboxInlineProps> = ({
       </button>
 
       {isOpen && (
-        <div className="combobox-dropdown">
+        <div className="combobox-dropdown" style={dropdownStyle}>
           {showSearch && (
             <div style={{ position: 'relative', padding: '0.4rem' }}>
               <Search size={14} style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
