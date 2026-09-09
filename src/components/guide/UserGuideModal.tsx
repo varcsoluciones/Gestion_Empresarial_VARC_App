@@ -580,10 +580,10 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
               <div style={{ padding: '1rem', backgroundColor: 'var(--bg-subtle)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)' }}>
                 <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <Sliders size={16} style={{ color: 'var(--color-accent)' }} />
-                  Realizar un Ajuste de Inventario:
+                  Ajustar o Cargar Inventario:
                 </h4>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                  Usa el botón <strong>+ Ajuste de Inventario</strong> para registrar aumentos o disminuciones por conteo físico, mermas o inventario inicial, justificando siempre el motivo para la auditoría.
+                  Usa el botón unificado <strong>Ajustar/Cargar</strong> para registrar aumentos o disminuciones por conteo físico, mermas o inventario inicial, fijando el costo o ajustando a costo promedio móvil de forma auditable.
                 </p>
               </div>
             </div>
@@ -730,7 +730,16 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
                     4. Ventas por Producto y Cliente con Fila de Totales:
                   </h4>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    Tablas detalladas con el total de piezas vendidas, saldos de clientes y participación porcentual.
+                    Tablas detalladas con el total de piezas vendidas, número de facturas emitidas, saldos de clientes y participación porcentual.
+                  </p>
+                </div>
+
+                <div className="card" style={{ padding: '1rem' }}>
+                  <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-accent)', marginBottom: '0.25rem' }}>
+                    5. Análisis de Rentabilidad Detallado por SKU:
+                  </h4>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    Desglose a nivel variante y producto con costo de compra, gastos operativos prorrateados, depreciación de activos fijos, precio de venta, ingreso y margen final neto en monto y porcentaje.
                   </p>
                 </div>
               </div>

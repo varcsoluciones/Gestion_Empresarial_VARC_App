@@ -743,7 +743,12 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
 
                   return (
                     <React.Fragment key={inv.id}>
-                      <tr>
+                      <tr
+                        style={{
+                          backgroundColor: hasPendingBalance ? 'rgba(239, 68, 68, 0.04)' : undefined,
+                          borderLeft: hasPendingBalance ? '3px solid var(--color-warning)' : '3px solid transparent'
+                        }}
+                      >
                         <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
                           {inv.numeroFactura}
                         </td>

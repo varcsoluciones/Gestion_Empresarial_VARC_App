@@ -381,6 +381,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                   varianteId: v.id,
                   cantidad: item.cantidad,
                   costoUnitario: item.costoUnitario,
+                  stockResultante: varNewStock,
                   motivo: `Recepción de compra ${purchase.numeroCompra} (${v.talla} / ${v.color})`,
                   usuario: 'Almacén'
                 });
@@ -398,6 +399,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               productoId: product.id,
               cantidad: item.cantidad,
               costoUnitario: item.costoUnitario,
+              stockResultante: updatedStock,
               motivo: `Recepción de compra ${purchase.numeroCompra}`,
               usuario: 'Almacén'
             });
@@ -417,9 +419,31 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       });
     });
 
-    if (newMovements.length > 0) {
-      setInventoryMovements(prev => [...newMovements, ...prev]);
-    }
+    const directFallbackMovements: InventoryMovement[] = purchase.items.map((item, idx) => {
+      const prod = products.find(p => p.id === item.productoId);
+      const variant = prod?.variantes?.find(v => v.id === item.varianteId);
+      const resultingStock = (variant ? (variant.stockActual || 0) : (prod?.stockActual || 0)) + item.cantidad;
+      return {
+        id: `mov-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 5)}`,
+        fecha: movementTimestamp,
+        tipo: 'ENTRADA_COMPRA' as MovementType,
+        referenciaDoc: purchase.numeroCompra,
+        productoId: item.productoId,
+        varianteId: item.varianteId,
+        cantidad: item.cantidad,
+        costoUnitario: item.costoUnitario,
+        stockResultante: resultingStock,
+        motivo: variant
+          ? `Recepción de compra ${purchase.numeroCompra} (${variant.talla} / ${variant.color})`
+          : `Recepción de compra ${purchase.numeroCompra}`,
+        usuario: 'Almacén'
+      };
+    });
+
+    setInventoryMovements(prev => {
+      const itemsToAdd = newMovements.length > 0 ? newMovements : directFallbackMovements;
+      return [...itemsToAdd, ...prev];
+    });
   };
 
   // Actions: Compras (Purchases)

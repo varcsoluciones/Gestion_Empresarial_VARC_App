@@ -185,8 +185,23 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
         return variant?.sku || prod?.codigo || '';
       },
       producto: (m) => products.find(p => p.id === m.productoId)?.nombre || '',
+      costoTotal: (m) => m.cantidad * m.costoUnitario,
     }
   });
+
+  const filteredKardexTotals = React.useMemo(() => {
+    const totalCantidad = filteredMovements.reduce((sum, m) => sum + m.cantidad, 0);
+    const totalCosto = filteredMovements.reduce((sum, m) => sum + (m.cantidad * m.costoUnitario), 0);
+    const totalEntradas = filteredMovements.filter(m => m.cantidad > 0).reduce((sum, m) => sum + m.cantidad, 0);
+    const totalSalidas = filteredMovements.filter(m => m.cantidad < 0).reduce((sum, m) => sum + Math.abs(m.cantidad), 0);
+    return {
+      totalCantidad,
+      totalCosto,
+      totalEntradas,
+      totalSalidas,
+      count: filteredMovements.length
+    };
+  }, [filteredMovements]);
 
   const filteredStockProducts = products.filter(p => {
     const matchesSearch = p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -257,19 +272,12 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
           </button>
           <button
             type="button"
-            className="btn btn-outline-primary btn-sm"
-            onClick={() => handleOpenAdjustment(undefined, undefined, true)}
-          >
-            <Boxes size={15} />
-            + Carga Inicial
-          </button>
-          <button
-            type="button"
             className="btn btn-primary btn-sm"
             onClick={() => handleOpenAdjustment(undefined, undefined, false)}
+            title="Ajustar existencias físicas o realizar carga inicial de inventario"
           >
             <SlidersHorizontal size={15} />
-            + Ajuste de Stock
+            + Ajustar/Cargar
           </button>
         </div>
       </div>
@@ -498,6 +506,16 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                   Costo Unit.
                 </SortableTh>
                 <SortableTh
+                  sortKey="costoTotal"
+                  currentSortKey={kardexSortKey}
+                  currentSortDirection={kardexSortDirection}
+                  onSort={requestKardexSort}
+                  isNumeric={true}
+                  align="right"
+                >
+                  Costo Total
+                </SortableTh>
+                <SortableTh
                   sortKey="motivo"
                   currentSortKey={kardexSortKey}
                   currentSortDirection={kardexSortDirection}
@@ -511,7 +529,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
             <tbody>
               {sortedMovements.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
+                  <td colSpan={9} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
                     No hay movimientos registrados con los filtros seleccionados.
                   </td>
                 </tr>
@@ -521,6 +539,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                   const variant = prod?.variantes?.find(v => v.id === m.varianteId);
                   const skuCode = variant?.sku || prod?.codigo || '—';
                   const isPositive = m.cantidad > 0;
+                  const totalMovementCost = m.cantidad * m.costoUnitario;
 
                   return (
                     <tr key={m.id}>
@@ -554,6 +573,9 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                       <td style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>
                         {formatCurrency(m.costoUnitario)}
                       </td>
+                      <td style={{ textAlign: 'right', fontWeight: 700, color: totalMovementCost >= 0 ? 'var(--color-primary-text, var(--color-accent))' : 'var(--color-danger-text)' }}>
+                        {formatCurrency(totalMovementCost)}
+                      </td>
                       <td style={{ fontSize: '0.825rem', color: 'var(--text-secondary)' }}>
                         {m.motivo}
                       </td>
@@ -562,6 +584,38 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                 })
               )}
             </tbody>
+            {sortedMovements.length > 0 && (
+              <tfoot style={{ borderTop: '2px solid var(--border-default)', backgroundColor: 'var(--bg-subtle)', fontWeight: 700 }}>
+                <tr>
+                  <td colSpan={5} style={{ padding: '0.85rem 0.6rem', fontSize: '0.85rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>TOTAL FILTRADO:</span>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: 800 }}>
+                        {filteredKardexTotals.count} movimientos
+                      </span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>
+                        (+{filteredKardexTotals.totalEntradas} entradas / -{filteredKardexTotals.totalSalidas} salidas)
+                      </span>
+                    </div>
+                  </td>
+                  <td style={{ textAlign: 'center', padding: '0.85rem 0.6rem', fontSize: '0.9rem' }}>
+                    <span style={{
+                      fontWeight: 700,
+                      color: filteredKardexTotals.totalCantidad >= 0 ? 'var(--color-success-text)' : 'var(--color-danger-text)'
+                    }}>
+                      {filteredKardexTotals.totalCantidad >= 0 ? `+${filteredKardexTotals.totalCantidad}` : filteredKardexTotals.totalCantidad} pzs
+                    </span>
+                  </td>
+                  <td style={{ textAlign: 'right', padding: '0.85rem 0.6rem', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                    —
+                  </td>
+                  <td style={{ textAlign: 'right', padding: '0.85rem 0.6rem', fontSize: '0.95rem', fontWeight: 800, color: filteredKardexTotals.totalCosto >= 0 ? 'var(--color-accent)' : 'var(--color-danger-text)' }}>
+                    {formatCurrency(filteredKardexTotals.totalCosto)}
+                  </td>
+                  <td style={{ padding: '0.85rem 0.6rem' }}></td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       )}
@@ -726,27 +780,15 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                           <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'flex-end' }}>
                             <button
                               type="button"
-                              className="btn btn-outline-primary btn-sm"
-                              style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenAdjustment(p.id, undefined, true);
-                              }}
-                              title="Carga de inventario inicial con costo asignado"
-                            >
-                              Carga Inicial
-                            </button>
-                            <button
-                              type="button"
                               className="btn btn-secondary btn-sm"
                               style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleOpenAdjustment(p.id, undefined, false);
                               }}
-                              title="Ajuste manual a costo promedio"
+                              title="Ajustar existencias o realizar carga de inventario"
                             >
-                              Ajustar
+                              Ajustar/Cargar
                             </button>
                           </div>
                         </td>
@@ -839,27 +881,15 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                                             <div style={{ display: 'flex', gap: '0.25rem', justifyContent: 'flex-end' }}>
                                               <button
                                                 type="button"
-                                                className="btn btn-outline-primary btn-sm"
-                                                style={{ fontSize: '0.7rem', padding: '0.15rem 0.4rem' }}
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  handleOpenAdjustment(p.id, v.id, true);
-                                                }}
-                                                title={`Carga inicial para ${v.color} - ${v.talla}`}
-                                              >
-                                                Carga Inicial
-                                              </button>
-                                              <button
-                                                type="button"
                                                 className="btn btn-secondary btn-sm"
-                                                style={{ fontSize: '0.7rem', padding: '0.15rem 0.4rem' }}
+                                                style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem' }}
                                                 onClick={(e) => {
                                                   e.stopPropagation();
                                                   handleOpenAdjustment(p.id, v.id, false);
                                                 }}
-                                                title={`Ajuste manual para ${v.color} - ${v.talla}`}
+                                                title={`Ajustar o cargar existencias para ${v.color} - ${v.talla}`}
                                               >
-                                                Ajustar
+                                                Ajustar/Cargar
                                               </button>
                                             </div>
                                           </td>
@@ -888,7 +918,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
         onClose={() => setIsAdjustModalOpen(false)}
         title={adjIsInitialLoad ? 'Carga de Inventario Inicial' : 'Ajuste Manual de Inventario'}
         subtitle={adjIsInitialLoad ? 'Asigna existencias iniciales con costo unitario de partida (Ref: II0001)' : 'Auditoría obligatoria a costo promedio móvil (Ref: AJ0001)'}
-        size="md"
+        size="lg"
         footer={
           <>
             <button type="button" className="btn btn-secondary" onClick={() => setIsAdjustModalOpen(false)}>
@@ -986,8 +1016,8 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
 
           {adjIsInitialLoad ? (
             /* Mode 1: Initial Inventory Load */
-            <div className="form-row">
-              <div className="form-group">
+            <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Cantidad Inicial a Cargar *</label>
                 <input
                   type="number"
@@ -1000,7 +1030,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                 />
               </div>
 
-              <div className="form-group">
+              <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Costo Unitario Inicial ($) *</label>
                 <input
                   type="number"
@@ -1016,8 +1046,8 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
             </div>
           ) : (
             /* Mode 2: Physical Adjustment */
-            <div className="form-row">
-              <div className="form-group">
+            <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1.4fr 0.8fr', gap: '1rem' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Tipo de Ajuste</label>
                 <select
                   className="form-select"
@@ -1029,7 +1059,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                 </select>
               </div>
 
-              <div className="form-group">
+              <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Cantidad *</label>
                 <input
                   type="number"

@@ -282,7 +282,6 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
   // 5. Calculations for SKU-Level Profitability Analysis (Análisis de Rentabilidad por SKU)
   const [profitabilitySearch, setProfitabilitySearch] = useState('');
   const [profitabilityCategoryFilter, setProfitabilityCategoryFilter] = useState('all');
-  const [profitabilityOnlySales, setProfitabilityOnlySales] = useState(false);
 
   interface SkuProfitabilityRow {
     id: string;
@@ -445,11 +444,10 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
         item.categoriaNombre.toLowerCase().includes(profitabilitySearch.toLowerCase());
 
       const matchCat = profitabilityCategoryFilter === 'all' || item.categoriaNombre === profitabilityCategoryFilter;
-      const matchSales = !profitabilityOnlySales || item.cantidadVendida > 0;
 
-      return matchSearch && matchCat && matchSales;
+      return matchSearch && matchCat;
     });
-  }, [skuProfitabilityList, profitabilitySearch, profitabilityCategoryFilter, profitabilityOnlySales]);
+  }, [skuProfitabilityList, profitabilitySearch, profitabilityCategoryFilter]);
 
   // Sorting for Profitability Analysis
   const {
@@ -878,6 +876,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
                     <th>Código</th>
                     <th>Producto</th>
                     <th>Categoría</th>
+                    <th style={{ textAlign: 'center' }}>No. Facturas</th>
                     <th style={{ textAlign: 'center' }}>Unidades Vendidas</th>
                     <th style={{ textAlign: 'right' }}>Descuentos ({settings.monedaSimbolo || '$'})</th>
                     <th style={{ textAlign: 'right', fontWeight: 800 }}>Total Vendido ({settings.monedaSimbolo || '$'})</th>
@@ -887,7 +886,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
                 <tbody>
                   {productSalesList.length === 0 ? (
                     <tr>
-                      <td colSpan={8} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
+                      <td colSpan={9} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
                         No se registraron ventas de productos en el periodo seleccionado ({selectedMonth}).
                       </td>
                     </tr>
@@ -920,6 +919,9 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
                               </div>
                             </td>
                             <td>{prodGroup.categoria}</td>
+                            <td style={{ textAlign: 'center', fontWeight: 600 }}>
+                              {prodGroup.ventas.length}
+                            </td>
                             <td style={{ textAlign: 'center', fontWeight: 700 }}>
                               {prodGroup.totalCantidad} pzas
                             </td>
@@ -939,7 +941,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
                           {/* Expanded Breakdown for Product */}
                           {isExpanded && (
                             <tr style={{ backgroundColor: 'var(--bg-subtle)' }}>
-                              <td colSpan={8} style={{ padding: '1rem 1.5rem' }}>
+                              <td colSpan={9} style={{ padding: '1rem 1.5rem' }}>
                                 <div style={{
                                   backgroundColor: 'var(--bg-surface)',
                                   borderRadius: 'var(--radius-md)',
@@ -1324,8 +1326,9 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
                     <th style={{ textAlign: 'right' }}>Precio Venta</th>
                     <th style={{ textAlign: 'right' }}>1. Costo Compra</th>
                     <th style={{ textAlign: 'center' }}>% Absorción</th>
-                    <th style={{ textAlign: 'right' }}>2. Gasto Absorbido</th>
-                    <th style={{ textAlign: 'right', fontWeight: 800 }}>3. Costo Real</th>
+                    <th style={{ textAlign: 'right' }}>2. Gasto Operativo</th>
+                    <th style={{ textAlign: 'right' }}>3. Deprec. Activos</th>
+                    <th style={{ textAlign: 'right', fontWeight: 800 }}>4. Costo Real Total</th>
                     <th style={{ textAlign: 'center' }}>Margen Real %</th>
                     <th style={{ textAlign: 'center', backgroundColor: 'var(--bg-subtle)' }}>Vol. Stock Disponible</th>
                     <th style={{ textAlign: 'right', backgroundColor: 'var(--bg-subtle)', fontWeight: 800 }}>Inventario Valuado a Costo Real</th>
@@ -1346,7 +1349,8 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
                         <td style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                           {costs.criterio === 'costo_material' ? `+${costs.tasaAbsorcionPorcentaje}%` : costs.criterio === 'valor_venta' ? `+${costs.tasaAbsorcionPorcentaje}% PVP` : 'Fijo'}
                         </td>
-                        <td style={{ textAlign: 'right', color: 'var(--color-warning-text)' }}>+{formatCurrency(costs.costoOperativoProrrateado)}</td>
+                        <td style={{ textAlign: 'right', color: 'var(--color-warning-text)' }}>+{formatCurrency(costs.gastoOperativoUnitario)}</td>
+                        <td style={{ textAlign: 'right', color: '#3b82f6' }}>+{formatCurrency(costs.gastoDepreciacionUnitario)}</td>
                         <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--color-accent)' }}>{formatCurrency(costs.costoReal)}</td>
                         <td style={{ textAlign: 'center' }}>
                           <span className={`badge ${Number(realMargin) >= 30 ? 'badge-success' : Number(realMargin) > 0 ? 'badge-warning' : 'badge-danger'}`}>
@@ -1367,7 +1371,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
                 </tbody>
                 <tfoot>
                   <tr style={{ borderTop: '2px solid var(--border-default)', backgroundColor: 'var(--bg-subtle)' }}>
-                    <td colSpan={8} style={{ padding: '0.85rem 1rem', fontWeight: 800, textAlign: 'right' }}>
+                    <td colSpan={9} style={{ padding: '0.85rem 1rem', fontWeight: 800, textAlign: 'right' }}>
                       TOTAL VALUACIÓN DE INVENTARIO REAL EN BALANCE:
                     </td>
                     <td style={{ padding: '0.85rem', textAlign: 'center', fontWeight: 800 }}>
@@ -1482,23 +1486,24 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
               </div>
             </div>
 
-            {/* Filter Bar */}
-            <div className="filter-bar no-print" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <div className="search-input" style={{ flex: '1 1 240px', minWidth: '220px' }}>
+            {/* Standardized Filters Bar */}
+            <div className="filters-bar no-print" style={{ marginBottom: '1.25rem' }}>
+              <div className="search-input-wrapper">
                 <Search size={16} />
                 <input
                   type="text"
+                  className="form-control"
                   placeholder="Buscar por SKU, producto o categoría..."
                   value={profitabilitySearch}
                   onChange={(e) => setProfitabilitySearch(e.target.value)}
                 />
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: 'auto' }}>
                 <Filter size={15} style={{ color: 'var(--text-muted)' }} />
                 <select
-                  className="form-control"
-                  style={{ width: 'auto', minWidth: '160px', padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
+                  className="form-select"
+                  style={{ width: 'auto', minWidth: '180px' }}
                   value={profitabilityCategoryFilter}
                   onChange={(e) => setProfitabilityCategoryFilter(e.target.value)}
                 >
@@ -1508,16 +1513,6 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
                   ))}
                 </select>
               </div>
-
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', userSelect: 'none' }}>
-                <input
-                  type="checkbox"
-                  checked={profitabilityOnlySales}
-                  onChange={(e) => setProfitabilityOnlySales(e.target.checked)}
-                  style={{ width: '16px', height: '16px', accentColor: 'var(--color-accent)', cursor: 'pointer' }}
-                />
-                <span>Solo productos con ventas en {selectedMonth}</span>
-              </label>
             </div>
 
             <div className="table-container" style={{ border: 'none', boxShadow: 'none' }}>

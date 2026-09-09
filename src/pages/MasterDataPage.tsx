@@ -1073,12 +1073,6 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
               )}
             </tbody>
           </table>
-          {/* Product Modal */}
-          <ProductFormModal
-            isOpen={isProductModalOpen}
-            onClose={() => setIsProductModalOpen(false)}
-            productToEdit={editingProduct}
-          />
         </div>
       )}
 
@@ -1444,6 +1438,13 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
           </div>
         </form>
       </Modal>
+
+      {/* Product Modal */}
+      <ProductFormModal
+        isOpen={isProductModalOpen}
+        onClose={() => setIsProductModalOpen(false)}
+        productToEdit={editingProduct}
+      />
     </div>
   );
 };

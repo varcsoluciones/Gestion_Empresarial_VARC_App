@@ -147,7 +147,8 @@ export const QuickNavigationModal: React.FC<QuickNavigationModalProps> = ({
         { id: 'pnl', name: 'Estado de Resultados (P&L)', desc: 'Margen bruto, gastos y utilidad neta devengada', icon: <TrendingUp size={15} /> },
         { id: 'balance', name: 'Balance General', desc: 'Activos vs Pasivos y Capital contable', icon: <Building2 size={15} /> },
         { id: 'sales', name: 'Ventas por Producto y Cliente', desc: 'Tablas analíticas con totales y exportación XLS', icon: <FileSpreadsheet size={15} /> },
-        { id: 'costs', name: 'Reporte de Costos Unitarios', desc: 'Comparativa de costo compra vs costo absorbido', icon: <Calculator size={15} /> }
+        { id: 'costs', name: 'Reporte de Costos Unitarios', desc: 'Comparativa de costo compra vs costo absorbido', icon: <Calculator size={15} /> },
+        { id: 'profitability', name: 'Análisis de Rentabilidad por SKU', desc: 'Margen real detallado por variante con absorción completa', icon: <PieChart size={15} /> }
       ]
     },
     {
@@ -172,6 +173,7 @@ export const QuickNavigationModal: React.FC<QuickNavigationModalProps> = ({
     { label: 'Prorrateo Costos', icon: <PieChart size={14} />, tab: 'accounting' as NavigationTab, subTab: 'prorrateo' },
     { label: 'Gastos Operativos', icon: <DollarSign size={14} />, tab: 'accounting' as NavigationTab, subTab: 'expenses' },
     { label: 'Resultados P&L', icon: <TrendingUp size={14} />, tab: 'reports' as NavigationTab, subTab: 'pnl' },
+    { label: 'Rentabilidad SKU', icon: <PieChart size={14} />, tab: 'reports' as NavigationTab, subTab: 'profitability' },
     { label: 'Ventas por Cliente', icon: <FileSpreadsheet size={14} />, tab: 'reports' as NavigationTab, subTab: 'sales' }
   ];
 

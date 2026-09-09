@@ -268,6 +268,21 @@ export const PurchasesPage: React.FC = () => {
     }
   });
 
+  const filteredPurchasesTotals = React.useMemo(() => {
+    const activePurchases = sortedPurchases.filter(p => p.estado !== 'anulada');
+    const totalCompras = activePurchases.reduce((sum, p) => sum + (p.total || 0), 0);
+    const totalSaldoPendiente = activePurchases.reduce((sum, p) => sum + (p.saldoPendiente || 0), 0);
+    const totalPagado = totalCompras - totalSaldoPendiente;
+    const totalItems = activePurchases.reduce((sum, p) => sum + p.items.reduce((s, i) => s + i.cantidad, 0), 0);
+    return {
+      totalCompras,
+      totalSaldoPendiente,
+      totalPagado,
+      totalItems,
+      count: activePurchases.length
+    };
+  }, [sortedPurchases]);
+
   const selectedProdObj = products.find(p => p.id === selectedProdForLine);
 
   return (
@@ -437,7 +452,12 @@ export const PurchasesPage: React.FC = () => {
 
                 return (
                   <React.Fragment key={p.id}>
-                    <tr>
+                    <tr
+                      style={{
+                        backgroundColor: hasPendingBalance ? 'rgba(239, 68, 68, 0.04)' : undefined,
+                        borderLeft: hasPendingBalance ? '3px solid var(--color-warning)' : '3px solid transparent'
+                      }}
+                    >
                       <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
                         {p.numeroCompra}
                       </td>
@@ -636,6 +656,39 @@ export const PurchasesPage: React.FC = () => {
               })
             )}
           </tbody>
+          {sortedPurchases.length > 0 && (
+            <tfoot style={{ borderTop: '2px solid var(--border-default)', backgroundColor: 'var(--bg-subtle)', fontWeight: 700 }}>
+              <tr>
+                <td colSpan={3} style={{ padding: '0.85rem 0.6rem', fontSize: '0.85rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>TOTAL FILTRADO:</span>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 800 }}>
+                      {filteredPurchasesTotals.count} órdenes activas
+                    </span>
+                    {sortedPurchases.some(p => p.estado === 'anulada') && (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>
+                        (excluye anuladas)
+                      </span>
+                    )}
+                  </div>
+                </td>
+                <td style={{ textAlign: 'center', padding: '0.85rem 0.6rem', fontSize: '0.85rem' }}>
+                  <span className="badge badge-neutral" style={{ fontWeight: 700 }}>
+                    {filteredPurchasesTotals.totalItems} pzs
+                  </span>
+                </td>
+                <td style={{ textAlign: 'right', padding: '0.85rem 0.6rem', color: 'var(--text-primary)', fontSize: '0.95rem' }}>
+                  {formatCurrency(filteredPurchasesTotals.totalCompras)}
+                </td>
+                <td style={{ textAlign: 'right', padding: '0.85rem 0.6rem', color: filteredPurchasesTotals.totalSaldoPendiente > 0 ? 'var(--color-danger-text)' : 'var(--color-success-text)', fontSize: '0.95rem' }}>
+                  {formatCurrency(filteredPurchasesTotals.totalSaldoPendiente)}
+                </td>
+                <td colSpan={2} style={{ textAlign: 'right', padding: '0.85rem 0.6rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  Total Pagado: <strong style={{ color: 'var(--color-success-text)' }}>{formatCurrency(filteredPurchasesTotals.totalPagado)}</strong>
+                </td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
 
@@ -860,16 +913,37 @@ export const PurchasesPage: React.FC = () => {
               />
             </div>
 
-            <div className="totals-summary-box">
-              <div className="totals-row">
-                <span>Subtotal (Base imponible):</span>
+            <div style={{ backgroundColor: 'var(--bg-subtle)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.35rem' }}>
+                <span>Subtotal:</span>
                 <span>{formatCurrency(formSubtotal)}</span>
               </div>
-              <div className="totals-row">
-                <span>IVA al proveedor:</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', marginBottom: '0.35rem' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  IVA (%):
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={formTasaImpuesto}
+                    onChange={(e) => setFormTasaImpuesto(e.target.value === '' ? 0 : Number(e.target.value))}
+                    style={{
+                      width: '55px',
+                      padding: '2px 4px',
+                      fontSize: '0.8rem',
+                      textAlign: 'right',
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid var(--border-default)',
+                      backgroundColor: 'var(--bg-surface)',
+                      color: 'var(--text-primary)'
+                    }}
+                  />
+                  %
+                </span>
                 <span>{formatCurrency(formImpuestos)}</span>
               </div>
-              <div className="totals-row grand-total">
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', fontWeight: 800, borderTop: '1px solid var(--border-default)', paddingTop: '0.5rem', color: 'var(--color-accent)' }}>
                 <span>Total a Pagar:</span>
                 <span>{formatCurrency(formTotal)}</span>
               </div>

@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { useTranslation } from '../../i18n/useTranslation';
-import { APP_NAME, APP_BRAND, APP_VERSION } from '../../config/version';
+import { APP_NAME, APP_BRAND } from '../../config/version';
 
 export type NavigationTab = 
   | 'dashboard' 
@@ -134,8 +134,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span className="brand-title" style={{ fontSize: '0.95rem', fontWeight: 800, lineHeight: 1.2, letterSpacing: '-0.01em' }}>
                   {APP_NAME}
                 </span>
-                <span className="brand-subtitle" style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--color-accent)' }}>
-                  {APP_BRAND} v{APP_VERSION}
+                <span className="brand-subtitle" style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--color-accent)' }}>
+                  {APP_BRAND}
                 </span>
               </div>
             </div>
