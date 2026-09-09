@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { useERP } from '../context/ERPContext';
-import { formatCurrency, getMonthKey } from '../utils/formatters';
+import { formatCurrency, getMonthKey, formatMonthLabel } from '../utils/formatters';
 import {
   TrendingUp,
   ShoppingBag,
@@ -14,7 +14,6 @@ import {
   Sparkles,
   Calendar,
   AlertCircle,
-  DollarSign,
   BarChart3
 } from 'lucide-react';
 import { ExcelExportButton } from '../components/common/ExcelExportButton';
@@ -39,7 +38,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // 1. KPI Metrics Calculations
+  const [hoveredMonthIndex, setHoveredMonthIndex] = useState<number | null>(null);
+
+  // 1. KPI Metrics Calculations (Current Month)
   const validInvoices = invoices.filter(i => i.estado === 'emitida' || i.estado === 'pagada');
   const monthInvoices = validInvoices.filter(i =>
     i.fechaEmision.startsWith(currentMonthKey) || i.emitidaFecha?.startsWith(currentMonthKey)
@@ -58,19 +59,75 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
   const totalInventoryUnits = products.reduce((sum, p) => sum + p.stockActual, 0);
   const totalInventoryValue = products.reduce((sum, p) => sum + (p.stockActual * p.costoPromedio), 0);
 
-  // Approximate Gross Profit for the month
-  const totalSalesSubtotal = monthInvoices.reduce((sum, i) => sum + i.subtotal, 0);
-  const totalCostOfGoodsSold = monthInvoices.reduce((sum, inv) => {
-    return sum + inv.items.reduce((iSum, item) => {
-      const prod = products.find(p => p.id === item.productoId);
-      return iSum + (item.cantidad * (prod?.costoPromedio || 0));
-    }, 0);
-  }, 0);
+  // 2. Historical 6-Month Evolution (Ventas vs Costos Operativos Totales)
+  const historicalMonths = useMemo(() => {
+    const months: string[] = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      months.push(`${y}-${m}`);
+    }
+    return months;
+  }, []);
 
-  const grossProfit = totalSalesSubtotal - totalCostOfGoodsSold;
-  const netOperatingProfit = grossProfit - prorrateo.gastoOperativoTotal;
+  const historicalStats = useMemo(() => {
+    return historicalMonths.map(mKey => {
+      const mInvoices = invoices.filter(i =>
+        (i.estado === 'emitida' || i.estado === 'pagada') &&
+        (i.fechaEmision.startsWith(mKey) || i.emitidaFecha?.startsWith(mKey))
+      );
+      const ventas = mInvoices.reduce((sum, i) => sum + i.total, 0);
+      const ventasSubtotal = mInvoices.reduce((sum, i) => sum + i.subtotal, 0);
 
-  // 2. Section 1 Data: Semáforo de Cobranza & Créditos CxC
+      const cogs = mInvoices.reduce((sum, inv) => {
+        return sum + inv.items.reduce((iSum, item) => {
+          const prod = products.find(p => p.id === item.productoId);
+          return iSum + (item.cantidad * (prod?.costoPromedio || 0));
+        }, 0);
+      }, 0);
+
+      const prorrateoM = getProrrateoMensual(mKey);
+      const opex = prorrateoM.gastoOperativoTotal;
+      const costoTotal = cogs + opex;
+      const utilidad = ventasSubtotal - costoTotal;
+      const margen = ventasSubtotal > 0 ? (utilidad / ventasSubtotal) * 100 : 0;
+
+      const fullLabel = formatMonthLabel(mKey);
+      const [mName, mYear] = fullLabel.split(' ');
+      const shortName = (mName || '').slice(0, 3);
+
+      return {
+        monthKey: mKey,
+        label: fullLabel,
+        shortLabel: `${shortName} '${mYear ? mYear.slice(-2) : ''}`,
+        year: mYear || mKey.split('-')[0],
+        ventas,
+        ventasSubtotal,
+        cogs,
+        opex,
+        costoTotal,
+        utilidad,
+        margen,
+        facturasCount: mInvoices.length
+      };
+    });
+  }, [historicalMonths, invoices, products, getProrrateoMensual]);
+
+  // Aggregate 6M metrics
+  const totalVentas6M = historicalStats.reduce((sum, s) => sum + s.ventas, 0);
+  const totalCostos6M = historicalStats.reduce((sum, s) => sum + s.costoTotal, 0);
+  const totalUtilidad6M = historicalStats.reduce((sum, s) => sum + s.utilidad, 0);
+  const totalVentasSub6M = historicalStats.reduce((sum, s) => sum + s.ventasSubtotal, 0);
+  const margenPromedio6M = totalVentasSub6M > 0 ? (totalUtilidad6M / totalVentasSub6M) * 100 : 0;
+
+  const maxChartVal = Math.max(
+    ...historicalStats.map(s => Math.max(s.ventas, s.costoTotal)),
+    1000
+  ) * 1.15;
+
+  // 3. Section 1 Data: Semáforo de Cobranza & Créditos CxC
   const cxcAlerts = invoices
     .filter(i => i.estado === 'emitida' && i.saldoPendiente > 0)
     .map(inv => {
@@ -97,7 +154,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
   const dueSoonInvoices = cxcAlerts.filter(i => i.statusCategory === 'dueSoon');
   const totalOverdueAmount = overdueInvoices.reduce((sum, i) => sum + i.saldoPendiente, 0);
 
-  // 3. Section 2 Data: Reabastecimiento Sugerido & Compras Necesarias
+  // 4. Section 2 Data: Reabastecimiento Sugerido & Compras Necesarias
   const lowStockProducts = products
     .filter(p => p.stockActual <= p.stockMinimo)
     .map(p => {
@@ -115,11 +172,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
 
   const totalRestockCost = lowStockProducts.reduce((sum, p) => sum + p.estimatedCost, 0);
 
-  // 4. Section 3 Data: Proyección de Flujo de Caja & Liquidez (30 Días)
+  // 5. Section 3 Data: Top Productos Estrella & Flujo de Caja (30 Días)
   const totalCommittedOutflows = pendingPayables + prorrateo.gastoOperativoTotal;
   const netCashflowPosition = pendingReceivables - totalCommittedOutflows;
 
-  // 5. Section 4 Data: Top Productos Estrella vs Stock Estancado
   const productSalesMap: Record<string, { product: Product; qty: number; total: number }> = {};
   monthInvoices.forEach(inv => {
     inv.items.forEach(item => {
@@ -136,20 +192,20 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
 
   const topSellingProducts = Object.values(productSalesMap)
     .sort((a, b) => b.total - a.total)
-    .slice(0, 4);
+    .slice(0, 3);
 
   const deadStockProducts = products
     .filter(p => p.stockActual > 0 && (!productSalesMap[p.id] || productSalesMap[p.id].qty === 0))
-    .slice(0, 4);
+    .slice(0, 3);
 
   return (
     <div className="page-content">
-      {/* Welcome Banner */}
+      {/* Welcome & Action Header */}
       <div className="page-header" style={{ marginBottom: '1.25rem' }}>
         <div>
           <h1 className="page-title">Panel de Control & Centro de Mando</h1>
           <p className="page-description">
-            Monitoreo en tiempo real de cobranza, reabastecimiento, liquidez y rotación comercial ({currentMonthKey}).
+            Monitoreo en tiempo real de cobranza, compras, inventario y evolución de rentabilidad ({currentMonthKey}).
           </p>
         </div>
         <div className="page-actions">
@@ -164,7 +220,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* Compact KPI Cards Grid */}
+      {/* Top 4 KPI Metrics Grid */}
       <div className="grid-4" style={{ marginBottom: '1.25rem', gap: '0.85rem' }}>
         <div className="stat-card" style={{ padding: '0.85rem 1rem' }}>
           <div className="stat-header" style={{ marginBottom: '0.35rem' }}>
@@ -224,86 +280,403 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* 4 Strategic Operational Sections in 2x2 Grid */}
-      <div className="grid-2" style={{ gap: '1.25rem' }}>
+      {/* HERO SECTION: 📊 Gráfico Histórico de Ventas vs Costos Operativos (Últimos 6 Meses) */}
+      <div className="card" style={{ marginBottom: '1.25rem', padding: '1.25rem' }}>
+        {/* Header with Title and Summary Badges */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          flexWrap: 'wrap',
+          gap: '1rem',
+          marginBottom: '1.25rem',
+          paddingBottom: '0.85rem',
+          borderBottom: '1px solid var(--border-default)'
+        }}>
+          <div>
+            <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.15rem' }}>
+              <BarChart3 size={20} style={{ color: 'var(--color-accent)' }} />
+              Evolución Histórica: Ventas vs. Costos Operativos Totales (6 Meses)
+            </h2>
+            <p className="card-subtitle" style={{ fontSize: '0.8rem', marginTop: '0.2rem' }}>
+              Comparativa mensual entre Ingresos Facturados, Estructura de Costos (Costo Mercancía + Gastos Operativos) y Margen Neto.
+            </p>
+          </div>
 
-        {/* SECTION 1: 🚨 Semáforo de Cobranza & Créditos CxC */}
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <div className="card-header" style={{ marginBottom: '0.75rem', paddingBottom: '0.65rem' }}>
+          {/* 6-Month Summary KPI Pills */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+            <div style={{
+              padding: '0.4rem 0.75rem',
+              backgroundColor: 'var(--bg-subtle)',
+              border: '1px solid var(--border-default)',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '0.75rem'
+            }}>
+              <span style={{ color: 'var(--text-muted)' }}>Ventas (6M): </span>
+              <strong style={{ color: 'var(--color-success)', fontSize: '0.85rem' }}>{formatCurrency(totalVentas6M)}</strong>
+            </div>
+
+            <div style={{
+              padding: '0.4rem 0.75rem',
+              backgroundColor: 'var(--bg-subtle)',
+              border: '1px solid var(--border-default)',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '0.75rem'
+            }}>
+              <span style={{ color: 'var(--text-muted)' }}>Costos Totales (6M): </span>
+              <strong style={{ color: 'var(--color-danger-text)', fontSize: '0.85rem' }}>{formatCurrency(totalCostos6M)}</strong>
+            </div>
+
+            <div style={{
+              padding: '0.4rem 0.75rem',
+              backgroundColor: totalUtilidad6M >= 0 ? 'var(--color-success-bg)' : 'var(--color-danger-bg)',
+              border: `1px solid ${totalUtilidad6M >= 0 ? 'var(--color-success)' : 'var(--color-danger)'}`,
+              borderRadius: 'var(--radius-md)',
+              fontSize: '0.75rem'
+            }}>
+              <span style={{ color: totalUtilidad6M >= 0 ? 'var(--color-success-text)' : 'var(--color-danger-text)' }}>Utilidad Neta: </span>
+              <strong style={{ color: totalUtilidad6M >= 0 ? 'var(--color-success-text)' : 'var(--color-danger-text)', fontSize: '0.85rem' }}>
+                {formatCurrency(totalUtilidad6M)} ({margenPromedio6M.toFixed(1)}%)
+              </strong>
+            </div>
+          </div>
+        </div>
+
+        {/* Visual Chart Canvas */}
+        <div style={{ position: 'relative', width: '100%', minHeight: '260px', padding: '0.5rem 0' }}>
+          {/* Subtle Gridlines Background */}
+          <div style={{
+            position: 'absolute',
+            inset: '0 0 45px 0',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            pointerEvents: 'none',
+            zIndex: 0
+          }}>
+            {[1, 0.75, 0.5, 0.25, 0].map((ratio, idx) => (
+              <div key={idx} style={{
+                display: 'flex',
+                alignItems: 'center',
+                width: '100%',
+                borderBottom: '1px dashed var(--border-subtle)'
+              }}>
+                <span style={{
+                  fontSize: '0.65rem',
+                  color: 'var(--text-muted)',
+                  width: '65px',
+                  textAlign: 'right',
+                  paddingRight: '8px',
+                  userSelect: 'none'
+                }}>
+                  {formatCurrency(maxChartVal * ratio)}
+                </span>
+                <div style={{ flex: 1 }} />
+              </div>
+            ))}
+          </div>
+
+          {/* Month Columns Grid */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${historicalStats.length}, 1fr)`,
+            gap: '1rem',
+            height: '220px',
+            marginLeft: '70px',
+            position: 'relative',
+            zIndex: 1
+          }}>
+            {historicalStats.map((stat, index) => {
+              const isHovered = hoveredMonthIndex === index;
+              const isCurrent = stat.monthKey === currentMonthKey;
+
+              const ventasHeightPercent = maxChartVal > 0 ? Math.min(100, Math.max(4, (stat.ventas / maxChartVal) * 100)) : 4;
+              const costoHeightPercent = maxChartVal > 0 ? Math.min(100, Math.max(4, (stat.costoTotal / maxChartVal) * 100)) : 4;
+              
+              // Proportion of COGS vs OPEX within the Cost bar
+              const cogsPercent = stat.costoTotal > 0 ? (stat.cogs / stat.costoTotal) * 100 : 50;
+              const opexPercent = stat.costoTotal > 0 ? (stat.opex / stat.costoTotal) * 100 : 50;
+
+              return (
+                <div
+                  key={stat.monthKey}
+                  onMouseEnter={() => setHoveredMonthIndex(index)}
+                  onMouseLeave={() => setHoveredMonthIndex(null)}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    height: '100%',
+                    position: 'relative',
+                    cursor: 'pointer',
+                    padding: '0.25rem',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: isHovered ? 'var(--bg-surface-hover)' : (isCurrent ? 'var(--color-accent-subtle)' : 'transparent'),
+                    border: isCurrent ? '1px solid var(--color-accent)' : '1px solid transparent',
+                    transition: 'all var(--transition-fast)'
+                  }}
+                >
+                  {/* Floating Tooltip on Hover */}
+                  {isHovered && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '-12px',
+                      transform: 'translateY(-100%)',
+                      zIndex: 20,
+                      backgroundColor: 'var(--bg-surface-elevated)',
+                      border: '1px solid var(--border-default)',
+                      borderRadius: 'var(--radius-md)',
+                      boxShadow: 'var(--shadow-lg)',
+                      padding: '0.65rem 0.85rem',
+                      width: '210px',
+                      fontSize: '0.75rem',
+                      pointerEvents: 'none',
+                      color: 'var(--text-primary)'
+                    }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.8rem', marginBottom: '0.35rem', borderBottom: '1px solid var(--border-default)', paddingBottom: '0.25rem' }}>
+                        {stat.label} {isCurrent && <span style={{ color: 'var(--color-accent)', fontSize: '0.7rem' }}>(Mes Actual)</span>}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
+                        <span style={{ color: 'var(--color-success)' }}>● Ventas Totales:</span>
+                        <strong>{formatCurrency(stat.ventas)}</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem', paddingLeft: '0.5rem', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                        <span>Costo Mercancía (COGS):</span>
+                        <span>{formatCurrency(stat.cogs)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem', paddingLeft: '0.5rem', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                        <span>Gastos Operativos (OPEX):</span>
+                        <span>{formatCurrency(stat.opex)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', borderTop: '1px dashed var(--border-default)', paddingTop: '0.25rem' }}>
+                        <span style={{ color: 'var(--color-danger-text)' }}>● Costo Total:</span>
+                        <strong>{formatCurrency(stat.costoTotal)}</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-default)', paddingTop: '0.25rem', marginTop: '0.15rem' }}>
+                        <span style={{ fontWeight: 700, color: stat.utilidad >= 0 ? 'var(--color-success-text)' : 'var(--color-danger-text)' }}>
+                          (=) Utilidad Operativa:
+                        </span>
+                        <strong style={{ color: stat.utilidad >= 0 ? 'var(--color-success-text)' : 'var(--color-danger-text)' }}>
+                          {formatCurrency(stat.utilidad)}
+                        </strong>
+                      </div>
+                      <div style={{ fontSize: '0.7rem', textAlign: 'right', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
+                        Margen: {stat.margen.toFixed(1)}% | {stat.facturasCount} ventas
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Dual Paired Bars Container */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'flex-end',
+                    gap: '6px',
+                    height: '180px',
+                    width: '100%',
+                    justifyContent: 'center'
+                  }}>
+                    {/* Bar 1: Ventas (Emerald Gradient) */}
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'flex-end',
+                      height: '100%',
+                      width: '28px'
+                    }}>
+                      <div
+                        style={{
+                          width: '100%',
+                          height: `${ventasHeightPercent}%`,
+                          background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)',
+                          borderRadius: '4px 4px 0 0',
+                          boxShadow: isHovered ? '0 0 10px rgba(16, 185, 129, 0.4)' : 'none',
+                          transition: 'height 0.3s ease, transform 0.2s ease',
+                          transform: isHovered ? 'scaleY(1.02)' : 'none',
+                          position: 'relative'
+                        }}
+                        title={`Ventas: ${formatCurrency(stat.ventas)}`}
+                      />
+                    </div>
+
+                    {/* Bar 2: Costos Operativos Totales (Stacked COGS + OPEX) */}
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'flex-end',
+                      height: '100%',
+                      width: '28px'
+                    }}>
+                      <div
+                        style={{
+                          width: '100%',
+                          height: `${costoHeightPercent}%`,
+                          borderRadius: '4px 4px 0 0',
+                          display: 'flex',
+                          flexDirection: 'column-reverse',
+                          overflow: 'hidden',
+                          boxShadow: isHovered ? '0 0 10px rgba(239, 68, 68, 0.4)' : 'none',
+                          transition: 'height 0.3s ease, transform 0.2s ease',
+                          transform: isHovered ? 'scaleY(1.02)' : 'none'
+                        }}
+                        title={`Costos Totales: ${formatCurrency(stat.costoTotal)} (Mercancía: ${formatCurrency(stat.cogs)}, Gastos: ${formatCurrency(stat.opex)})`}
+                      >
+                        {/* OPEX portion (Purple/Pink tone) */}
+                        <div style={{
+                          height: `${opexPercent}%`,
+                          background: 'linear-gradient(180deg, #a855f7 0%, #9333ea 100%)',
+                          width: '100%'
+                        }} />
+                        {/* COGS portion (Coral / Amber tone) */}
+                        <div style={{
+                          height: `${cogsPercent}%`,
+                          background: 'linear-gradient(180deg, #f97316 0%, #ea580c 100%)',
+                          width: '100%'
+                        }} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Month Label & Utility Sub-badge */}
+                  <div style={{ marginTop: '0.4rem', textAlign: 'center', width: '100%' }}>
+                    <div style={{
+                      fontSize: '0.75rem',
+                      fontWeight: isCurrent ? 800 : 600,
+                      color: isCurrent ? 'var(--color-accent)' : 'var(--text-primary)'
+                    }}>
+                      {stat.shortLabel}
+                    </div>
+                    <div style={{
+                      fontSize: '0.675rem',
+                      fontWeight: 700,
+                      color: stat.utilidad >= 0 ? 'var(--color-success)' : 'var(--color-danger)',
+                      marginTop: '0.1rem'
+                    }}>
+                      {stat.utilidad >= 0 ? `+${stat.margen.toFixed(0)}%` : `${stat.margen.toFixed(0)}%`}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Legend Footer */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '1.5rem',
+          flexWrap: 'wrap',
+          marginTop: '0.85rem',
+          paddingTop: '0.65rem',
+          borderTop: '1px solid var(--border-default)',
+          fontSize: '0.75rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)' }} />
+            <span style={{ fontWeight: 600 }}>Ventas Facturadas</span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'linear-gradient(180deg, #f97316 0%, #ea580c 100%)' }} />
+            <span style={{ color: 'var(--text-secondary)' }}>Costo de Mercancía (COGS)</span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'linear-gradient(180deg, #a855f7 0%, #9333ea 100%)' }} />
+            <span style={{ color: 'var(--text-secondary)' }}>Gastos Operativos (OPEX Prorrateado)</span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-success)' }} />
+            <span style={{ color: 'var(--text-muted)' }}>% Margen Neto Mensual</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 3 COMPACT OPERATIONAL COLUMNS BELOW */}
+      <div className="grid-3" style={{ gap: '1.25rem' }}>
+
+        {/* COLUMN 1: 🚨 Semáforo de Cobranza & Créditos CxC */}
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '1rem' }}>
+          <div className="card-header" style={{ marginBottom: '0.65rem', paddingBottom: '0.5rem' }}>
             <div>
-              <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem' }}>
-                <ShieldAlert size={18} style={{ color: overdueInvoices.length > 0 ? 'var(--color-danger)' : 'var(--color-info)' }} />
-                Semáforo de Cobranza & Créditos CxC
+              <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.95rem' }}>
+                <ShieldAlert size={16} style={{ color: overdueInvoices.length > 0 ? 'var(--color-danger)' : 'var(--color-info)' }} />
+                Cobranza & Créditos CxC
               </h2>
-              <p className="card-subtitle" style={{ fontSize: '0.775rem' }}>
-                Control preventivo de facturas vencidas y créditos por expirar en los próximos 7 días
+              <p className="card-subtitle" style={{ fontSize: '0.725rem' }}>
+                Facturas vencidas y créditos en riesgo
               </p>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
               <ExcelExportButton filename="Alertas_Cobranza_CxC" />
               <button
                 type="button"
                 className="btn btn-ghost btn-sm"
                 onClick={() => onNavigate('sales')}
-                style={{ fontSize: '0.775rem', padding: '0.3rem 0.5rem' }}
+                style={{ fontSize: '0.725rem', padding: '0.25rem 0.4rem' }}
               >
-                Ver Todas &rarr;
+                Ventas &rarr;
               </button>
             </div>
           </div>
 
           <div style={{ flex: 1 }}>
             {cxcAlerts.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-muted)' }}>
-                <CheckCircle size={30} style={{ color: 'var(--color-success)', margin: '0 auto 0.4rem auto', display: 'block' }} />
-                <div style={{ fontWeight: 600 }}>¡Cartera al día!</div>
-                <div style={{ fontSize: '0.775rem' }}>No hay facturas vencidas ni saldos pendientes por cobrar.</div>
+              <div style={{ textAlign: 'center', padding: '1.75rem 0.75rem', color: 'var(--text-muted)' }}>
+                <CheckCircle size={26} style={{ color: 'var(--color-success)', margin: '0 auto 0.35rem auto', display: 'block' }} />
+                <div style={{ fontWeight: 600, fontSize: '0.825rem' }}>¡Cartera al día!</div>
+                <div style={{ fontSize: '0.725rem' }}>No hay facturas pendientes por cobrar.</div>
               </div>
             ) : (
               <div className="table-container" style={{ border: 'none', boxShadow: 'none' }}>
-                <table className="table" style={{ fontSize: '0.8rem' }}>
+                <table className="table" style={{ fontSize: '0.775rem' }}>
                   <thead>
                     <tr>
                       <th>Folio / Cliente</th>
-                      <th style={{ textAlign: 'center' }}>Vencimiento</th>
-                      <th style={{ textAlign: 'right' }}>Saldo CxC</th>
+                      <th style={{ textAlign: 'center' }}>Vence</th>
+                      <th style={{ textAlign: 'right' }}>Saldo</th>
                       <th style={{ textAlign: 'right' }}>Acción</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {cxcAlerts.slice(0, 5).map(inv => (
+                    {cxcAlerts.slice(0, 4).map(inv => (
                       <tr key={inv.id}>
-                        <td>
+                        <td style={{ padding: '0.4rem 0.3rem' }}>
                           <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{inv.numeroFactura}</div>
-                          <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', wordBreak: 'break-word' }}>
+                          <div style={{ fontSize: '0.675rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '110px' }}>
                             {inv.clientName}
                           </div>
                         </td>
-                        <td style={{ textAlign: 'center' }}>
+                        <td style={{ textAlign: 'center', padding: '0.4rem 0.2rem' }}>
                           {inv.statusCategory === 'overdue' && (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--color-danger-text)', fontWeight: 700, backgroundColor: 'var(--color-danger-bg)', padding: '2px 6px', borderRadius: 'var(--radius-sm)' }}>
-                              <AlertCircle size={12} /> {Math.abs(inv.diffDays)}d vencida
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', color: 'var(--color-danger-text)', fontWeight: 700, backgroundColor: 'var(--color-danger-bg)', padding: '2px 4px', borderRadius: 'var(--radius-sm)', fontSize: '0.675rem' }}>
+                              <AlertCircle size={10} /> {Math.abs(inv.diffDays)}d
                             </span>
                           )}
                           {inv.statusCategory === 'dueSoon' && (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--color-warning-text)', fontWeight: 700, backgroundColor: 'var(--color-warning-bg)', padding: '2px 6px', borderRadius: 'var(--radius-sm)' }}>
-                              <Calendar size={12} /> Vence en {inv.diffDays === 0 ? 'hoy' : `${inv.diffDays}d`}
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', color: 'var(--color-warning-text)', fontWeight: 700, backgroundColor: 'var(--color-warning-bg)', padding: '2px 4px', borderRadius: 'var(--radius-sm)', fontSize: '0.675rem' }}>
+                              <Calendar size={10} /> {inv.diffDays === 0 ? 'Hoy' : `${inv.diffDays}d`}
                             </span>
                           )}
                           {inv.statusCategory === 'normal' && (
-                            <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
-                              En {inv.diffDays} días
+                            <span style={{ color: 'var(--text-secondary)', fontSize: '0.7rem' }}>
+                              {inv.diffDays}d
                             </span>
                           )}
                         </td>
-                        <td style={{ textAlign: 'right', fontWeight: 700, color: inv.statusCategory === 'overdue' ? 'var(--color-danger-text)' : 'var(--color-warning-text)' }}>
+                        <td style={{ textAlign: 'right', fontWeight: 700, padding: '0.4rem 0.3rem', color: inv.statusCategory === 'overdue' ? 'var(--color-danger-text)' : 'inherit' }}>
                           {formatCurrency(inv.saldoPendiente)}
                         </td>
-                        <td style={{ textAlign: 'right' }}>
+                        <td style={{ textAlign: 'right', padding: '0.4rem 0.2rem' }}>
                           <button
                             type="button"
                             className="btn btn-secondary btn-sm"
-                            style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}
+                            style={{ padding: '0.15rem 0.4rem', fontSize: '0.7rem' }}
                             onClick={() => onNavigate('sales')}
                           >
                             Cobrar
@@ -317,89 +690,84 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
             )}
           </div>
 
-          {/* Section 1 Footer */}
           {cxcAlerts.length > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.6rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border-default)', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              <span>
-                Vencido en riesgo: <strong style={{ color: 'var(--color-danger-text)' }}>{formatCurrency(totalOverdueAmount)}</strong>
-              </span>
-              <span>
-                Por vencer (7d): <strong>{dueSoonInvoices.length} facturas</strong>
-              </span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', paddingTop: '0.4rem', borderTop: '1px solid var(--border-default)', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+              <span>Vencido: <strong style={{ color: 'var(--color-danger-text)' }}>{formatCurrency(totalOverdueAmount)}</strong></span>
+              <span>{dueSoonInvoices.length} por vencer</span>
             </div>
           )}
         </div>
 
-        {/* SECTION 2: 📦 Reabastecimiento Sugerido & Compras Necesarias */}
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <div className="card-header" style={{ marginBottom: '0.75rem', paddingBottom: '0.65rem' }}>
+        {/* COLUMN 2: 📦 Reabastecimiento Sugerido & Compras */}
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '1rem' }}>
+          <div className="card-header" style={{ marginBottom: '0.65rem', paddingBottom: '0.5rem' }}>
             <div>
-              <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem' }}>
-                <AlertTriangle size={18} style={{ color: 'var(--color-warning)' }} />
-                Reabastecimiento Sugerido & Compras ({lowStockProducts.length})
+              <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.95rem' }}>
+                <AlertTriangle size={16} style={{ color: 'var(--color-warning)' }} />
+                Reabastecimiento ({lowStockProducts.length})
               </h2>
-              <p className="card-subtitle" style={{ fontSize: '0.775rem' }}>
-                Productos bajo el stock de seguridad con cálculo de compra sugerida en 1 clic
+              <p className="card-subtitle" style={{ fontSize: '0.725rem' }}>
+                Artículos bajo stock de seguridad
               </p>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
               <ExcelExportButton filename="Compras_Sugeridas_Reabastecimiento" />
               <button
                 type="button"
                 className="btn btn-ghost btn-sm"
                 onClick={() => onNavigate('inventory')}
-                style={{ fontSize: '0.775rem', padding: '0.3rem 0.5rem' }}
+                style={{ fontSize: '0.725rem', padding: '0.25rem 0.4rem' }}
               >
-                Inventario &rarr;
+                Stock &rarr;
               </button>
             </div>
           </div>
 
           <div style={{ flex: 1 }}>
             {lowStockProducts.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-muted)' }}>
-                <CheckCircle size={30} style={{ color: 'var(--color-success)', margin: '0 auto 0.4rem auto', display: 'block' }} />
-                <div style={{ fontWeight: 600 }}>¡Stock Saludable!</div>
-                <div style={{ fontSize: '0.775rem' }}>Todos los productos se encuentran por encima de su umbral mínimo.</div>
+              <div style={{ textAlign: 'center', padding: '1.75rem 0.75rem', color: 'var(--text-muted)' }}>
+                <CheckCircle size={26} style={{ color: 'var(--color-success)', margin: '0 auto 0.35rem auto', display: 'block' }} />
+                <div style={{ fontWeight: 600, fontSize: '0.825rem' }}>¡Stock Saludable!</div>
+                <div style={{ fontSize: '0.725rem' }}>Todos los productos están sobre el mínimo.</div>
               </div>
             ) : (
               <div className="table-container" style={{ border: 'none', boxShadow: 'none' }}>
-                <table className="table" style={{ fontSize: '0.8rem' }}>
+                <table className="table" style={{ fontSize: '0.775rem' }}>
                   <thead>
                     <tr>
                       <th>Producto / SKU</th>
-                      <th style={{ textAlign: 'center' }}>Stock / Mín</th>
-                      <th style={{ textAlign: 'center' }}>Sugerido Pedir</th>
+                      <th style={{ textAlign: 'center' }}>Stock</th>
+                      <th style={{ textAlign: 'center' }}>Pedir</th>
                       <th style={{ textAlign: 'right' }}>Acción</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {lowStockProducts.slice(0, 5).map(p => (
+                    {lowStockProducts.slice(0, 4).map(p => (
                       <tr key={p.id}>
-                        <td>
-                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', wordBreak: 'break-word' }}>
+                        <td style={{ padding: '0.4rem 0.3rem' }}>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '110px' }}>
                             {p.nombre}
                           </div>
-                          <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>SKU: {p.codigo}</div>
+                          <div style={{ fontSize: '0.675rem', color: 'var(--text-muted)' }}>SKU: {p.codigo}</div>
                         </td>
-                        <td style={{ textAlign: 'center' }}>
+                        <td style={{ textAlign: 'center', padding: '0.4rem 0.2rem' }}>
                           <span style={{ fontWeight: 700, color: 'var(--color-danger-text)' }}>{p.stockActual}</span>
-                          <span style={{ color: 'var(--text-muted)', fontSize: '0.725rem' }}> / {p.stockMinimo} {p.unidadMedida}</span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.675rem' }}>/{p.stockMinimo}</span>
                         </td>
-                        <td style={{ textAlign: 'center' }}>
-                          <span className="badge badge-primary" style={{ padding: '0.2rem 0.5rem', fontWeight: 700, fontSize: '0.75rem' }}>
-                            +{p.suggestedQty} {p.unidadMedida}
+                        <td style={{ textAlign: 'center', padding: '0.4rem 0.2rem' }}>
+                          <span className="badge badge-primary" style={{ padding: '0.15rem 0.35rem', fontWeight: 700, fontSize: '0.7rem' }}>
+                            +{p.suggestedQty}
                           </span>
                         </td>
-                        <td style={{ textAlign: 'right' }}>
+                        <td style={{ textAlign: 'right', padding: '0.4rem 0.2rem' }}>
                           <button
                             type="button"
                             className="btn btn-primary btn-sm"
-                            style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}
+                            style={{ padding: '0.15rem 0.4rem', fontSize: '0.7rem' }}
                             onClick={() => onNavigate('purchases')}
-                            title={`Generar orden de compra por ${p.suggestedQty} piezas`}
+                            title={`Generar orden de compra`}
                           >
-                            + Comprar
+                            + Pedir
                           </button>
                         </td>
                       </tr>
@@ -410,201 +778,119 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
             )}
           </div>
 
-          {/* Section 2 Footer */}
           {lowStockProducts.length > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.6rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border-default)', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              <span>
-                Inversión estimada reposición: <strong style={{ color: 'var(--color-accent)' }}>{formatCurrency(totalRestockCost)}</strong>
-              </span>
-              <span>
-                <strong>{lowStockProducts.length}</strong> artículos críticos
-              </span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', paddingTop: '0.4rem', borderTop: '1px solid var(--border-default)', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+              <span>Inversión reposición: <strong style={{ color: 'var(--color-accent)' }}>{formatCurrency(totalRestockCost)}</strong></span>
+              <span>{lowStockProducts.length} críticos</span>
             </div>
           )}
         </div>
 
-        {/* SECTION 3: 📊 Proyección de Flujo de Caja & Salud Financiera */}
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <div className="card-header" style={{ marginBottom: '0.75rem', paddingBottom: '0.65rem' }}>
+        {/* COLUMN 3: 🏆 Top Ventas & Flujo de Caja */}
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '1rem' }}>
+          <div className="card-header" style={{ marginBottom: '0.65rem', paddingBottom: '0.5rem' }}>
             <div>
-              <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem' }}>
-                <DollarSign size={18} style={{ color: 'var(--color-success)' }} />
-                Proyección de Flujo de Caja (30 Días)
+              <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.95rem' }}>
+                <Sparkles size={16} style={{ color: 'var(--color-accent)' }} />
+                Top Productos & Liquidez
               </h2>
-              <p className="card-subtitle" style={{ fontSize: '0.775rem' }}>
-                Balance previsto entre cobranza estimada y compromisos de pago operativos
-              </p>
-            </div>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={() => onNavigate('accounting')}
-              style={{ fontSize: '0.775rem', padding: '0.3rem 0.5rem' }}
-            >
-              Costos & P&L &rarr;
-            </button>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', flex: 1, justifyContent: 'center' }}>
-            {/* Inflows vs Outflows Bars */}
-            <div style={{ backgroundColor: 'var(--bg-subtle)', padding: '0.85rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                  (+) Entradas Proyectadas (CxC Clientes):
-                </span>
-                <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--color-success-text)' }}>
-                  +{formatCurrency(pendingReceivables)}
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                  (-) Salidas Comprometidas (CxP + Gastos Operativos):
-                </span>
-                <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--color-danger-text)' }}>
-                  -{formatCurrency(totalCommittedOutflows)}
-                </span>
-              </div>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                borderTop: '1px solid var(--border-default)',
-                paddingTop: '0.5rem',
-                marginTop: '0.35rem'
-              }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>
-                  (=) Posición Neta de Liquidez Esperada:
-                </span>
-                <span style={{
-                  fontSize: '1.1rem',
-                  fontWeight: 900,
-                  color: netCashflowPosition >= 0 ? 'var(--color-success-text)' : 'var(--color-danger-text)'
-                }}>
-                  {formatCurrency(netCashflowPosition)}
-                </span>
-              </div>
-            </div>
-
-            {/* Live Operating Profit Mini Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
-              <div style={{ backgroundColor: 'var(--bg-surface)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)' }}>
-                <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
-                  Margen Bruto del Mes
-                </div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: grossProfit >= 0 ? 'var(--color-success)' : 'var(--color-danger)', marginTop: '0.15rem' }}>
-                  {formatCurrency(grossProfit)}
-                </div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Ventas − Costo Mercancía</div>
-              </div>
-
-              <div style={{ backgroundColor: 'var(--bg-surface)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)' }}>
-                <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
-                  Utilidad Operativa Neta
-                </div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: netOperatingProfit >= 0 ? 'var(--color-success)' : 'var(--color-danger)', marginTop: '0.15rem' }}>
-                  {formatCurrency(netOperatingProfit)}
-                </div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Absorbiendo {formatCurrency(prorrateo.gastoOperativoTotal)} de gastos</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* SECTION 4: 🏆 Top Productos Estrella & Rotación Comercial */}
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <div className="card-header" style={{ marginBottom: '0.75rem', paddingBottom: '0.65rem' }}>
-            <div>
-              <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem' }}>
-                <Sparkles size={18} style={{ color: 'var(--color-accent)' }} />
-                Top Productos Estrella & Rotación
-              </h2>
-              <p className="card-subtitle" style={{ fontSize: '0.775rem' }}>
-                Productos de mayor facturación este mes vs. inventario sin rotación
+              <p className="card-subtitle" style={{ fontSize: '0.725rem' }}>
+                Rotación de catálogo y posición a 30 días
               </p>
             </div>
             <button
               type="button"
               className="btn btn-ghost btn-sm"
               onClick={() => onNavigate('reports')}
-              style={{ fontSize: '0.775rem', padding: '0.3rem 0.5rem' }}
+              style={{ fontSize: '0.725rem', padding: '0.25rem 0.4rem' }}
             >
               Reportes &rarr;
             </button>
           </div>
 
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {/* Top sellers */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+            {/* Top 3 Selling Products */}
             {topSellingProducts.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                No se han registrado ventas en el periodo actual ({currentMonthKey}).
+              <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                No hay ventas registradas en {currentMonthKey}.
               </div>
             ) : (
-              <div>
-                <div style={{ fontSize: '0.725rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <TrendingUp size={13} style={{ color: 'var(--color-accent)' }} />
-                  Mayores Ingresos Generados
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                  {topSellingProducts.map(({ product, qty, total }, index) => {
-                    const share = totalSalesMonth > 0 ? Math.round((total / totalSalesMonth) * 100) : 0;
-                    return (
-                      <div
-                        key={product.id}
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          padding: '0.45rem 0.65rem',
-                          borderRadius: 'var(--radius-sm)',
-                          backgroundColor: 'var(--bg-subtle)',
-                          border: '1px solid var(--border-default)',
-                          fontSize: '0.8rem'
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span style={{ fontWeight: 800, color: 'var(--color-accent)', width: '16px' }}>#{index + 1}</span>
-                          <div>
-                            <div style={{ fontWeight: 600, color: 'var(--text-primary)', wordBreak: 'break-word' }}>
-                              {product.nombre}
-                            </div>
-                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{qty} pzas vendidas</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                {topSellingProducts.map(({ product, qty, total }, index) => {
+                  const share = totalSalesMonth > 0 ? Math.round((total / totalSalesMonth) * 100) : 0;
+                  return (
+                    <div
+                      key={product.id}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '0.35rem 0.5rem',
+                        borderRadius: 'var(--radius-sm)',
+                        backgroundColor: 'var(--bg-subtle)',
+                        border: '1px solid var(--border-default)',
+                        fontSize: '0.75rem'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <span style={{ fontWeight: 800, color: 'var(--color-accent)', width: '14px', fontSize: '0.75rem' }}>#{index + 1}</span>
+                        <div>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>
+                            {product.nombre}
                           </div>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontWeight: 700, color: 'var(--color-accent)' }}>{formatCurrency(total)}</div>
-                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{share}% del mes</div>
+                          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{qty} vendidas ({share}%)</div>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                      <div style={{ fontWeight: 700, color: 'var(--color-accent)', fontSize: '0.775rem' }}>
+                        {formatCurrency(total)}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
-            {/* Dead stock / Slow moving alert */}
+            {/* Dead stock warning pill */}
             {deadStockProducts.length > 0 && (
-              <div style={{ marginTop: 'auto', paddingTop: '0.5rem', borderTop: '1px solid var(--border-default)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.725rem', fontWeight: 700, color: 'var(--color-warning-text)', marginBottom: '0.35rem' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <AlertTriangle size={13} />
-                    Inventario sin Ventas en el Mes:
-                  </span>
-                  <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>Sugerencia: Promocionar</span>
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                  {deadStockProducts.map(p => (
-                    <span
-                      key={p.id}
-                      className="badge badge-neutral"
-                      style={{ fontSize: '0.725rem', padding: '0.2rem 0.5rem' }}
-                      title={`Stock disponible: ${p.stockActual} ${p.unidadMedida}`}
-                    >
-                      {p.nombre} ({p.stockActual} pzas)
-                    </span>
-                  ))}
-                </div>
+              <div style={{ fontSize: '0.675rem', color: 'var(--color-warning-text)', display: 'flex', alignItems: 'center', gap: '0.3rem', backgroundColor: 'var(--color-warning-bg)', padding: '0.25rem 0.4rem', borderRadius: 'var(--radius-sm)' }}>
+                <AlertTriangle size={11} />
+                <span>Sin ventas: {deadStockProducts.map(p => p.nombre).slice(0, 2).join(', ')}...</span>
               </div>
             )}
+
+            {/* Cash Flow Position Mini Card */}
+            <div style={{
+              marginTop: 'auto',
+              padding: '0.6rem 0.75rem',
+              backgroundColor: 'var(--bg-subtle)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--border-default)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '0.2rem' }}>
+                <span>(+) Entradas CxC:</span>
+                <strong style={{ color: 'var(--color-success)' }}>+{formatCurrency(pendingReceivables)}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
+                <span>(-) Salidas CxP + Gastos:</span>
+                <strong style={{ color: 'var(--color-danger-text)' }}>-{formatCurrency(totalCommittedOutflows)}</strong>
+              </div>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderTop: '1px solid var(--border-default)',
+                paddingTop: '0.3rem'
+              }}>
+                <span style={{ fontSize: '0.725rem', fontWeight: 700 }}>Flujo Neto (30d):</span>
+                <span style={{
+                  fontSize: '0.85rem',
+                  fontWeight: 900,
+                  color: netCashflowPosition >= 0 ? 'var(--color-success)' : 'var(--color-danger)'
+                }}>
+                  {formatCurrency(netCashflowPosition)}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
