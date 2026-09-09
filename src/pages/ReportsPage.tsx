@@ -136,9 +136,13 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
       numeroFactura: string;
       fecha: string;
       clienteNombre: string;
+      varianteId?: string;
+      varianteSku: string;
+      varianteDesc: string;
       cantidad: number;
       precioUnitario: number;
-      descuento: number;
+      descuentoPorcentaje: number;
+      descuentoMonto: number;
       subtotal: number;
       estado: string;
     }>;
@@ -156,6 +160,14 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
       const cat = categories.find(c => c.id === prod?.categoriaId);
       const prodCat = cat?.nombre || 'General';
 
+      const variant = prod?.variantes?.find(v => v.id === item.varianteId);
+      const variantSku = variant?.sku || (item.varianteId ? `VAR-${item.varianteId.slice(-4).toUpperCase()}` : '-');
+      const variantDesc = variant ? `${variant.color} / Talla ${variant.talla}` : '';
+
+      const lineGross = item.cantidad * item.precioUnitario;
+      const lineDiscountPct = item.descuento || 0;
+      const lineDiscountMonto = Math.max(0, lineGross - item.subtotal);
+
       if (!productSalesMap.has(prodId)) {
         productSalesMap.set(prodId, {
           productoId: prodId,
@@ -172,15 +184,19 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
       const entry = productSalesMap.get(prodId)!;
       entry.totalCantidad += item.cantidad;
       entry.totalMonto += item.subtotal;
-      entry.totalDescuento += item.descuento || 0;
+      entry.totalDescuento += lineDiscountMonto;
       entry.ventas.push({
         facturaId: inv.id,
         numeroFactura: inv.numeroFactura,
         fecha: inv.fechaEmision,
         clienteNombre: clientName,
+        varianteId: item.varianteId,
+        varianteSku: variantSku,
+        varianteDesc: variantDesc,
         cantidad: item.cantidad,
         precioUnitario: item.precioUnitario,
-        descuento: item.descuento || 0,
+        descuentoPorcentaje: lineDiscountPct,
+        descuentoMonto: lineDiscountMonto,
         subtotal: item.subtotal,
         estado: inv.estado
       });
@@ -947,9 +963,10 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
                                         <th style={{ padding: '0.4rem 0.5rem' }}>Folio Factura</th>
                                         <th style={{ padding: '0.4rem 0.5rem' }}>Fecha Emisión</th>
                                         <th style={{ padding: '0.4rem 0.5rem' }}>Cliente</th>
+                                        <th style={{ padding: '0.4rem 0.5rem' }}>SKU / Variante</th>
                                         <th style={{ padding: '0.4rem 0.5rem', textAlign: 'center' }}>Cantidad</th>
                                         <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right' }}>Precio Unitario</th>
-                                        <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right' }}>Descuento</th>
+                                        <th style={{ padding: '0.4rem 0.5rem', textAlign: 'center' }}>Descuento (%)</th>
                                         <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right', fontWeight: 700 }}>Subtotal</th>
                                         <th style={{ padding: '0.4rem 0.5rem', textAlign: 'center' }}>Estado</th>
                                       </tr>
@@ -962,10 +979,29 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
                                           </td>
                                           <td style={{ padding: '0.5rem' }}>{formatDateTime(sale.fecha)}</td>
                                           <td style={{ padding: '0.5rem', fontWeight: 600 }}>{sale.clienteNombre}</td>
+                                          <td style={{ padding: '0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>
+                                            {sale.varianteSku !== '-' ? (
+                                              <div>
+                                                <span style={{ fontWeight: 600, color: 'var(--color-accent)' }}>{sale.varianteSku}</span>
+                                                {sale.varianteDesc && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{sale.varianteDesc}</div>}
+                                              </div>
+                                            ) : (
+                                              <span style={{ color: 'var(--text-muted)' }}>-</span>
+                                            )}
+                                          </td>
                                           <td style={{ padding: '0.5rem', textAlign: 'center', fontWeight: 700 }}>{sale.cantidad}</td>
                                           <td style={{ padding: '0.5rem', textAlign: 'right' }}>{formatCurrency(sale.precioUnitario)}</td>
-                                          <td style={{ padding: '0.5rem', textAlign: 'right', color: sale.descuento > 0 ? 'var(--color-danger-text)' : 'var(--text-muted)' }}>
-                                            {sale.descuento > 0 ? `-${formatCurrency(sale.descuento)}` : formatCurrency(0)}
+                                          <td style={{ padding: '0.5rem', textAlign: 'center' }}>
+                                            {sale.descuentoPorcentaje > 0 ? (
+                                              <div>
+                                                <Badge variant="warning">{sale.descuentoPorcentaje}%</Badge>
+                                                <div style={{ fontSize: '0.7rem', color: 'var(--color-danger-text)' }}>
+                                                  -{formatCurrency(sale.descuentoMonto)}
+                                                </div>
+                                              </div>
+                                            ) : (
+                                              <span style={{ color: 'var(--text-muted)' }}>0%</span>
+                                            )}
                                           </td>
                                           <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 700 }}>
                                             {formatCurrency(sale.subtotal)}
@@ -1136,8 +1172,8 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
                                         <th style={{ padding: '0.4rem 0.5rem', textAlign: 'center' }}>Piezas</th>
                                         <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right' }}>Subtotal</th>
                                         <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right' }}>IVA (16%)</th>
-                                        <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right', fontWeight: 700 }}>Total Factura</th>
                                         <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right' }}>Saldo Pendiente</th>
+                                        <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right', fontWeight: 700 }}>Total Factura</th>
                                         <th style={{ padding: '0.4rem 0.5rem', textAlign: 'center' }}>Estado</th>
                                       </tr>
                                     </thead>
@@ -1152,11 +1188,11 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
                                           <td style={{ padding: '0.5rem', textAlign: 'center', fontWeight: 600 }}>{inv.totalPiezas}</td>
                                           <td style={{ padding: '0.5rem', textAlign: 'right' }}>{formatCurrency(inv.subtotal)}</td>
                                           <td style={{ padding: '0.5rem', textAlign: 'right' }}>{formatCurrency(inv.impuestos)}</td>
-                                          <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 700 }}>
-                                            {formatCurrency(inv.total)}
-                                          </td>
                                           <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 600, color: inv.saldoPendiente > 0 ? 'var(--color-warning-text)' : 'var(--color-success-text)' }}>
                                             {formatCurrency(inv.saldoPendiente)}
+                                          </td>
+                                          <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 700 }}>
+                                            {formatCurrency(inv.total)}
                                           </td>
                                           <td style={{ padding: '0.5rem', textAlign: 'center' }}>
                                             <Badge variant={inv.estado === 'pagada' ? 'success' : 'info'}>
