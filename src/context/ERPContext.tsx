@@ -59,14 +59,17 @@ export interface ERPContextType {
   // Acciones Clientes & Proveedores
   addClient: (client: Omit<Client, 'id' | 'creadoEn'>) => Client;
   updateClient: (id: string, data: Partial<Client>) => void;
+  toggleClientActive: (id: string) => void;
   addSupplier: (supplier: Omit<Supplier, 'id' | 'creadoEn'>) => Supplier;
   updateSupplier: (id: string, data: Partial<Supplier>) => void;
+  toggleSupplierActive: (id: string) => void;
 
   // Acciones Categorías & Productos
   addCategory: (category: Omit<Category, 'id'>) => Category;
   updateCategory: (id: string, data: Partial<Category>) => void;
   addProduct: (product: Omit<Product, 'id' | 'creadoEn' | 'costoPromedio' | 'stockActual'> & { costoInicial?: number; stockInicial?: number }) => Product;
   updateProduct: (id: string, data: Partial<Product>) => void;
+  toggleProductActive: (id: string) => void;
 
   // Acciones Compras
   createPurchase: (purchase: Omit<Purchase, 'id' | 'numeroCompra' | 'saldoPendiente' | 'pagos'>) => Purchase;
@@ -219,6 +222,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const newClient: Client = {
       ...data,
       id: nextId,
+      activo: data.activo !== undefined ? data.activo : true,
       creadoEn: new Date().toISOString()
     };
     setClients(prev => [newClient, ...prev]);
@@ -229,11 +233,16 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setClients(prev => prev.map(c => c.id === id ? { ...c, ...data } : c));
   };
 
+  const toggleClientActive = (id: string) => {
+    setClients(prev => prev.map(c => c.id === id ? { ...c, activo: c.activo === false ? true : false } : c));
+  };
+
   const addSupplier = (data: Omit<Supplier, 'id' | 'creadoEn'>): Supplier => {
     const nextId = getNextEntityId('PR', suppliers);
     const newSupplier: Supplier = {
       ...data,
       id: nextId,
+      activo: data.activo !== undefined ? data.activo : true,
       creadoEn: new Date().toISOString()
     };
     setSuppliers(prev => [newSupplier, ...prev]);
@@ -244,9 +253,13 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setSuppliers(prev => prev.map(s => s.id === id ? { ...s, ...data } : s));
   };
 
+  const toggleSupplierActive = (id: string) => {
+    setSuppliers(prev => prev.map(s => s.id === id ? { ...s, activo: s.activo === false ? true : false } : s));
+  };
+
   // Actions: Categories & Products
   const addCategory = (data: Omit<Category, 'id'>): Category => {
-    const nextId = generateDocNumber('CA', categories.length);
+    const nextId = generateDocNumber('CA', categories);
     const subcats = data.subcategorias ? data.subcategorias.map((s, idx) => ({
       ...s,
       id: s.id || `${nextId}-${idx + 1}`,
@@ -275,7 +288,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const addProduct = (data: Omit<Product, 'id' | 'creadoEn' | 'costoPromedio' | 'stockActual'> & { costoInicial?: number; stockInicial?: number }): Product => {
-    const prodId = generateDocNumber('PR', products.length);
+    const prodId = generateDocNumber('PR', products);
     const initialCost = data.costoInicial || 0;
     const initialStock = data.stockInicial || 0;
 
@@ -308,6 +321,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       tieneVariantes: data.tieneVariantes,
       variantes: variants,
       descripcion: data.descripcion,
+      activo: data.activo !== undefined ? data.activo : true,
       creadoEn: new Date().toISOString()
     };
 
@@ -342,6 +356,10 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
       return updated;
     }));
+  };
+
+  const toggleProductActive = (id: string) => {
+    setProducts(prev => prev.map(p => p.id === id ? { ...p, activo: p.activo === false ? true : false } : p));
   };
 
   // Helper to synchronously receive stock and update weighted average cost
@@ -446,9 +464,80 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     });
   };
 
+  // Helper to synchronously deduct stock and generate Kardex movements when an invoice is issued
+  const applyInvoiceStockDeduction = (invoice: Invoice, deductionDate?: string) => {
+    const movementTimestamp = deductionDate || invoice.emitidaFecha || new Date().toISOString();
+    const newMovements: InventoryMovement[] = [];
+
+    setProducts(prevProducts => {
+      return prevProducts.map(product => {
+        const itemsForThisProduct = invoice.items.filter(item => item.productoId === product.id);
+        if (itemsForThisProduct.length === 0) return product;
+
+        let updatedStock = product.stockActual;
+        let updatedVariants = product.variantes ? product.variantes.map(v => ({ ...v })) : undefined;
+
+        for (const item of itemsForThisProduct) {
+          const targetVarId = item.varianteId || (product.tieneVariantes && updatedVariants && updatedVariants.length > 0 ? updatedVariants[0].id : undefined);
+
+          if (product.tieneVariantes && targetVarId && updatedVariants) {
+            updatedVariants = updatedVariants.map(v => {
+              if (v.id === targetVarId) {
+                const varNewStock = (v.stockActual || 0) - item.cantidad;
+                newMovements.push({
+                  id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+                  fecha: movementTimestamp,
+                  tipo: 'SALIDA_VENTA',
+                  referenciaDoc: invoice.numeroFactura,
+                  productoId: product.id,
+                  varianteId: v.id,
+                  cantidad: -item.cantidad,
+                  costoUnitario: product.costoPromedio,
+                  stockResultante: varNewStock,
+                  motivo: `Venta según factura ${invoice.numeroFactura} (${v.talla} / ${v.color})`,
+                  usuario: 'Ventas'
+                });
+                return { ...v, stockActual: varNewStock };
+              }
+              return v;
+            });
+          } else {
+            updatedStock = updatedStock - item.cantidad;
+            newMovements.push({
+              id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+              fecha: movementTimestamp,
+              tipo: 'SALIDA_VENTA',
+              referenciaDoc: invoice.numeroFactura,
+              productoId: product.id,
+              cantidad: -item.cantidad,
+              costoUnitario: product.costoPromedio,
+              stockResultante: updatedStock,
+              motivo: `Venta según factura ${invoice.numeroFactura}`,
+              usuario: 'Ventas'
+            });
+          }
+        }
+
+        if (product.tieneVariantes && updatedVariants) {
+          updatedStock = updatedVariants.reduce((acc, v) => acc + (v.stockActual || 0), 0);
+        }
+
+        return {
+          ...product,
+          stockActual: updatedStock,
+          variantes: updatedVariants
+        };
+      });
+    });
+
+    if (newMovements.length > 0) {
+      setInventoryMovements(prev => [...newMovements, ...prev]);
+    }
+  };
+
   // Actions: Compras (Purchases)
   const createPurchase = (data: Omit<Purchase, 'id' | 'numeroCompra' | 'saldoPendiente' | 'pagos'>): Purchase => {
-    const num = generateDocNumber('CO', purchases.length);
+    const num = generateDocNumber('CO', purchases);
     const isDirectReceive = data.estado === 'recibida';
     const now = new Date().toISOString();
 
@@ -538,24 +627,24 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           }
         } else if (m.tipo === 'SALIDA_VENTA') {
           const outQty = Math.abs(qty);
-          runningStock = Math.max(0, runningStock - outQty);
+          runningStock = runningStock - outQty;
           if (targetVarId) {
-            variantStocks[targetVarId] = Math.max(0, (variantStocks[targetVarId] || 0) - outQty);
+            variantStocks[targetVarId] = (variantStocks[targetVarId] || 0) - outQty;
           }
         } else if (m.tipo === 'AJUSTE_MANUAL') {
-          runningStock = Math.max(0, runningStock + qty);
+          runningStock = runningStock + qty;
           if (targetVarId) {
-            variantStocks[targetVarId] = Math.max(0, (variantStocks[targetVarId] || 0) + qty);
+            variantStocks[targetVarId] = (variantStocks[targetVarId] || 0) + qty;
           }
         } else if (m.tipo === 'ANULACION_COMPRA') {
           const cancQty = Math.abs(qty);
           const currentVal = Math.max(0, runningStock * runningCost);
           const cancelledVal = cancQty * cost;
           const remainingVal = Math.max(0, currentVal - cancelledVal);
-          runningStock = Math.max(0, runningStock - cancQty);
+          runningStock = runningStock - cancQty;
           runningCost = runningStock > 0 ? Number((remainingVal / runningStock).toFixed(2)) : (runningStock === 0 ? 0 : runningCost);
           if (targetVarId) {
-            variantStocks[targetVarId] = Math.max(0, (variantStocks[targetVarId] || 0) - cancQty);
+            variantStocks[targetVarId] = (variantStocks[targetVarId] || 0) - cancQty;
           }
         } else if (m.tipo === 'ANULACION_VENTA') {
           const reenterQty = Math.abs(qty);
@@ -851,7 +940,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Actions: Cotizaciones (Quotes)
   const createQuote = (data: Omit<Quote, 'id' | 'numeroCotizacion'>): Quote => {
-    const num = generateDocNumber('CT', quotes.length);
+    const num = generateDocNumber('CT', quotes);
     const newQuote: Quote = {
       ...data,
       id: num,
@@ -871,7 +960,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const client = clients.find(c => c.id === quote.clienteId);
     const tipoPago = client?.tipoPago || 'contado';
-    const numFactura = generateDocNumber('FA', invoices.length);
+    const numFactura = generateDocNumber('FA', invoices);
     const now = new Date().toISOString();
 
     const invoiceItems = quote.items.map(item => ({
@@ -908,69 +997,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
 
     if (directIssue) {
-      const newMovements: InventoryMovement[] = [];
-      setProducts(prevProducts => {
-        return prevProducts.map(product => {
-          const itemsForThisProduct = newInvoice.items.filter(item => item.productoId === product.id);
-          if (itemsForThisProduct.length === 0) return product;
-
-          let updatedStock = product.stockActual;
-          let updatedVariants = product.variantes ? [...product.variantes] : undefined;
-
-          for (const item of itemsForThisProduct) {
-            const targetVarId = item.varianteId || (product.tieneVariantes && updatedVariants && updatedVariants.length > 0 ? updatedVariants[0].id : undefined);
-
-            if (product.tieneVariantes && targetVarId && updatedVariants) {
-              updatedVariants = updatedVariants.map(v => {
-                if (v.id === targetVarId) {
-                  const varNewStock = v.stockActual - item.cantidad;
-                  newMovements.push({
-                    id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-                    fecha: now,
-                    tipo: 'SALIDA_VENTA',
-                    referenciaDoc: newInvoice.numeroFactura,
-                    productoId: product.id,
-                    varianteId: v.id,
-                    cantidad: -item.cantidad,
-                    costoUnitario: product.costoPromedio,
-                    motivo: `Venta según factura ${newInvoice.numeroFactura} (${v.talla} / ${v.color})`,
-                    usuario: 'Ventas'
-                  });
-                  return { ...v, stockActual: varNewStock };
-                }
-                return v;
-              });
-            } else {
-              updatedStock = updatedStock - item.cantidad;
-              newMovements.push({
-                id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-                fecha: now,
-                tipo: 'SALIDA_VENTA',
-                referenciaDoc: newInvoice.numeroFactura,
-                productoId: product.id,
-                cantidad: -item.cantidad,
-                costoUnitario: product.costoPromedio,
-                motivo: `Venta según factura ${newInvoice.numeroFactura}`,
-                usuario: 'Ventas'
-              });
-            }
-          }
-
-          if (product.tieneVariantes && updatedVariants) {
-            updatedStock = updatedVariants.reduce((acc, v) => acc + v.stockActual, 0);
-          }
-
-          return {
-            ...product,
-            stockActual: updatedStock,
-            variantes: updatedVariants
-          };
-        });
-      });
-
-      if (newMovements.length > 0) {
-        setInventoryMovements(prev => [...newMovements, ...prev]);
-      }
+      applyInvoiceStockDeduction(newInvoice, now);
     }
 
     setInvoices(prev => [newInvoice, ...prev]);
@@ -981,7 +1008,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Actions: Facturación (Invoices & CxC)
   const createInvoice = (data: Omit<Invoice, 'id' | 'numeroFactura' | 'saldoPendiente' | 'pagos'>): Invoice => {
-    const num = generateDocNumber('FA', invoices.length);
+    const num = generateDocNumber('FA', invoices);
     const now = new Date().toISOString();
     const isDirectEmit = data.estado === 'emitida';
 
@@ -996,69 +1023,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
 
     if (isDirectEmit) {
-      const newMovements: InventoryMovement[] = [];
-      setProducts(prevProducts => {
-        return prevProducts.map(product => {
-          const itemsForThisProduct = newInvoice.items.filter(item => item.productoId === product.id);
-          if (itemsForThisProduct.length === 0) return product;
-
-          let updatedStock = product.stockActual;
-          let updatedVariants = product.variantes ? [...product.variantes] : undefined;
-
-          for (const item of itemsForThisProduct) {
-            const targetVarId = item.varianteId || (product.tieneVariantes && updatedVariants && updatedVariants.length > 0 ? updatedVariants[0].id : undefined);
-
-            if (product.tieneVariantes && targetVarId && updatedVariants) {
-              updatedVariants = updatedVariants.map(v => {
-                if (v.id === targetVarId) {
-                  const varNewStock = v.stockActual - item.cantidad;
-                  newMovements.push({
-                    id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-                    fecha: now,
-                    tipo: 'SALIDA_VENTA',
-                    referenciaDoc: newInvoice.numeroFactura,
-                    productoId: product.id,
-                    varianteId: v.id,
-                    cantidad: -item.cantidad,
-                    costoUnitario: product.costoPromedio,
-                    motivo: `Venta según factura ${newInvoice.numeroFactura} (${v.talla} / ${v.color})`,
-                    usuario: 'Ventas'
-                  });
-                  return { ...v, stockActual: varNewStock };
-                }
-                return v;
-              });
-            } else {
-              updatedStock = updatedStock - item.cantidad;
-              newMovements.push({
-                id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-                fecha: now,
-                tipo: 'SALIDA_VENTA',
-                referenciaDoc: newInvoice.numeroFactura,
-                productoId: product.id,
-                cantidad: -item.cantidad,
-                costoUnitario: product.costoPromedio,
-                motivo: `Venta según factura ${newInvoice.numeroFactura}`,
-                usuario: 'Ventas'
-              });
-            }
-          }
-
-          if (product.tieneVariantes && updatedVariants) {
-            updatedStock = updatedVariants.reduce((acc, v) => acc + v.stockActual, 0);
-          }
-
-          return {
-            ...product,
-            stockActual: updatedStock,
-            variantes: updatedVariants
-          };
-        });
-      });
-
-      if (newMovements.length > 0) {
-        setInventoryMovements(prev => [...newMovements, ...prev]);
-      }
+      applyInvoiceStockDeduction(newInvoice, now);
     }
 
     setInvoices(prev => [newInvoice, ...prev]);
@@ -1072,70 +1037,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
 
     const now = new Date().toISOString();
-    const newMovements: InventoryMovement[] = [];
-
-    setProducts(prevProducts => {
-      return prevProducts.map(product => {
-        const itemsForThisProduct = invoice.items.filter(item => item.productoId === product.id);
-        if (itemsForThisProduct.length === 0) return product;
-
-        let updatedStock = product.stockActual;
-        let updatedVariants = product.variantes ? [...product.variantes] : undefined;
-
-        for (const item of itemsForThisProduct) {
-          const targetVarId = item.varianteId || (product.tieneVariantes && updatedVariants && updatedVariants.length > 0 ? updatedVariants[0].id : undefined);
-
-          if (product.tieneVariantes && targetVarId && updatedVariants) {
-            updatedVariants = updatedVariants.map(v => {
-              if (v.id === targetVarId) {
-                const varNewStock = v.stockActual - item.cantidad;
-                newMovements.push({
-                  id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-                  fecha: now,
-                  tipo: 'SALIDA_VENTA',
-                  referenciaDoc: invoice.numeroFactura,
-                  productoId: product.id,
-                  varianteId: v.id,
-                  cantidad: -item.cantidad,
-                  costoUnitario: product.costoPromedio,
-                  motivo: `Venta según factura ${invoice.numeroFactura} (${v.talla} / ${v.color})`,
-                  usuario: 'Ventas'
-                });
-                return { ...v, stockActual: varNewStock };
-              }
-              return v;
-            });
-          } else {
-            updatedStock = updatedStock - item.cantidad;
-            newMovements.push({
-              id: `mov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-              fecha: now,
-              tipo: 'SALIDA_VENTA',
-              referenciaDoc: invoice.numeroFactura,
-              productoId: product.id,
-              cantidad: -item.cantidad,
-              costoUnitario: product.costoPromedio,
-              motivo: `Venta según factura ${invoice.numeroFactura}`,
-              usuario: 'Ventas'
-            });
-          }
-        }
-
-        if (product.tieneVariantes && updatedVariants) {
-          updatedStock = updatedVariants.reduce((acc, v) => acc + v.stockActual, 0);
-        }
-
-        return {
-          ...product,
-          stockActual: updatedStock,
-          variantes: updatedVariants
-        };
-      });
-    });
-
-    if (newMovements.length > 0) {
-      setInventoryMovements(prev => [...newMovements, ...prev]);
-    }
+    applyInvoiceStockDeduction(invoice, now);
 
     setInvoices(prev => prev.map(inv => inv.id === invoiceId ? {
       ...inv,
@@ -1291,7 +1193,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (product.tieneVariantes && targetVarId && updatedVariants) {
           updatedVariants = updatedVariants.map(v => {
             if (v.id === targetVarId) {
-              const newVarStock = Math.max(0, (v.stockActual || 0) + cantidad);
+              const newVarStock = (v.stockActual || 0) + cantidad;
               resultingStock = newVarStock;
               return { ...v, stockActual: newVarStock };
             }
@@ -1299,7 +1201,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           });
           updatedStock = updatedVariants.reduce((sum, v) => sum + (v.stockActual || 0), 0);
         } else {
-          updatedStock = Math.max(0, updatedStock + cantidad);
+          updatedStock = updatedStock + cantidad;
           resultingStock = updatedStock;
         }
 
@@ -1314,8 +1216,8 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const docType: MovementType = isInitialLoad ? 'INVENTARIO_INICIAL' : 'AJUSTE_MANUAL';
     const nextRef = isInitialLoad
-      ? generateDocNumber('II', inventoryMovements.filter(m => m.referenciaDoc?.startsWith('II') || m.tipo === 'INVENTARIO_INICIAL').length)
-      : generateDocNumber('AJ', inventoryMovements.filter(m => m.tipo === 'AJUSTE_MANUAL').length);
+      ? generateDocNumber('II', inventoryMovements)
+      : generateDocNumber('AJ', inventoryMovements);
 
     const newMovement: InventoryMovement = {
       id: `mov-${Date.now()}`,
@@ -1767,12 +1669,15 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         fixedAssets,
         addClient,
         updateClient,
+        toggleClientActive,
         addSupplier,
         updateSupplier,
+        toggleSupplierActive,
         addCategory,
         updateCategory,
         addProduct,
         updateProduct,
+        toggleProductActive,
         createPurchase,
         receivePurchase,
         cancelPurchase,

@@ -79,6 +79,7 @@ export const SettingsPage: React.FC = () => {
     idioma: settings.idioma || 'es',
     tasaImpuestoDefecto: settings.tasaImpuestoDefecto,
     criterioProrrateoDefecto: settings.criterioProrrateoDefecto || 'costo_material',
+    capitalAportado: settings.capitalAportado !== undefined ? settings.capitalAportado : 0,
     direccion: settings.direccion,
     telefono: settings.telefono,
     email: settings.email,
@@ -479,6 +480,26 @@ export const SettingsPage: React.FC = () => {
                   {formData.criterioProrrateoDefecto === 'costo_material' && t.settings.ruleMaterialDesc}
                   {formData.criterioProrrateoDefecto === 'valor_venta' && t.settings.rulePriceDesc}
                   {formData.criterioProrrateoDefecto === 'unidades_iguales' && t.settings.ruleUnitsDesc}
+                </span>
+              </div>
+
+              {/* Capital Aportado Inicial */}
+              <div className="form-group">
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <DollarSign size={15} style={{ color: 'var(--color-accent)' }} />
+                  Capital Aportado Inicial ({formData.monedaSimbolo || '$'})
+                </label>
+                <input
+                  type="number"
+                  className="form-control"
+                  value={formData.capitalAportado !== undefined ? formData.capitalAportado : ''}
+                  onChange={(e) => setFormData({ ...formData, capitalAportado: e.target.value === '' ? 0 : Number(e.target.value) })}
+                  placeholder="0.00"
+                  min={0}
+                  step="0.01"
+                />
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                  Aporte inicial o capital social del propietario para el cálculo del efectivo real en el Balance General.
                 </span>
               </div>
             </div>

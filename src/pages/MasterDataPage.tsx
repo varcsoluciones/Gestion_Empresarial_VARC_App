@@ -13,7 +13,9 @@ import {
   Trash2,
   Layers,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Archive,
+  ArchiveRestore
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
@@ -41,10 +43,13 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
     currencySymbol,
     addClient,
     updateClient,
+    toggleClientActive,
     addSupplier,
     updateSupplier,
+    toggleSupplierActive,
     addCategory,
-    updateCategory
+    updateCategory,
+    toggleProductActive
   } = useERP();
 
   const [activeTab, setActiveTab] = useState<'clients' | 'suppliers' | 'categories' | 'products'>(initialTab || 'products');
@@ -55,6 +60,7 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
     }
   }, [initialTab]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'active' | 'archived' | 'all'>('active');
 
   // Modals state
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
@@ -87,6 +93,7 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
   const [cliTipoPago, setCliTipoPago] = useState<PaymentTerm>('contado');
   const [cliLimite, setCliLimite] = useState<number | ''>(10000);
   const [cliDias, setCliDias] = useState<number | ''>(30);
+  const [cliActivo, setCliActivo] = useState(true);
 
   // Form states for Supplier
   const [provNombre, setProvNombre] = useState('');
@@ -95,6 +102,7 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
   const [provEmail, setProvEmail] = useState('');
   const [provContacto, setProvContacto] = useState('');
   const [provDir, setProvDir] = useState('');
+  const [provActivo, setProvActivo] = useState(true);
 
   // Expandable variants row state
   const [expandedProductIds, setExpandedProductIds] = useState<Record<string, boolean>>({});
@@ -125,6 +133,7 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
     setCliTipoPago('contado');
     setCliLimite(10000);
     setCliDias(30);
+    setCliActivo(true);
     setIsClientModalOpen(true);
   };
 
@@ -138,6 +147,7 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
     setCliTipoPago(c.tipoPago);
     setCliLimite(c.limiteCredito);
     setCliDias(c.diasCredito);
+    setCliActivo(c.activo !== false);
     setIsClientModalOpen(true);
   };
 
@@ -154,7 +164,8 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
         direccion: cliDir,
         tipoPago: cliTipoPago,
         limiteCredito: cliTipoPago === 'credito' ? Number(cliLimite) || 0 : 0,
-        diasCredito: cliTipoPago === 'credito' ? Number(cliDias) || 0 : 0
+        diasCredito: cliTipoPago === 'credito' ? Number(cliDias) || 0 : 0,
+        activo: cliActivo
       });
     } else {
       addClient({
@@ -165,7 +176,8 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
         direccion: cliDir,
         tipoPago: cliTipoPago,
         limiteCredito: cliTipoPago === 'credito' ? Number(cliLimite) || 0 : 0,
-        diasCredito: cliTipoPago === 'credito' ? Number(cliDias) || 0 : 0
+        diasCredito: cliTipoPago === 'credito' ? Number(cliDias) || 0 : 0,
+        activo: cliActivo
       });
     }
     setIsClientModalOpen(false);
@@ -180,6 +192,7 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
     setProvEmail('');
     setProvContacto('');
     setProvDir('');
+    setProvActivo(true);
     setIsSupplierModalOpen(true);
   };
 
@@ -191,6 +204,7 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
     setProvEmail(s.email);
     setProvContacto(s.contactoNombre || '');
     setProvDir(s.direccion);
+    setProvActivo(s.activo !== false);
     setIsSupplierModalOpen(true);
   };
 
@@ -205,7 +219,8 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
         telefono: provTel,
         email: provEmail,
         contactoNombre: provContacto,
-        direccion: provDir
+        direccion: provDir,
+        activo: provActivo
       });
     } else {
       addSupplier({
@@ -214,7 +229,8 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
         telefono: provTel,
         email: provEmail,
         contactoNombre: provContacto,
-        direccion: provDir
+        direccion: provDir,
+        activo: provActivo
       });
     }
     setIsSupplierModalOpen(false);
@@ -292,10 +308,14 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
   };
 
   // Filtered queries
-  const filteredProducts = products.filter(p =>
-    p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.codigo.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.codigo.toLowerCase().includes(searchTerm.toLowerCase());
+    if (!matchesSearch) return false;
+    if (statusFilter === 'active') return p.activo !== false;
+    if (statusFilter === 'archived') return p.activo === false;
+    return true;
+  });
 
   const {
     sortedItems: sortedProducts,
@@ -309,13 +329,18 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
     customGetters: {
       categoria: (p) => categories.find(c => c.id === p.categoriaId)?.nombre || '',
       variantesCount: (p) => p.variantes?.length || 0,
+      estado: (p) => p.activo === false ? 'Archivado' : 'Activo'
     }
   });
 
-  const filteredClients = clients.filter(c =>
-    c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.identificacionFiscal.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredClients = clients.filter(c => {
+    const matchesSearch = c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.identificacionFiscal.toLowerCase().includes(searchTerm.toLowerCase());
+    if (!matchesSearch) return false;
+    if (statusFilter === 'active') return c.activo !== false;
+    if (statusFilter === 'archived') return c.activo === false;
+    return true;
+  });
 
   const {
     sortedItems: sortedClients,
@@ -325,14 +350,21 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
   } = useTableSort(filteredClients, {
     defaultKey: 'nombre',
     defaultDirection: 'asc',
-    defaultIsNumeric: false
+    defaultIsNumeric: false,
+    customGetters: {
+      estado: (c) => c.activo === false ? 'Archivado' : 'Activo'
+    }
   });
 
-  const filteredSuppliers = suppliers.filter(s =>
-    s.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.identificacionFiscal.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (s.direccion && s.direccion.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredSuppliers = suppliers.filter(s => {
+    const matchesSearch = s.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.identificacionFiscal.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (s.direccion && s.direccion.toLowerCase().includes(searchTerm.toLowerCase()));
+    if (!matchesSearch) return false;
+    if (statusFilter === 'active') return s.activo !== false;
+    if (statusFilter === 'archived') return s.activo === false;
+    return true;
+  });
 
   const {
     sortedItems: sortedSuppliers,
@@ -342,7 +374,10 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
   } = useTableSort(filteredSuppliers, {
     defaultKey: 'nombre',
     defaultDirection: 'asc',
-    defaultIsNumeric: false
+    defaultIsNumeric: false,
+    customGetters: {
+      estado: (s) => s.activo === false ? 'Archivado' : 'Activo'
+    }
   });
 
   const filteredCategories = categories.filter(cat =>
@@ -454,6 +489,24 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+
+        {activeTab !== 'categories' && (
+          <div style={{ minWidth: '180px' }}>
+            <ComboboxInline
+              options={[
+                { id: 'active', label: 'Solo Activos' },
+                { id: 'archived', label: 'Solo Archivados' },
+                { id: 'all', label: 'Todos los Registros' }
+              ]}
+              value={statusFilter}
+              onChange={(val) => setStatusFilter(val as any)}
+              placeholder="Filtrar estado..."
+              hideSearch={true}
+              buttonStyle={{ minWidth: '180px' }}
+            />
+          </div>
+        )}
+
         <ExcelExportButton filename={`Catalogo_Maestro_${activeTab.toUpperCase()}`} />
       </div>
 
@@ -541,6 +594,16 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
                 >
                   Variantes
                 </SortableTh>
+                <SortableTh
+                  sortKey="estado"
+                  currentSortKey={prodSortKey}
+                  currentSortDirection={prodSortDirection}
+                  onSort={requestProdSort}
+                  isNumeric={false}
+                  align="center"
+                >
+                  Estado
+                </SortableTh>
                 <th style={{ textAlign: 'right' }}>Acciones</th>
               </tr>
             </thead>
@@ -552,7 +615,7 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
 
                 return (
                   <React.Fragment key={p.id}>
-                    <tr>
+                    <tr style={{ opacity: p.activo === false ? 0.65 : 1 }}>
                       <td>
                         {p.tieneVariantes && p.variantes && p.variantes.length > 0 && (
                           <button
@@ -603,22 +666,38 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
                           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Simple</span>
                         )}
                       </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <Badge variant={p.activo === false ? 'neutral' : 'success'}>
+                          {p.activo === false ? 'Archivado' : 'Activo'}
+                        </Badge>
+                      </td>
                       <td style={{ textAlign: 'right' }}>
-                        <button
-                          type="button"
-                          className="btn-icon btn-sm"
-                          onClick={() => handleEditProduct(p)}
-                          title="Editar producto"
-                        >
-                          <Edit2 size={14} />
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.35rem' }}>
+                          <button
+                            type="button"
+                            className="btn-icon btn-sm"
+                            onClick={() => handleEditProduct(p)}
+                            title="Editar producto"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-icon btn-sm"
+                            onClick={() => toggleProductActive(p.id)}
+                            title={p.activo === false ? 'Reactivar producto' : 'Archivar producto'}
+                            style={{ color: p.activo === false ? 'var(--color-success)' : 'var(--text-muted)' }}
+                          >
+                            {p.activo === false ? <ArchiveRestore size={14} /> : <Archive size={14} />}
+                          </button>
+                        </div>
                       </td>
                     </tr>
 
                     {/* Expandable Variants Breakdown */}
                     {isExpanded && p.tieneVariantes && p.variantes && (
                       <tr style={{ backgroundColor: 'var(--bg-subtle)' }}>
-                        <td colSpan={10} style={{ padding: '0.75rem 2rem' }}>
+                        <td colSpan={11} style={{ padding: '0.75rem 2rem' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                             <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                               <Layers size={14} />
@@ -745,19 +824,29 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
                 >
                   Días Crédito
                 </SortableTh>
+                <SortableTh
+                  sortKey="estado"
+                  currentSortKey={clientSortKey}
+                  currentSortDirection={clientSortDirection}
+                  onSort={requestClientSort}
+                  isNumeric={false}
+                  align="center"
+                >
+                  Estado
+                </SortableTh>
                 <th style={{ textAlign: 'right' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {sortedClients.length === 0 ? (
                 <tr>
-                  <td colSpan={9} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                  <td colSpan={10} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                     No hay clientes registrados en el catálogo.
                   </td>
                 </tr>
               ) : (
                 sortedClients.map(c => (
-                  <tr key={c.id}>
+                  <tr key={c.id} style={{ opacity: c.activo === false ? 0.65 : 1 }}>
                     <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-accent)' }}>
                       {c.id}
                     </td>
@@ -779,15 +868,31 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
                     <td style={{ textAlign: 'center' }}>
                       {c.tipoPago === 'credito' ? `${c.diasCredito} días` : '-'}
                     </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <Badge variant={c.activo === false ? 'neutral' : 'success'}>
+                        {c.activo === false ? 'Archivado' : 'Activo'}
+                      </Badge>
+                    </td>
                     <td style={{ textAlign: 'right' }}>
-                      <button
-                        type="button"
-                        className="btn-icon btn-sm"
-                        onClick={() => handleEditClient(c)}
-                        title="Editar cliente"
-                      >
-                        <Edit2 size={14} />
-                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.35rem' }}>
+                        <button
+                          type="button"
+                          className="btn-icon btn-sm"
+                          onClick={() => handleEditClient(c)}
+                          title="Editar cliente"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-icon btn-sm"
+                          onClick={() => toggleClientActive(c.id)}
+                          title={c.activo === false ? 'Reactivar cliente' : 'Archivar cliente'}
+                          style={{ color: c.activo === false ? 'var(--color-success)' : 'var(--text-muted)' }}
+                        >
+                          {c.activo === false ? <ArchiveRestore size={14} /> : <Archive size={14} />}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -857,19 +962,29 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
                 >
                   Dirección
                 </SortableTh>
+                <SortableTh
+                  sortKey="estado"
+                  currentSortKey={supplierSortKey}
+                  currentSortDirection={supplierSortDirection}
+                  onSort={requestSupplierSort}
+                  isNumeric={false}
+                  align="center"
+                >
+                  Estado
+                </SortableTh>
                 <th style={{ textAlign: 'right' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {sortedSuppliers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                  <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                     No hay proveedores registrados en el catálogo.
                   </td>
                 </tr>
               ) : (
                 sortedSuppliers.map(s => (
-                  <tr key={s.id}>
+                  <tr key={s.id} style={{ opacity: s.activo === false ? 0.65 : 1 }}>
                     <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-accent)' }}>
                       {s.id}
                     </td>
@@ -881,15 +996,31 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{s.email}</div>
                     </td>
                     <td style={{ fontSize: '0.825rem', color: 'var(--text-secondary)' }}>{s.direccion || '-'}</td>
+                    <td style={{ textAlign: 'center' }}>
+                      <Badge variant={s.activo === false ? 'neutral' : 'success'}>
+                        {s.activo === false ? 'Archivado' : 'Activo'}
+                      </Badge>
+                    </td>
                     <td style={{ textAlign: 'right' }}>
-                      <button
-                        type="button"
-                        className="btn-icon btn-sm"
-                        onClick={() => handleEditSupplier(s)}
-                        title="Editar proveedor"
-                      >
-                        <Edit2 size={14} />
-                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.35rem' }}>
+                        <button
+                          type="button"
+                          className="btn-icon btn-sm"
+                          onClick={() => handleEditSupplier(s)}
+                          title="Editar proveedor"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-icon btn-sm"
+                          onClick={() => toggleSupplierActive(s.id)}
+                          title={s.activo === false ? 'Reactivar proveedor' : 'Archivar proveedor'}
+                          style={{ color: s.activo === false ? 'var(--color-success)' : 'var(--text-muted)' }}
+                        >
+                          {s.activo === false ? <ArchiveRestore size={14} /> : <Archive size={14} />}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -1098,6 +1229,37 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
         }
       >
         <form id="client-form" onSubmit={handleSaveClient}>
+          {/* Estado Activo Toggle */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0.75rem 1rem',
+            backgroundColor: cliActivo ? 'var(--color-accent-subtle)' : 'var(--bg-surface-hover)',
+            border: `1px solid ${cliActivo ? 'var(--color-accent)' : 'var(--border-default)'}`,
+            borderRadius: 'var(--radius-md)',
+            marginBottom: '1.25rem',
+            transition: 'all var(--transition-fast)'
+          }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '0.875rem' }}>
+                Estado del Cliente: {cliActivo ? <span style={{ color: 'var(--color-accent)' }}>Activo</span> : <span style={{ color: 'var(--text-muted)' }}>Archivado</span>}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                {cliActivo ? 'Disponible para nuevas ventas, cotizaciones y cobros.' : 'Archivado (oculto en nuevos formularios, mantiene historial de facturación).'}
+              </div>
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.825rem' }}>
+              <input
+                type="checkbox"
+                checked={cliActivo}
+                onChange={(e) => setCliActivo(e.target.checked)}
+                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--color-accent)' }}
+              />
+              <span>Activo</span>
+            </label>
+          </div>
+
           <div className="form-group">
             <label className="form-label">Nombre / Razón Social *</label>
             <input
@@ -1210,6 +1372,37 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
         }
       >
         <form id="supplier-form" onSubmit={handleSaveSupplier}>
+          {/* Estado Activo Toggle */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0.75rem 1rem',
+            backgroundColor: provActivo ? 'var(--color-accent-subtle)' : 'var(--bg-surface-hover)',
+            border: `1px solid ${provActivo ? 'var(--color-accent)' : 'var(--border-default)'}`,
+            borderRadius: 'var(--radius-md)',
+            marginBottom: '1.25rem',
+            transition: 'all var(--transition-fast)'
+          }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '0.875rem' }}>
+                Estado del Proveedor: {provActivo ? <span style={{ color: 'var(--color-accent)' }}>Activo</span> : <span style={{ color: 'var(--text-muted)' }}>Archivado</span>}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                {provActivo ? 'Disponible para nuevas órdenes de compra y pagos.' : 'Archivado (oculto en nuevos formularios, mantiene historial de compras y CxP).'}
+              </div>
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.825rem' }}>
+              <input
+                type="checkbox"
+                checked={provActivo}
+                onChange={(e) => setProvActivo(e.target.checked)}
+                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--color-accent)' }}
+              />
+              <span>Activo</span>
+            </label>
+          </div>
+
           <div className="form-group">
             <label className="form-label">Nombre / Empresa *</label>
             <input

@@ -86,6 +86,13 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
   const [monthFilter, setMonthFilter] = useState<string>('all');
   const [expandedInvoicePayments, setExpandedInvoicePayments] = useState<Record<string, boolean>>({});
 
+  // Active entities filters for modal selectors
+  const activeClients = useMemo(() => clients.filter(c => c.activo !== false), [clients]);
+  const activeProducts = useMemo(() => products.filter(p => p.activo !== false), [products]);
+
+  // Form submitting protection
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // Modals state
   const [isNewInvoiceModalOpen, setIsNewInvoiceModalOpen] = useState(false);
   const [isNewQuoteModalOpen, setIsNewQuoteModalOpen] = useState(false);
@@ -154,7 +161,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
   };
 
   const handleOpenNewInvoice = () => {
-    const defaultClient = clients[0];
+    const defaultClient = activeClients[0] || clients[0];
     setFormClienteId(defaultClient?.id || '');
     setFormTipoPago(defaultClient?.tipoPago || 'contado');
     setFormFechaEmision(getTodayLocalDateString());
@@ -172,7 +179,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
   };
 
   const handleOpenNewQuote = () => {
-    const defaultClient = clients[0];
+    const defaultClient = activeClients[0] || clients[0];
     setFormClienteId(defaultClient?.id || '');
     setFormFechaEmision(getTodayLocalDateString());
     const validUntil = getFutureLocalDateString(30);
@@ -264,31 +271,36 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
   const formTotal = formSubtotal + formImpuestos;
 
   const handleSaveDraftInvoice = () => {
-    if (!formClienteId || formItems.length === 0) return;
-    const todayStr = getTodayLocalDateString();
-    const nowIso = new Date().toISOString();
-    const emissionDate = formFechaEmision === todayStr ? nowIso : (formFechaEmision.includes('T') ? formFechaEmision : `${formFechaEmision}T${nowIso.split('T')[1] || '12:00:00.000Z'}`);
+    if (isSubmitting || !formClienteId || formItems.length === 0) return;
+    setIsSubmitting(true);
+    try {
+      const todayStr = getTodayLocalDateString();
+      const nowIso = new Date().toISOString();
+      const emissionDate = formFechaEmision === todayStr ? nowIso : (formFechaEmision.includes('T') ? formFechaEmision : `${formFechaEmision}T${nowIso.split('T')[1] || '12:00:00.000Z'}`);
 
-    createInvoice({
-      clienteId: formClienteId,
-      fechaEmision: emissionDate,
-      fechaVencimiento: formFechaVencimiento,
-      tipoPago: formTipoPago,
-      estado: 'borrador',
-      items: formItems.map((item, idx) => ({
-        ...item,
-        id: `fitem-${Date.now()}-${idx + 1}`,
-        facturaId: ''
-      })),
-      subtotal: formSubtotal,
-      descuentoTotal: 0,
-      tasaImpuesto: formTasaImpuesto,
-      impuestos: formImpuestos,
-      total: formTotal,
-      notas: formNotas
-    });
+      createInvoice({
+        clienteId: formClienteId,
+        fechaEmision: emissionDate,
+        fechaVencimiento: formFechaVencimiento,
+        tipoPago: formTipoPago,
+        estado: 'borrador',
+        items: formItems.map((item, idx) => ({
+          ...item,
+          id: `fitem-${Date.now()}-${idx + 1}`,
+          facturaId: ''
+        })),
+        subtotal: formSubtotal,
+        descuentoTotal: 0,
+        tasaImpuesto: formTasaImpuesto,
+        impuestos: formImpuestos,
+        total: formTotal,
+        notas: formNotas
+      });
 
-    setIsNewInvoiceModalOpen(false);
+      setIsNewInvoiceModalOpen(false);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleRequestIssueNewInvoice = () => {
@@ -317,27 +329,33 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
       total: formTotal,
       deficitItems: deficits,
       onConfirm: () => {
-        const newInv = createInvoice({
-          clienteId: formClienteId,
-          fechaEmision: emissionDate,
-          fechaVencimiento: formFechaVencimiento,
-          tipoPago: formTipoPago,
-          estado: 'emitida',
-          items: formItems.map((item, idx) => ({
-            ...item,
-            id: `fitem-${Date.now()}-${idx + 1}`,
-            facturaId: ''
-          })),
-          subtotal: formSubtotal,
-          descuentoTotal: 0,
-          tasaImpuesto: formTasaImpuesto,
-          impuestos: formImpuestos,
-          total: formTotal,
-          notas: formNotas
-        });
-        setConfirmIssueData(null);
-        setIsNewInvoiceModalOpen(false);
-        setPrintDoc({ doc: newInv, type: 'invoice' });
+        if (isSubmitting) return;
+        setIsSubmitting(true);
+        try {
+          const newInv = createInvoice({
+            clienteId: formClienteId,
+            fechaEmision: emissionDate,
+            fechaVencimiento: formFechaVencimiento,
+            tipoPago: formTipoPago,
+            estado: 'emitida',
+            items: formItems.map((item, idx) => ({
+              ...item,
+              id: `fitem-${Date.now()}-${idx + 1}`,
+              facturaId: ''
+            })),
+            subtotal: formSubtotal,
+            descuentoTotal: 0,
+            tasaImpuesto: formTasaImpuesto,
+            impuestos: formImpuestos,
+            total: formTotal,
+            notas: formNotas
+          });
+          setConfirmIssueData(null);
+          setIsNewInvoiceModalOpen(false);
+          setPrintDoc({ doc: newInv, type: 'invoice' });
+        } finally {
+          setIsSubmitting(false);
+        }
       }
     });
   };
@@ -400,29 +418,34 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
   };
 
   const handleSaveQuote = () => {
-    if (!formClienteId || formItems.length === 0) return;
-    const todayStr = getTodayLocalDateString();
-    const nowIso = new Date().toISOString();
-    const emissionDate = formFechaEmision === todayStr ? nowIso : (formFechaEmision.includes('T') ? formFechaEmision : `${formFechaEmision}T${nowIso.split('T')[1] || '12:00:00.000Z'}`);
+    if (isSubmitting || !formClienteId || formItems.length === 0) return;
+    setIsSubmitting(true);
+    try {
+      const todayStr = getTodayLocalDateString();
+      const nowIso = new Date().toISOString();
+      const emissionDate = formFechaEmision === todayStr ? nowIso : (formFechaEmision.includes('T') ? formFechaEmision : `${formFechaEmision}T${nowIso.split('T')[1] || '12:00:00.000Z'}`);
 
-    createQuote({
-      clienteId: formClienteId,
-      fechaEmision: emissionDate,
-      fechaVencimiento: formFechaVencimiento,
-      estado: 'pendiente',
-      items: formItems.map((item, idx) => ({
-        ...item,
-        id: `qitem-${Date.now()}-${idx + 1}`
-      })),
-      subtotal: formSubtotal,
-      descuentoTotal: 0,
-      tasaImpuesto: formTasaImpuesto,
-      impuestos: formImpuestos,
-      total: formTotal,
-      notas: formNotas
-    });
+      createQuote({
+        clienteId: formClienteId,
+        fechaEmision: emissionDate,
+        fechaVencimiento: formFechaVencimiento,
+        estado: 'pendiente',
+        items: formItems.map((item, idx) => ({
+          ...item,
+          id: `qitem-${Date.now()}-${idx + 1}`
+        })),
+        subtotal: formSubtotal,
+        descuentoTotal: 0,
+        tasaImpuesto: formTasaImpuesto,
+        impuestos: formImpuestos,
+        total: formTotal,
+        notas: formNotas
+      });
 
-    setIsNewQuoteModalOpen(false);
+      setIsNewQuoteModalOpen(false);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Payment handler (CxC)
@@ -437,19 +460,23 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
 
   const handleSavePayment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedInvoice || !paymentAmount || Number(paymentAmount) <= 0) return;
+    if (isSubmitting || !selectedInvoice || !paymentAmount || Number(paymentAmount) <= 0) return;
+    setIsSubmitting(true);
+    try {
+      addClientPayment({
+        facturaId: selectedInvoice.id,
+        fecha: new Date().toISOString(),
+        monto: Number(paymentAmount),
+        metodoPago: paymentMethod,
+        referencia: paymentRef || `COBRO-${Date.now().toString().slice(-4)}`,
+        notas: paymentNotes
+      });
 
-    addClientPayment({
-      facturaId: selectedInvoice.id,
-      fecha: new Date().toISOString(),
-      monto: Number(paymentAmount),
-      metodoPago: paymentMethod,
-      referencia: paymentRef || `COBRO-${Date.now().toString().slice(-4)}`,
-      notas: paymentNotes
-    });
-
-    setIsPaymentModalOpen(false);
-    setSelectedInvoice(null);
+      setIsPaymentModalOpen(false);
+      setSelectedInvoice(null);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Cancel Invoice handler
@@ -1139,14 +1166,14 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
         size="xl"
         footer={
           <>
-            <button type="button" className="btn btn-secondary" onClick={() => setIsNewInvoiceModalOpen(false)}>
+            <button type="button" className="btn btn-secondary" onClick={() => setIsNewInvoiceModalOpen(false)} disabled={isSubmitting}>
               Cancelar
             </button>
             <button
               type="button"
               className="btn btn-secondary"
               onClick={handleSaveDraftInvoice}
-              disabled={formItems.length === 0}
+              disabled={isSubmitting || formItems.length === 0}
             >
               Guardar como Borrador
             </button>
@@ -1154,10 +1181,10 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
               type="button"
               className="btn btn-primary"
               onClick={handleRequestIssueNewInvoice}
-              disabled={formItems.length === 0}
+              disabled={isSubmitting || formItems.length === 0}
             >
               <CheckCircle size={16} />
-              Guardar y Emitir Factura
+              {isSubmitting ? 'Guardando...' : 'Guardar y Emitir Factura'}
             </button>
           </>
         }
@@ -1167,7 +1194,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
             <div className="form-group" style={{ flex: 1.5 }}>
               <label className="form-label">Cliente *</label>
               <ComboboxInline
-                options={clients.map(c => ({ id: c.id, label: c.nombre, sublabel: `${c.identificacionFiscal} - ${c.tipoPago}` }))}
+                options={activeClients.map(c => ({ id: c.id, label: c.nombre, sublabel: `${c.identificacionFiscal} - ${c.tipoPago}` }))}
                 value={formClienteId}
                 onChange={handleSelectClient}
                 placeholder="Seleccionar cliente..."
@@ -1214,7 +1241,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Producto *</label>
                 <ComboboxInline
-                  options={products.map(p => ({
+                  options={activeProducts.map(p => ({
                     id: p.id,
                     label: p.nombre,
                     sublabel: `Stock: ${p.stockActual} - P.Venta: ${formatCurrency(p.precioVenta)}`
@@ -1450,16 +1477,16 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
         size="xl"
         footer={
           <>
-            <button type="button" className="btn btn-secondary" onClick={() => setIsNewQuoteModalOpen(false)}>
+            <button type="button" className="btn btn-secondary" onClick={() => setIsNewQuoteModalOpen(false)} disabled={isSubmitting}>
               Cancelar
             </button>
             <button
               type="button"
               className="btn btn-primary"
               onClick={handleSaveQuote}
-              disabled={formItems.length === 0}
+              disabled={isSubmitting || formItems.length === 0}
             >
-              Guardar Cotización
+              {isSubmitting ? 'Guardando...' : 'Guardar Cotización'}
             </button>
           </>
         }
@@ -1469,7 +1496,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
             <div className="form-group" style={{ flex: 1.5 }}>
               <label className="form-label">Cliente *</label>
               <ComboboxInline
-                options={clients.map(c => ({ id: c.id, label: c.nombre, sublabel: c.identificacionFiscal }))}
+                options={activeClients.map(c => ({ id: c.id, label: c.nombre, sublabel: c.identificacionFiscal }))}
                 value={formClienteId}
                 onChange={handleSelectClient}
                 placeholder="Seleccionar cliente..."
@@ -1511,7 +1538,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Producto *</label>
                 <ComboboxInline
-                  options={products.map(p => ({
+                  options={activeProducts.map(p => ({
                     id: p.id,
                     label: p.nombre,
                     sublabel: `P.Venta: ${formatCurrency(p.precioVenta)}`
@@ -1866,9 +1893,10 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
                 type="button"
                 className="btn btn-primary"
                 onClick={confirmIssueData.onConfirm}
+                disabled={isSubmitting}
               >
                 <CheckCircle size={16} />
-                Confirmar y Emitir Factura
+                {isSubmitting ? 'Emitiendo...' : 'Confirmar y Emitir Factura'}
               </button>
             </>
           }

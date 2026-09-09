@@ -53,6 +53,7 @@ export interface Client {
   diasCredito: number;
   creadoEn: string;
   notas?: string;
+  activo?: boolean;
 }
 
 export interface Supplier {
@@ -65,6 +66,7 @@ export interface Supplier {
   contactoNombre?: string;
   creadoEn: string;
   notas?: string;
+  activo?: boolean;
 }
 
 export interface Subcategory {
@@ -106,6 +108,7 @@ export interface Product {
   variantes?: ProductVariant[];
   creadoEn: string;
   descripcion?: string;
+  activo?: boolean;
 }
 
 // 2. Compras & CxP
@@ -312,6 +315,7 @@ export interface CompanySettings {
   idioma: AppLanguage; // es | en | pt
   tasaImpuestoDefecto: number; // e.g. 16
   criterioProrrateoDefecto: ProrrateoCriterion; // 'costo_material' | 'valor_venta' | 'unidades_iguales'
+  capitalAportado?: number; // Capital social / aporte inicial del propietario
   direccion: string;
   telefono: string;
   email: string;

@@ -112,9 +112,57 @@ export function getFutureLocalDateString(daysToAdd: number): string {
   return `${year}-${month}-${day}`;
 }
 
-export function generateDocNumber(prefix: string, count: number): string {
-  const seq = (count + 1).toString().padStart(4, '0');
-  return `${prefix}${seq}`;
+/**
+ * Calculates the next sequential document number (e.g., FA0001, CO0001, CT0001, CA0001, II0001, AJ0001).
+ * Scans all existing documents to find the highest numeric suffix and increments by 1.
+ * If passed a numeric count fallback, it safely calculates prefix + (count + 1).
+ */
+export function getNextDocNumber(
+  prefix: string,
+  itemsOrCount: Array<{ id?: string; numero?: string; numeroFactura?: string; numeroCompra?: string; numeroCotizacion?: string; referenciaDoc?: string; codigo?: string }> | number = []
+): string {
+  if (typeof itemsOrCount === 'number') {
+    const seq = (itemsOrCount + 1).toString().padStart(4, '0');
+    return `${prefix.toUpperCase()}${seq}`;
+  }
+
+  let maxNumber = 0;
+  const regex = new RegExp(`^${prefix}-?(\\d+)$`, 'i');
+
+  if (Array.isArray(itemsOrCount)) {
+    itemsOrCount.forEach(item => {
+      const candidates = [
+        item?.numeroFactura,
+        item?.numeroCompra,
+        item?.numeroCotizacion,
+        item?.numero,
+        item?.referenciaDoc,
+        item?.codigo,
+        item?.id
+      ];
+      for (const str of candidates) {
+        if (str && typeof str === 'string') {
+          const match = str.trim().match(regex);
+          if (match) {
+            const num = parseInt(match[1], 10);
+            if (!isNaN(num) && num > maxNumber) {
+              maxNumber = num;
+            }
+          }
+        }
+      }
+    });
+  }
+
+  const nextNumber = maxNumber + 1;
+  return `${prefix.toUpperCase()}${nextNumber.toString().padStart(4, '0')}`;
+}
+
+export function generateDocNumber(
+  prefix: string,
+  itemsOrCount: Array<{ id?: string; numero?: string; numeroFactura?: string; numeroCompra?: string; numeroCotizacion?: string; referenciaDoc?: string; codigo?: string }> | number = 0
+): string {
+  return getNextDocNumber(prefix, itemsOrCount);
 }
 
 export function calculateWeightedAverageCost(

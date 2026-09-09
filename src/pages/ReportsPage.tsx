@@ -95,6 +95,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
   const netMarginPercent = totalNetSales > 0 ? ((netOperatingIncome / totalNetSales) * 100).toFixed(1) : '0';
 
   // 2. Calculations for Balance Sheet (Balance General)
+  const initialCapital = Number(settings.capitalAportado) || 0;
   const totalClientPaymentsReceived = invoices.reduce((sum, inv) => {
     return sum + inv.pagos.reduce((pSum, p) => pSum + p.monto, 0);
   }, 0);
@@ -104,7 +105,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
   }, 0);
 
   const totalExpensesPaid = expenses.reduce((sum, e) => sum + e.monto, 0);
-  const estimatedCash = Math.max(25000, totalClientPaymentsReceived - totalSupplierPaymentsMade - totalExpensesPaid + 50000);
+  const realCash = initialCapital + totalClientPaymentsReceived - totalSupplierPaymentsMade - totalExpensesPaid;
 
   const totalReceivablesCxC = invoices
     .filter(i => (i.estado === 'emitida' || i.estado === 'borrador') && i.saldoPendiente > 0)
@@ -113,7 +114,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
   const totalInventoryAssetValue = products.reduce((sum, p) => sum + (p.stockActual * p.costoPromedio), 0);
   const totalFixedAssetsNet = fixedAssets.reduce((sum, a) => sum + a.valorEnLibros, 0);
 
-  const totalAssets = estimatedCash + totalReceivablesCxC + totalInventoryAssetValue + totalFixedAssetsNet;
+  const totalAssets = realCash + totalReceivablesCxC + totalInventoryAssetValue + totalFixedAssetsNet;
 
   // Liabilities (Pasivos):
   const totalPayablesCxP = purchases
@@ -122,6 +123,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
 
   const totalLiabilities = totalPayablesCxP;
   const totalEquity = totalAssets - totalLiabilities;
+  const accumulatedRetainedEarnings = totalEquity - initialCapital;
 
   // 3. Detailed Aggregations for Sales Report: By Product and By Client
   const productSalesMap = new Map<string, {
@@ -726,8 +728,15 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
                     <td colSpan={2} style={{ fontWeight: 700, paddingTop: '0.5rem' }}>Activo Circulante:</td>
                   </tr>
                   <tr>
-                    <td style={{ padding: '0.35rem 0.75rem', color: 'var(--text-secondary)' }}>Efectivo y Bancos (Estimado)</td>
-                    <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(estimatedCash)}</td>
+                    <td style={{ padding: '0.35rem 0.75rem', color: 'var(--text-secondary)' }}>
+                      <div>Efectivo y Bancos (Caja Real)</div>
+                      {initialCapital === 0 && (
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                          💡 Configura tu Capital Inicial en <em>Configuración</em> para reflejar tu aporte real
+                        </div>
+                      )}
+                    </td>
+                    <td style={{ textAlign: 'right', fontWeight: 600, verticalAlign: 'top', paddingTop: '0.35rem' }}>{formatCurrency(realCash)}</td>
                   </tr>
                   <tr>
                     <td style={{ padding: '0.35rem 0.75rem', color: 'var(--text-secondary)' }}>Cuentas por Cobrar (CxC)</td>
@@ -781,8 +790,16 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
                     </td>
                   </tr>
                   <tr>
-                    <td style={{ padding: '0.35rem 0.75rem', color: 'var(--text-secondary)' }}>Capital Social & Resultados Acumulados</td>
-                    <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(totalEquity)}</td>
+                    <td style={{ padding: '0.35rem 0.75rem', color: 'var(--text-secondary)' }}>Capital Aportado / Social</td>
+                    <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(initialCapital)}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '0.35rem 0.75rem', color: 'var(--text-secondary)' }}>Resultados del Ejercicio y Acumulados</td>
+                    <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(accumulatedRetainedEarnings)}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '0.5rem 0.75rem', fontWeight: 700 }}>Total Patrimonio</td>
+                    <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatCurrency(totalEquity)}</td>
                   </tr>
 
                   <tr style={{ borderTop: '2px solid var(--border-default)' }}>

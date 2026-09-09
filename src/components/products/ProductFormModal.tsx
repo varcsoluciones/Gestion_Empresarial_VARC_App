@@ -49,6 +49,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [descripcion, setDescripcion] = useState('');
   const [tieneVariantes, setTieneVariantes] = useState(false);
   const [variantes, setVariantes] = useState<{ talla: string; color: string; sku: string; stockActual: number | '' }[]>([]);
+  const [activo, setActivo] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   // Synchronize form on modal open or editing change
@@ -56,6 +58,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     if (!isOpen) return;
 
     setError('');
+    setIsSubmitting(false);
     if (productToEdit) {
       setCodigo(productToEdit.codigo);
       setNombre(productToEdit.nombre);
@@ -66,6 +69,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setStockMinimo(productToEdit.stockMinimo || 5);
       setDescripcion(productToEdit.descripcion || '');
       setTieneVariantes(productToEdit.tieneVariantes);
+      setActivo(productToEdit.activo !== false);
       setVariantes(productToEdit.variantes ? productToEdit.variantes.map(v => ({
         talla: v.talla,
         color: v.color,
@@ -84,6 +88,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setStockMinimo(5);
       setDescripcion('');
       setTieneVariantes(false);
+      setActivo(true);
       setVariantes([
         { talla: 'M', color: 'Negro', sku: `${nextSKU}-1`, stockActual: 0 },
         { talla: 'L', color: 'Negro', sku: `${nextSKU}-2`, stockActual: 0 }
@@ -163,6 +168,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     const finalCatId = categoriaId || categories[0]?.id || 'cat-1';
     const finalSubcatId = subcategoriaId.trim() ? subcategoriaId.trim() : undefined;
 
+    setIsSubmitting(true);
+
     if (productToEdit) {
       updateProduct(productToEdit.id, {
         codigo: finalCode,
@@ -173,6 +180,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         precioVenta: Number(precioVenta),
         stockMinimo: Number(stockMinimo) || 5,
         tieneVariantes: tieneVariantes,
+        activo: activo,
         descripcion: descripcion.trim() || undefined,
         variantes: tieneVariantes ? variantes.map((v, i) => ({
           id: productToEdit.variantes?.[i]?.id || `var-${productToEdit.id}-${i + 1}`,
@@ -194,6 +202,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         precioVenta: Number(precioVenta),
         stockMinimo: Number(stockMinimo) || 5,
         tieneVariantes: tieneVariantes,
+        activo: activo,
         descripcion: descripcion.trim() || undefined,
         variantes: tieneVariantes ? variantes.map((v, i) => ({
           id: `var-${Date.now()}-${i + 1}`,
@@ -221,11 +230,11 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       size="lg"
       footer={
         <>
-          <button type="button" className="btn btn-secondary" onClick={onClose}>
+          <button type="button" className="btn btn-secondary" onClick={onClose} disabled={isSubmitting}>
             Cancelar
           </button>
-          <button type="submit" form="universal-product-form" className="btn btn-primary">
-            {productToEdit ? 'Guardar Cambios' : (onProductCreated ? 'Guardar y Seleccionar' : 'Guardar Producto')}
+          <button type="submit" form="universal-product-form" className="btn btn-primary" disabled={isSubmitting}>
+            {isSubmitting ? 'Guardando...' : (productToEdit ? 'Guardar Cambios' : (onProductCreated ? 'Guardar y Seleccionar' : 'Guardar Producto'))}
           </button>
         </>
       }
@@ -243,6 +252,37 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
             {error}
           </div>
         )}
+
+        {/* Estado Activo Toggle */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0.75rem 1rem',
+          backgroundColor: activo ? 'var(--color-accent-subtle)' : 'var(--bg-surface-hover)',
+          border: `1px solid ${activo ? 'var(--color-accent)' : 'var(--border-default)'}`,
+          borderRadius: 'var(--radius-md)',
+          marginBottom: '1.25rem',
+          transition: 'all var(--transition-fast)'
+        }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: '0.875rem' }}>
+              Estado del Producto: {activo ? <span style={{ color: 'var(--color-accent)' }}>Activo</span> : <span style={{ color: 'var(--text-muted)' }}>Archivado</span>}
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+              {activo ? 'Disponible para nuevas ventas, compras y cotizaciones.' : 'Archivado (oculto en nuevos formularios, mantiene historial contable).'}
+            </div>
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.825rem' }}>
+            <input
+              type="checkbox"
+              checked={activo}
+              onChange={(e) => setActivo(e.target.checked)}
+              style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--color-accent)' }}
+            />
+            <span>Activo</span>
+          </label>
+        </div>
 
         <div className="form-row">
           <div className="form-group" style={{ flex: '0 0 160px' }}>

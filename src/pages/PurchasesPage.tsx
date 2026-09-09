@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useERP } from '../context/ERPContext';
 import type { Purchase, PaymentMethod } from '../types/erp';
 import { formatCurrency, formatDateTime, formatMonthLabel, getTodayLocalDateString } from '../utils/formatters';
@@ -34,6 +34,10 @@ export const PurchasesPage: React.FC = () => {
     addSupplierPayment
   } = useERP();
 
+  const activeSuppliers = useMemo(() => suppliers.filter(s => s.activo !== false), [suppliers]);
+  const activeProducts = useMemo(() => products.filter(p => p.activo !== false), [products]);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedSupplierFilter, setSelectedSupplierFilter] = useState<string>('all');
@@ -85,7 +89,8 @@ export const PurchasesPage: React.FC = () => {
   const [lineCosto, setLineCosto] = useState<number | ''>('');
 
   const handleOpenNewPurchase = () => {
-    setFormProveedorId(suppliers[0]?.id || '');
+    const defaultSupplier = activeSuppliers[0] || suppliers[0];
+    setFormProveedorId(defaultSupplier?.id || '');
     setFormFecha(getTodayLocalDateString());
     setFormTasaImpuesto(settings.tasaImpuestoDefecto ?? 16);
     setFormNotas('');
@@ -165,28 +170,32 @@ export const PurchasesPage: React.FC = () => {
   const formImpuestos = Number((formTotal - formSubtotal).toFixed(2));
 
   const handleSavePurchase = (directReceive = false) => {
-    if (!formProveedorId || formItems.length === 0) return;
+    if (isSubmitting || !formProveedorId || formItems.length === 0) return;
+    setIsSubmitting(true);
+    try {
+      const nowIso = new Date().toISOString();
+      const todayStr = getTodayLocalDateString();
+      const purchaseDate = formFecha === todayStr ? nowIso : (formFecha.includes('T') ? formFecha : `${formFecha}T${nowIso.split('T')[1] || '12:00:00.000Z'}`);
 
-    const nowIso = new Date().toISOString();
-    const todayStr = getTodayLocalDateString();
-    const purchaseDate = formFecha === todayStr ? nowIso : (formFecha.includes('T') ? formFecha : `${formFecha}T${nowIso.split('T')[1] || '12:00:00.000Z'}`);
+      createPurchase({
+        proveedorId: formProveedorId,
+        fecha: purchaseDate,
+        estado: directReceive ? 'recibida' : 'borrador',
+        items: formItems.map((item, idx) => ({
+          ...item,
+          id: `pdet-${Date.now()}-${idx + 1}`,
+          compraId: ''
+        })),
+        subtotal: formSubtotal,
+        impuestos: formImpuestos,
+        total: formTotal,
+        notas: formNotas
+      });
 
-    createPurchase({
-      proveedorId: formProveedorId,
-      fecha: purchaseDate,
-      estado: directReceive ? 'recibida' : 'borrador',
-      items: formItems.map((item, idx) => ({
-        ...item,
-        id: `pdet-${Date.now()}-${idx + 1}`,
-        compraId: ''
-      })),
-      subtotal: formSubtotal,
-      impuestos: formImpuestos,
-      total: formTotal,
-      notas: formNotas
-    });
-
-    setIsNewPurchaseModalOpen(false);
+      setIsNewPurchaseModalOpen(false);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Payment Handler
@@ -201,19 +210,23 @@ export const PurchasesPage: React.FC = () => {
 
   const handleSavePayment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPurchase || !paymentAmount || Number(paymentAmount) <= 0) return;
+    if (isSubmitting || !selectedPurchase || !paymentAmount || Number(paymentAmount) <= 0) return;
+    setIsSubmitting(true);
+    try {
+      addSupplierPayment({
+        compraId: selectedPurchase.id,
+        fecha: new Date().toISOString(),
+        monto: Number(paymentAmount),
+        metodoPago: paymentMethod,
+        referencia: paymentRef || `PAGO-${Date.now().toString().slice(-4)}`,
+        notas: paymentNotes
+      });
 
-    addSupplierPayment({
-      compraId: selectedPurchase.id,
-      fecha: new Date().toISOString(),
-      monto: Number(paymentAmount),
-      metodoPago: paymentMethod,
-      referencia: paymentRef || `PAGO-${Date.now().toString().slice(-4)}`,
-      notas: paymentNotes
-    });
-
-    setIsPaymentModalOpen(false);
-    setSelectedPurchase(null);
+      setIsPaymentModalOpen(false);
+      setSelectedPurchase(null);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Cancel Handler
@@ -708,14 +721,14 @@ export const PurchasesPage: React.FC = () => {
         size="xl"
         footer={
           <>
-            <button type="button" className="btn btn-secondary" onClick={() => setIsNewPurchaseModalOpen(false)}>
+            <button type="button" className="btn btn-secondary" onClick={() => setIsNewPurchaseModalOpen(false)} disabled={isSubmitting}>
               Cancelar
             </button>
             <button
               type="button"
               className="btn btn-secondary"
               onClick={() => handleSavePurchase(false)}
-              disabled={formItems.length === 0}
+              disabled={isSubmitting || formItems.length === 0}
             >
               Guardar como Borrador
             </button>
@@ -723,10 +736,10 @@ export const PurchasesPage: React.FC = () => {
               type="button"
               className="btn btn-primary"
               onClick={() => handleSavePurchase(true)}
-              disabled={formItems.length === 0}
+              disabled={isSubmitting || formItems.length === 0}
             >
               <CheckCircle size={16} />
-              Guardar y Recibir en Almacén
+              {isSubmitting ? 'Guardando...' : 'Guardar y Recibir en Almacén'}
             </button>
           </>
         }
@@ -739,7 +752,7 @@ export const PurchasesPage: React.FC = () => {
                 Proveedor *
               </label>
               <ComboboxInline
-                options={suppliers.map(s => ({ id: s.id, label: s.nombre, sublabel: s.identificacionFiscal }))}
+                options={activeSuppliers.map(s => ({ id: s.id, label: s.nombre, sublabel: s.identificacionFiscal }))}
                 value={formProveedorId}
                 onChange={setFormProveedorId}
                 placeholder="Seleccionar proveedor..."
@@ -771,7 +784,7 @@ export const PurchasesPage: React.FC = () => {
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Producto *</label>
                 <ComboboxInline
-                  options={products.map(p => ({
+                  options={activeProducts.map(p => ({
                     id: p.id,
                     label: p.nombre,
                     sublabel: `SKU: ${p.codigo} - Costo Prom: ${formatCurrency(p.costoPromedio)}`
