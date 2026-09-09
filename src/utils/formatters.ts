@@ -43,7 +43,7 @@ export function parseDateSafe(dateString?: string): Date | null {
   const str = String(dateString).trim();
   if (!str) return null;
 
-  // Handle YYYY-MM-DD explicitly to prevent UTC midnight shifts on negative timezones (e.g. America/Mexico)
+  // Handle YYYY-MM-DD explicitly to prevent UTC midnight shifts on negative timezones (e.g. America/Mexico, Costa Rica)
   const dateOnlyMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (dateOnlyMatch) {
     const year = parseInt(dateOnlyMatch[1], 10);
@@ -52,10 +52,56 @@ export function parseDateSafe(dateString?: string): Date | null {
     return new Date(year, month, day, 12, 0, 0); // Noon local avoids all boundary shift issues
   }
 
-  // Handle date-time strings with or without timezone
+  // Handle YYYY-MM-DDTHH:mm... strings without timezone
+  const dateTimeMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (dateTimeMatch && !str.endsWith('Z') && !str.includes('+') && !str.match(/-\d{2}:\d{2}$/)) {
+    const year = parseInt(dateTimeMatch[1], 10);
+    const month = parseInt(dateTimeMatch[2], 10) - 1;
+    const day = parseInt(dateTimeMatch[3], 10);
+    const hour = parseInt(dateTimeMatch[4], 10);
+    const minute = parseInt(dateTimeMatch[5], 10);
+    const second = dateTimeMatch[6] ? parseInt(dateTimeMatch[6], 10) : 0;
+    return new Date(year, month, day, hour, minute, second);
+  }
+
+  // Handle date-time strings with timezone
   const d = new Date(str);
   if (isNaN(d.getTime())) return null;
   return d;
+}
+
+/**
+ * Constructs a local ISO date-time string without UTC timezone offset corruption.
+ * When given "2026-10-01", it generates "2026-10-01T12:00:00" (or current local time if today),
+ * which parses reliably in local time across all timezones without boundary shifts.
+ */
+export function buildLocalDateISO(dateInput?: string | Date): string {
+  const now = new Date();
+  const timePart = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+  
+  if (!dateInput) {
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}T${timePart}`;
+  }
+
+  if (typeof dateInput === 'string') {
+    const str = dateInput.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+      return `${str}T${timePart}`;
+    }
+    if (str.includes('T')) {
+      // If it contains a timezone suffix Z or offset, strip it to preserve the local date
+      return str.replace(/Z|[+-]\d{2}:\d{2}$/, '');
+    }
+    return `${str}T${timePart}`;
+  }
+
+  const y = dateInput.getFullYear();
+  const m = String(dateInput.getMonth() + 1).padStart(2, '0');
+  const d = String(dateInput.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}T${timePart}`;
 }
 
 export function formatDate(dateString?: string): string {

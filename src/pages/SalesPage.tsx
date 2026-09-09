@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useERP } from '../context/ERPContext';
 import type { Invoice, Quote, PaymentMethod, PaymentTerm } from '../types/erp';
-import { formatCurrency, formatDate, formatDateTime, generateDocNumber, formatMonthLabel, getTodayLocalDateString, getFutureLocalDateString } from '../utils/formatters';
+import { formatCurrency, formatDate, formatDateTime, generateDocNumber, formatMonthLabel, getTodayLocalDateString, getFutureLocalDateString, buildLocalDateISO } from '../utils/formatters';
 import {
   TrendingUp,
   Plus,
@@ -274,9 +274,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
     if (isSubmitting || !formClienteId || formItems.length === 0) return;
     setIsSubmitting(true);
     try {
-      const todayStr = getTodayLocalDateString();
-      const nowIso = new Date().toISOString();
-      const emissionDate = formFechaEmision === todayStr ? nowIso : (formFechaEmision.includes('T') ? formFechaEmision : `${formFechaEmision}T${nowIso.split('T')[1] || '12:00:00.000Z'}`);
+      const emissionDate = buildLocalDateISO(formFechaEmision);
 
       createInvoice({
         clienteId: formClienteId,
@@ -309,9 +307,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
     const nextFolio = generateDocNumber('FA', invoices.length);
     const totalPieces = formItems.reduce((sum, item) => sum + item.cantidad, 0);
     const deficits = checkStockDeficits(formItems);
-    const todayStr = getTodayLocalDateString();
-    const nowIso = new Date().toISOString();
-    const emissionDate = formFechaEmision === todayStr ? nowIso : (formFechaEmision.includes('T') ? formFechaEmision : `${formFechaEmision}T${nowIso.split('T')[1] || '12:00:00.000Z'}`);
+    const emissionDate = buildLocalDateISO(formFechaEmision);
 
     setConfirmIssueData({
       title: 'Confirmar Emisión de Factura',
@@ -392,7 +388,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
     const client = clients.find(c => c.id === quote.clienteId);
     const totalPieces = quote.items.reduce((sum, item) => sum + item.cantidad, 0);
     const deficits = checkStockDeficits(quote.items);
-    const nowIso = new Date().toISOString();
+    const nowIso = buildLocalDateISO();
 
     setConfirmIssueData({
       title: 'Confirmar Conversión de Cotización a Factura',
@@ -421,9 +417,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
     if (isSubmitting || !formClienteId || formItems.length === 0) return;
     setIsSubmitting(true);
     try {
-      const todayStr = getTodayLocalDateString();
-      const nowIso = new Date().toISOString();
-      const emissionDate = formFechaEmision === todayStr ? nowIso : (formFechaEmision.includes('T') ? formFechaEmision : `${formFechaEmision}T${nowIso.split('T')[1] || '12:00:00.000Z'}`);
+      const emissionDate = buildLocalDateISO(formFechaEmision);
 
       createQuote({
         clienteId: formClienteId,

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useERP } from '../context/ERPContext';
 import type { Purchase, PaymentMethod } from '../types/erp';
-import { formatCurrency, formatDateTime, formatMonthLabel, getTodayLocalDateString } from '../utils/formatters';
+import { formatCurrency, formatDateTime, formatMonthLabel, getTodayLocalDateString, buildLocalDateISO } from '../utils/formatters';
 import {
   Plus,
   Search,
@@ -173,9 +173,7 @@ export const PurchasesPage: React.FC = () => {
     if (isSubmitting || !formProveedorId || formItems.length === 0) return;
     setIsSubmitting(true);
     try {
-      const nowIso = new Date().toISOString();
-      const todayStr = getTodayLocalDateString();
-      const purchaseDate = formFecha === todayStr ? nowIso : (formFecha.includes('T') ? formFecha : `${formFecha}T${nowIso.split('T')[1] || '12:00:00.000Z'}`);
+      const purchaseDate = buildLocalDateISO(formFecha);
 
       createPurchase({
         proveedorId: formProveedorId,

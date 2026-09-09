@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useERP } from '../context/ERPContext';
 import type { ExpenseType, OperatingExpense } from '../types/erp';
-import { formatCurrency, formatDate, formatDateTime, getMonthKey, getTodayLocalDateString } from '../utils/formatters';
+import { formatCurrency, formatDate, formatDateTime, getMonthKey, getTodayLocalDateString, buildLocalDateISO } from '../utils/formatters';
 import { useTranslation } from '../i18n/useTranslation';
 import {
   Calculator,
@@ -88,9 +88,7 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
     e.preventDefault();
     if (!expMonto || Number(expMonto) <= 0 || !expDesc.trim()) return;
 
-    const todayStr = getTodayLocalDateString();
-    const nowIso = new Date().toISOString();
-    const expenseDate = expFecha === todayStr ? nowIso : (expFecha.includes('T') ? expFecha : `${expFecha}T${nowIso.split('T')[1] || '12:00:00.000Z'}`);
+    const expenseDate = buildLocalDateISO(expFecha);
 
     addExpense({
       fecha: expenseDate,
