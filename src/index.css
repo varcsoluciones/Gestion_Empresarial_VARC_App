@@ -1057,6 +1057,18 @@ body {
   color: var(--text-primary);
 }
 
+.btn-outline {
+  background-color: var(--bg-surface);
+  border-color: var(--border-default);
+  color: var(--text-primary);
+}
+
+.btn-outline:hover:not(:disabled) {
+  background-color: var(--bg-surface-hover);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
 .btn-sm {
   padding: 0.35rem 0.7rem;
   font-size: 0.775rem;

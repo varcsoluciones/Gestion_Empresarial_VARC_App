@@ -494,37 +494,47 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
               type="button"
               className="btn btn-secondary btn-sm"
               onClick={() => setIsReopenModalOpen(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                fontWeight: 600,
+                backgroundColor: 'var(--bg-surface)',
+                borderColor: 'var(--border-default)',
+                color: 'var(--text-primary)'
+              }}
               title="Reabrir periodo para ajustes"
             >
-              <Lock size={15} />
-              Reabrir Mes
+              <Lock size={15} style={{ color: 'var(--color-accent)' }} />
+              Reabrir Periodo
             </button>
           ) : (
             <button
               type="button"
-              className={`btn btn-sm ${isPastMonth ? 'btn-primary' : 'btn-outline'}`}
+              className={`btn btn-sm ${isPastMonth ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setIsClosePeriodModalOpen(true)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.4rem',
+                gap: '0.45rem',
+                fontWeight: 600,
                 ...(isPastMonth
                   ? {
                       backgroundColor: 'var(--color-accent)',
                       color: 'var(--text-on-accent)',
-                      boxShadow: '0 2px 6px var(--color-accent-glow)',
-                      fontWeight: 600
+                      borderColor: 'var(--color-accent)',
+                      boxShadow: '0 2px 8px var(--color-accent-glow)'
                     }
                   : {
-                      color: 'var(--text-muted)',
-                      borderColor: 'var(--border-default)'
+                      backgroundColor: 'var(--bg-surface)',
+                      borderColor: 'var(--border-default)',
+                      color: 'var(--text-primary)'
                     })
               }}
-              title={isPastMonth ? "Mes concluido pendiente de cierre contable (Clic para cerrar)" : "Cerrar y congelar mes contable"}
+              title={isPastMonth ? "Mes concluido pendiente de cierre contable (Clic para cerrar)" : "Cerrar y congelar periodo contable"}
             >
-              <Lock size={15} />
-              Cerrar Mes
+              <Lock size={15} style={{ color: isPastMonth ? 'var(--text-on-accent)' : 'var(--text-secondary)' }} />
+              Cerrar Periodo
             </button>
           )}
 
@@ -566,9 +576,18 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
               {unclosedInfo.unclosedMonth && selectedMonth !== unclosedInfo.unclosedMonth && (
                 <button
                   type="button"
-                  className="btn btn-sm btn-outline"
+                  className="btn btn-sm btn-secondary"
                   onClick={() => setSelectedMonth(unclosedInfo.unclosedMonth!)}
-                  style={{ marginLeft: '0.65rem', padding: '0.2rem 0.55rem', fontSize: '0.8rem', verticalAlign: 'middle' }}
+                  style={{
+                    marginLeft: '0.65rem',
+                    padding: '0.2rem 0.65rem',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    verticalAlign: 'middle',
+                    backgroundColor: 'var(--bg-surface)',
+                    color: 'var(--text-primary)',
+                    borderColor: 'var(--border-default)'
+                  }}
                 >
                   Ir al mes {unclosedInfo.unclosedMonth}
                 </button>
