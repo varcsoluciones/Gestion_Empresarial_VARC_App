@@ -13,7 +13,6 @@ import {
   Sparkles,
   DollarSign,
   BarChart3,
-  Layers,
   ArrowRight
 } from 'lucide-react';
 import type { NavigationTab } from '../components/layout/Sidebar';
@@ -100,8 +99,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Tab state for Hero Analytics: 'trends' vs 'waterfall'
-  const [heroView, setHeroView] = useState<'trends' | 'waterfall'>('trends');
   // Tab state for Bottom Column 3: 'cashflow' vs 'topskus'
   const [bottomColView, setBottomColView] = useState<'cashflow' | 'topskus'>('cashflow');
 
@@ -329,12 +326,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
   const netCashflowPosition = pendingReceivables - totalCommittedOutflows;
 
   // SVG Chart Geometry Calculations (Spline Multimes)
-  const svgWidth = 600;
-  const svgHeight = 200;
-  const padLeft = 52;
-  const padRight = 20;
-  const padTop = 16;
-  const padBottom = 26;
+  const svgWidth = 500;
+  const svgHeight = 180;
+  const padLeft = 14;
+  const padRight = 14;
+  const padTop = 12;
+  const padBottom = 12;
   const chartW = svgWidth - padLeft - padRight;
   const chartH = svgHeight - padTop - padBottom;
 
@@ -652,225 +649,239 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* 3. Módulo Central Hero: Selector Dual (Tendencias Multimes vs Waterfall Profit Bridge) */}
-      <div className="card" style={{ padding: '0.85rem 1.15rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <div>
-            <h2 style={{ fontSize: '0.975rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.45rem', margin: 0 }}>
-              {heroView === 'trends' ? (
-                <>
-                  <TrendingUp size={16} style={{ color: 'var(--color-accent)' }} />
-                  Evolución Financiera Histórica: Ventas vs. Costos Operativos ({historicalStats.length} {historicalStats.length === 1 ? 'Mes' : 'Meses'})
-                </>
-              ) : (
-                <>
-                  <BarChart3 size={16} style={{ color: '#0ea5e9' }} />
-                  Puente de Rentabilidad Waterfall: Desglose de Venta a Utilidad Neta Real ({currentMonthKey})
-                </>
-              )}
-            </h2>
-            <p style={{ fontSize: '0.725rem', color: 'var(--text-muted)', margin: 0 }}>
-              {heroView === 'trends'
-                ? 'Ingresos facturados, costos totales de mercancía + gastos y utilidad neta'
-                : 'Paso a paso contable: Ventas Brutas (-) COGS (=) Margen Bruto (-) OpEx (-) Depreciación (=) Ganancia Neta'}
-            </p>
-          </div>
-
-          {/* View Selector Tabs & Summary Badges */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-            <div className="dashboard-segmented-tabs">
-              <button
-                type="button"
-                className={`dashboard-segmented-tab ${heroView === 'trends' ? 'active' : ''}`}
-                onClick={() => setHeroView('trends')}
-              >
-                <TrendingUp size={13} />
-                Tendencias Multimes
-              </button>
-              <button
-                type="button"
-                className={`dashboard-segmented-tab ${heroView === 'waterfall' ? 'active' : ''}`}
-                onClick={() => setHeroView('waterfall')}
-              >
-                <Layers size={13} />
-                Puente Waterfall
-              </button>
+      {/* 3. Módulo Analítico Central: Dos Gráficas Separadas Lado a Lado (30% Más Altas y Tipografía Proporcional) */}
+      <div className="dashboard-charts-grid">
+        {/* Gráfica 1: Tendencias Multimes (Evolución Financiera) */}
+        <div className="chart-card">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div>
+              <h2 style={{ fontSize: '0.925rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.45rem', margin: 0 }}>
+                <TrendingUp size={16} style={{ color: 'var(--color-accent)' }} />
+                Evolución Financiera Histórica
+              </h2>
+              <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: '0.1rem 0 0 0' }}>
+                Ventas, Costos y Utilidad Neta ({historicalStats.length} {historicalStats.length === 1 ? 'mes' : 'meses'})
+              </p>
             </div>
 
-            {heroView === 'trends' && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <div style={{ padding: '0.2rem 0.45rem', backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-default)', borderRadius: '4px', fontSize: '0.7rem' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Ventas: </span>
-                  <strong style={{ color: '#10b981' }}>{formatCurrency(totalVentasHist)}</strong>
-                </div>
-                <div style={{ padding: '0.2rem 0.45rem', backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-default)', borderRadius: '4px', fontSize: '0.7rem' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Costos: </span>
-                  <strong style={{ color: '#f43f5e' }}>{formatCurrency(totalCostosHist)}</strong>
-                </div>
-                <div style={{
-                  padding: '0.2rem 0.45rem',
-                  backgroundColor: totalUtilidadHist >= 0 ? 'rgba(14, 165, 233, 0.12)' : 'var(--color-danger-bg)',
-                  border: `1px solid ${totalUtilidadHist >= 0 ? 'rgba(14, 165, 233, 0.35)' : 'var(--color-danger)'}`,
-                  borderRadius: '4px',
-                  fontSize: '0.7rem'
-                }}>
-                  <span style={{ color: totalUtilidadHist >= 0 ? '#0284c7' : 'var(--color-danger-text)' }}>Utilidad: </span>
-                  <strong style={{ color: totalUtilidadHist >= 0 ? '#0284c7' : 'var(--color-danger-text)' }}>
-                    {formatCurrency(totalUtilidadHist)} ({margenPromedioHist.toFixed(0)}%)
-                  </strong>
-                </div>
-              </div>
-            )}
+            {/* Leyenda con indicadores de color y totales acumulados */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.675rem' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--text-secondary)' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+                Ventas ({formatCurrency(totalVentasHist)})
+              </span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--text-secondary)' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#f43f5e' }} />
+                Costos ({formatCurrency(totalCostosHist)})
+              </span>
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+                color: totalUtilidadHist >= 0 ? '#0284c7' : 'var(--color-danger-text)',
+                fontWeight: 600
+              }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#0ea5e9' }} />
+                Utilidad ({margenPromedioHist.toFixed(0)}%)
+              </span>
+            </div>
           </div>
-        </div>
 
-        {/* View 1: Spline Trend Chart */}
-        {heroView === 'trends' && (
-          <div style={{ position: 'relative', width: '100%', minHeight: '180px', height: '180px' }}>
-            <svg
-              viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-              preserveAspectRatio="none"
-              style={{ width: '100%', height: '100%', overflow: 'visible' }}
-            >
-              <defs>
-                <linearGradient id="areaVentasGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#10b981" stopOpacity="0.18" />
-                  <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
-                </linearGradient>
-                <linearGradient id="lineVentasGrad" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#34d399" />
-                  <stop offset="100%" stopColor="#10b981" />
-                </linearGradient>
-                <linearGradient id="lineCostoGrad" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#fb7185" />
-                  <stop offset="100%" stopColor="#f43f5e" />
-                </linearGradient>
-                <linearGradient id="lineUtilidadGrad" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#38bdf8" />
-                  <stop offset="100%" stopColor="#0ea5e9" />
-                </linearGradient>
-              </defs>
-
-              {/* Grid Lines */}
-              {[0, 0.33, 0.66, 1].map((frac, idx) => {
-                const yPos = padTop + chartH * frac;
-                const val = maxChartVal * (1 - frac);
-                return (
-                  <g key={idx}>
-                    <line x1={padLeft} y1={yPos} x2={svgWidth - padRight} y2={yPos} stroke="var(--border-subtle)" strokeDasharray="3 3" />
-                    <text x={padLeft - 6} y={yPos + 3} textAnchor="end" fontSize="9" fill="var(--text-muted)" fontFamily="sans-serif">
+          {/* Área del Gráfico con Altura Incrementada un 30% (234px) y Tipografía HTML no deformable */}
+          <div style={{ position: 'relative', width: '100%', height: '234px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', width: '100%', height: '202px', position: 'relative' }}>
+              {/* Eje Y: Escala en HTML (Cero deformación o estiramiento de texto) */}
+              <div style={{ width: '42px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', paddingRight: '6px', textAlign: 'right', flexShrink: 0 }}>
+                {[1, 0.66, 0.33, 0].map((frac, idx) => {
+                  const val = maxChartVal * frac;
+                  return (
+                    <span key={idx} style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', lineHeight: 1 }}>
                       ${val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val.toFixed(0)}
-                    </text>
-                  </g>
-                );
-              })}
+                    </span>
+                  );
+                })}
+              </div>
 
-              {/* Area & Curves */}
-              {ventasAreaPath && <path d={ventasAreaPath} fill="url(#areaVentasGrad)" />}
-              {costoLinePath && <path d={costoLinePath} fill="none" stroke="url(#lineCostoGrad)" strokeWidth="2.2" strokeLinecap="round" strokeDasharray="4 2" />}
-              {ventasLinePath && <path d={ventasLinePath} fill="none" stroke="url(#lineVentasGrad)" strokeWidth="2.5" strokeLinecap="round" />}
-              {utilidadLinePath && <path d={utilidadLinePath} fill="none" stroke="url(#lineUtilidadGrad)" strokeWidth="2" strokeLinecap="round" />}
+              {/* Contenedor del SVG interactivo (Solo dibuja trazos, no fuentes) */}
+              <div style={{ flex: 1, height: '100%', position: 'relative' }}>
+                <svg
+                  viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+                  preserveAspectRatio="none"
+                  style={{ width: '100%', height: '100%', overflow: 'visible' }}
+                >
+                  <defs>
+                    <linearGradient id="areaVentasGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10b981" stopOpacity="0.18" />
+                      <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                    </linearGradient>
+                    <linearGradient id="lineVentasGrad" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#34d399" />
+                      <stop offset="100%" stopColor="#10b981" />
+                    </linearGradient>
+                    <linearGradient id="lineCostoGrad" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#fb7185" />
+                      <stop offset="100%" stopColor="#f43f5e" />
+                    </linearGradient>
+                    <linearGradient id="lineUtilidadGrad" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#38bdf8" />
+                      <stop offset="100%" stopColor="#0ea5e9" />
+                    </linearGradient>
+                  </defs>
 
-              {/* Vertical Guide and Interactive Nodes */}
+                  {/* Líneas horizontales guía */}
+                  {[0, 0.33, 0.66, 1].map((frac, idx) => {
+                    const yPos = padTop + chartH * frac;
+                    return (
+                      <line key={idx} x1={padLeft} y1={yPos} x2={svgWidth - padRight} y2={yPos} stroke="var(--border-subtle)" strokeDasharray="3 3" />
+                    );
+                  })}
+
+                  {/* Curvas y Áreas Suaves */}
+                  {ventasAreaPath && <path d={ventasAreaPath} fill="url(#areaVentasGrad)" />}
+                  {costoLinePath && <path d={costoLinePath} fill="none" stroke="url(#lineCostoGrad)" strokeWidth="2.2" strokeLinecap="round" strokeDasharray="4 2" />}
+                  {ventasLinePath && <path d={ventasLinePath} fill="none" stroke="url(#lineVentasGrad)" strokeWidth="2.5" strokeLinecap="round" />}
+                  {utilidadLinePath && <path d={utilidadLinePath} fill="none" stroke="url(#lineUtilidadGrad)" strokeWidth="2" strokeLinecap="round" />}
+
+                  {/* Nodos Interactivos */}
+                  {historicalStats.map((stat, idx) => {
+                    const xPos = getX(idx);
+                    const isHovered = hoveredMonthIndex === idx;
+
+                    return (
+                      <g
+                        key={stat.monthKey}
+                        onMouseEnter={() => setHoveredMonthIndex(idx)}
+                        onMouseLeave={() => setHoveredMonthIndex(null)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <rect x={xPos - chartW / (numPoints * 2 || 2)} y={padTop} width={chartW / (numPoints || 1)} height={chartH} fill="transparent" />
+
+                        {isHovered && (
+                          <line x1={xPos} y1={padTop} x2={xPos} y2={padTop + chartH} stroke="var(--color-accent)" strokeWidth="1.5" strokeDasharray="2 2" />
+                        )}
+
+                        <circle
+                          cx={xPos}
+                          cy={getY(stat.ventas)}
+                          r={isHovered ? 5.5 : 3.5}
+                          fill="#10b981"
+                          stroke="var(--bg-surface)"
+                          strokeWidth="2"
+                        />
+
+                        <circle
+                          cx={xPos}
+                          cy={getY(stat.costoTotal)}
+                          r={isHovered ? 4.5 : 3}
+                          fill="#f43f5e"
+                          stroke="var(--bg-surface)"
+                          strokeWidth="1.5"
+                        />
+                      </g>
+                    );
+                  })}
+                </svg>
+
+                {/* Tooltip Flotante */}
+                {hoveredMonthIndex !== null && historicalStats[hoveredMonthIndex] && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '6px',
+                      left: `${(hoveredMonthIndex / (numPoints - 1 || 1)) * 100}%`,
+                      transform: hoveredMonthIndex > numPoints / 2 ? 'translateX(-85%)' : 'translateX(-15%)',
+                      backgroundColor: 'rgba(15, 23, 42, 0.94)',
+                      color: '#ffffff',
+                      padding: '0.45rem 0.65rem',
+                      borderRadius: 'var(--radius-sm)',
+                      boxShadow: '0 8px 20px rgba(0,0,0,0.3)',
+                      fontSize: '0.725rem',
+                      pointerEvents: 'none',
+                      zIndex: 10,
+                      whiteSpace: 'nowrap',
+                      border: '1px solid rgba(255,255,255,0.12)'
+                    }}
+                  >
+                    <div style={{ fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.15)', paddingBottom: '0.2rem', marginBottom: '0.25rem' }}>
+                      {historicalStats[hoveredMonthIndex].label}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', color: '#34d399' }}>
+                      <span>Ventas:</span>
+                      <strong>{formatCurrency(historicalStats[hoveredMonthIndex].ventas)}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', color: '#fb7185' }}>
+                      <span>Costos:</span>
+                      <strong>{formatCurrency(historicalStats[hoveredMonthIndex].costoTotal)}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', color: '#38bdf8' }}>
+                      <span>Utilidad Neta:</span>
+                      <strong>
+                        {formatCurrency(historicalStats[hoveredMonthIndex].utilidad)} ({historicalStats[hoveredMonthIndex].margen.toFixed(0)}%)
+                      </strong>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Eje X: Etiquetas de Meses en HTML (Sin distorsión tipográfica) */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', paddingLeft: '42px', paddingRight: '6px', height: '22px', alignItems: 'center' }}>
               {historicalStats.map((stat, idx) => {
-                const xPos = getX(idx);
                 const isHovered = hoveredMonthIndex === idx;
-
                 return (
-                  <g
+                  <span
                     key={stat.monthKey}
                     onMouseEnter={() => setHoveredMonthIndex(idx)}
                     onMouseLeave={() => setHoveredMonthIndex(null)}
-                    style={{ cursor: 'pointer' }}
+                    style={{
+                      fontSize: '0.675rem',
+                      fontWeight: isHovered ? 700 : 500,
+                      color: isHovered ? 'var(--color-accent)' : 'var(--text-muted)',
+                      cursor: 'pointer',
+                      transition: 'color 0.15s ease'
+                    }}
                   >
-                    <rect x={xPos - chartW / (numPoints * 2 || 2)} y={padTop} width={chartW / (numPoints || 1)} height={chartH} fill="transparent" />
-
-                    {isHovered && (
-                      <line x1={xPos} y1={padTop} x2={xPos} y2={padTop + chartH} stroke="var(--color-accent)" strokeWidth="1.5" strokeDasharray="2 2" />
-                    )}
-
-                    {/* Ventas Circle */}
-                    <circle
-                      cx={xPos}
-                      cy={getY(stat.ventas)}
-                      r={isHovered ? 5.5 : 3.5}
-                      fill="#10b981"
-                      stroke="var(--bg-surface)"
-                      strokeWidth="2"
-                    />
-
-                    {/* Costos Circle */}
-                    <circle
-                      cx={xPos}
-                      cy={getY(stat.costoTotal)}
-                      r={isHovered ? 4.5 : 3}
-                      fill="#f43f5e"
-                      stroke="var(--bg-surface)"
-                      strokeWidth="1.5"
-                    />
-
-                    {/* X-Axis Label */}
-                    <text
-                      x={xPos}
-                      y={padTop + chartH + 16}
-                      textAnchor="middle"
-                      fontSize="9.5"
-                      fontWeight={isHovered ? 700 : 500}
-                      fill={isHovered ? 'var(--text-primary)' : 'var(--text-muted)'}
-                    >
-                      {stat.shortLabel}
-                    </text>
-                  </g>
+                    {stat.shortLabel}
+                  </span>
                 );
               })}
-            </svg>
-
-            {/* Hover Tooltip */}
-            {hoveredMonthIndex !== null && historicalStats[hoveredMonthIndex] && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '6px',
-                  left: `${(getX(hoveredMonthIndex) / svgWidth) * 100}%`,
-                  transform: 'translateX(-50%)',
-                  backgroundColor: 'rgba(15, 23, 42, 0.94)',
-                  color: '#ffffff',
-                  padding: '0.45rem 0.65rem',
-                  borderRadius: 'var(--radius-sm)',
-                  boxShadow: '0 8px 20px rgba(0,0,0,0.3)',
-                  fontSize: '0.725rem',
-                  pointerEvents: 'none',
-                  zIndex: 10,
-                  whiteSpace: 'nowrap',
-                  border: '1px solid rgba(255,255,255,0.12)'
-                }}
-              >
-                <div style={{ fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.15)', paddingBottom: '0.2rem', marginBottom: '0.25rem' }}>
-                  {historicalStats[hoveredMonthIndex].label}
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', color: '#34d399' }}>
-                  <span>Ventas:</span>
-                  <strong>{formatCurrency(historicalStats[hoveredMonthIndex].ventas)}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', color: '#fb7185' }}>
-                  <span>Costos:</span>
-                  <strong>{formatCurrency(historicalStats[hoveredMonthIndex].costoTotal)}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', color: '#38bdf8' }}>
-                  <span>Utilidad Neta:</span>
-                  <strong>
-                    {formatCurrency(historicalStats[hoveredMonthIndex].utilidad)} ({historicalStats[hoveredMonthIndex].margen.toFixed(0)}%)
-                  </strong>
-                </div>
-              </div>
-            )}
+            </div>
           </div>
-        )}
+        </div>
 
-        {/* View 2: Waterfall Profit Bridge */}
-        {heroView === 'waterfall' && (
-          <div style={{ position: 'relative', width: '100%', minHeight: '180px', height: '180px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.5rem', height: '100%', alignItems: 'end', padding: '0.5rem 0.5rem 1.5rem 0.5rem' }}>
+        {/* Gráfica 2: Puente Waterfall de Rentabilidad */}
+        <div className="chart-card">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div>
+              <h2 style={{ fontSize: '0.925rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.45rem', margin: 0 }}>
+                <BarChart3 size={16} style={{ color: '#0ea5e9' }} />
+                Puente de Utilidad (Waterfall)
+              </h2>
+              <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: '0.1rem 0 0 0' }}>
+                De Ventas a Utilidad Neta Real ({currentMonthKey})
+              </p>
+            </div>
+
+            <div style={{
+              padding: '0.2rem 0.5rem',
+              backgroundColor: netOperatingProfit >= 0 ? 'rgba(16, 185, 129, 0.12)' : 'var(--color-danger-bg)',
+              border: `1px solid ${netOperatingProfit >= 0 ? 'rgba(16, 185, 129, 0.3)' : 'var(--color-danger)'}`,
+              borderRadius: '4px',
+              fontSize: '0.7rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.3rem'
+            }}>
+              <span style={{ color: 'var(--text-muted)' }}>Neto:</span>
+              <strong style={{ color: netOperatingProfit >= 0 ? '#10b981' : 'var(--color-danger-text)' }}>
+                {formatCurrency(netOperatingProfit)} ({netProfitMargin.toFixed(0)}%)
+              </strong>
+            </div>
+          </div>
+
+          {/* Área del Gráfico Waterfall con Altura Incrementada un 30% (234px) */}
+          <div style={{ position: 'relative', width: '100%', height: '234px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.4rem', height: '100%', alignItems: 'end', padding: '0.25rem 0.15rem 0.5rem 0.15rem' }}>
               {waterfallSteps.map((step, idx) => {
                 const maxV = step.maxVal;
                 const bottomPct = (step.startVal < step.endVal ? step.startVal : step.endVal) / maxV * 100;
@@ -891,10 +902,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                       cursor: 'pointer'
                     }}
                   >
-                    {/* Amount Tag Above Bar */}
+                    {/* Valor numérico superior en HTML (Nítido, nunca estirado) */}
                     <div
                       style={{
-                        fontSize: '0.7rem',
+                        fontSize: '0.675rem',
                         fontWeight: 700,
                         color: step.color,
                         textAlign: 'center',
@@ -903,35 +914,35 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                       }}
                     >
                       {step.type === 'deduction' ? '-' : (step.type === 'total' ? '+' : '=')}
-                      {formatCurrency(step.amount)}
+                      {step.amount >= 1000 ? `$${(step.amount / 1000).toFixed(0)}k` : `$${step.amount.toFixed(0)}`}
                     </div>
 
-                    {/* Stepped Bar Container */}
-                    <div style={{ position: 'relative', width: '100%', height: '100px', display: 'flex', alignItems: 'flex-end' }}>
+                    {/* Barra Flotante Escalonada con Altura Proporcional */}
+                    <div style={{ position: 'relative', width: '100%', height: '142px', display: 'flex', alignItems: 'flex-end' }}>
                       <div
                         style={{
                           position: 'absolute',
                           bottom: `${bottomPct}%`,
-                          left: '10%',
-                          width: '80%',
+                          left: '8%',
+                          width: '84%',
                           height: `${heightPct}%`,
                           backgroundColor: step.color,
                           borderRadius: '4px',
                           boxShadow: isHovered ? `0 4px 12px ${step.color}66` : 'none',
-                          transform: isHovered ? 'scaleY(1.04)' : 'none',
+                          transform: isHovered ? 'scaleY(1.03)' : 'none',
                           transition: 'all 0.18s ease',
                           opacity: hoveredWaterfallStep !== null && !isHovered ? 0.6 : 1
                         }}
                       />
                     </div>
 
-                    {/* Step Label */}
+                    {/* Etiquetas Inferiores en HTML (Nítidas y Proporcionales) */}
                     <div style={{ textAlign: 'center', marginTop: '6px' }}>
-                      <div style={{ fontSize: '0.7rem', fontWeight: 600, color: isHovered ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                      <div style={{ fontSize: '0.675rem', fontWeight: 600, color: isHovered ? 'var(--text-primary)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {step.shortLabel}
                       </div>
-                      <div style={{ fontSize: '0.625rem', color: 'var(--text-muted)' }}>
-                        {step.marginPct.toFixed(0)}% venta
+                      <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>
+                        {step.marginPct.toFixed(0)}% vta
                       </div>
                     </div>
                   </div>
@@ -939,13 +950,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
               })}
             </div>
 
-            {/* Waterfall Hover Tooltip */}
+            {/* Tooltip Flotante Waterfall */}
             {hoveredWaterfallStep !== null && waterfallSteps[hoveredWaterfallStep] && (
               <div
                 style={{
                   position: 'absolute',
-                  top: '0px',
-                  right: '12px',
+                  top: '4px',
+                  right: '6px',
                   backgroundColor: 'rgba(15, 23, 42, 0.94)',
                   color: '#ffffff',
                   padding: '0.45rem 0.65rem',
@@ -954,13 +965,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                   fontSize: '0.725rem',
                   zIndex: 10,
                   border: `1px solid ${waterfallSteps[hoveredWaterfallStep].color}`,
-                  maxWidth: '280px'
+                  maxWidth: '260px',
+                  pointerEvents: 'none'
                 }}
               >
                 <div style={{ fontWeight: 700, color: waterfallSteps[hoveredWaterfallStep].color, marginBottom: '0.15rem' }}>
                   {waterfallSteps[hoveredWaterfallStep].label}
                 </div>
-                <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.68rem', lineHeight: 1.3 }}>
+                <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.675rem', lineHeight: 1.3 }}>
                   {waterfallSteps[hoveredWaterfallStep].description}
                 </div>
                 <div style={{ marginTop: '0.3rem', paddingTop: '0.2rem', borderTop: '1px solid rgba(255,255,255,0.15)', display: 'flex', justifyContent: 'space-between' }}>
@@ -970,7 +982,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
               </div>
             )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* 4. Cuadrícula Operativa Inferior (3 Columnas Compactas) */}
