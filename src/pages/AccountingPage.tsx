@@ -593,17 +593,16 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
           style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
             marginBottom: '1.25rem',
             padding: '0.85rem 1.25rem',
             borderRadius: 'var(--radius-md)',
-            backgroundColor: 'rgba(59, 130, 246, 0.08)',
-            border: '1px solid rgba(59, 130, 246, 0.3)',
+            backgroundColor: 'var(--color-accent-subtle)',
+            border: '1px solid var(--color-accent-subtle-border)',
             color: 'var(--text-primary)'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{ padding: '6px', borderRadius: '50%', backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#2563eb' }}>
+            <div style={{ padding: '6px', borderRadius: '50%', backgroundColor: 'var(--color-accent-subtle)', color: 'var(--color-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Lock size={18} />
             </div>
             <div>
@@ -619,15 +618,6 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
               </div>
             </div>
           </div>
-          <button
-            type="button"
-            className="btn btn-sm btn-outline"
-            onClick={() => setIsReopenModalOpen(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}
-          >
-            <Lock size={13} />
-            Reabrir...
-          </button>
         </div>
       )}
 
