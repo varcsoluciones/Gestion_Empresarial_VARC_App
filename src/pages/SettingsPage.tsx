@@ -24,7 +24,9 @@ import {
   Languages,
   SlidersHorizontal,
   Calendar,
-  Lock
+  Lock,
+  Percent,
+  Info
 } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
 import { ComboboxInline } from '../components/common/ComboboxInline';
@@ -377,8 +379,8 @@ export const SettingsPage: React.FC = () => {
             <h3 className="form-section-title">
               Identificación & Razón Social
             </h3>
-            <div className="form-grid-2">
-              <div className="form-group">
+            <div className="form-grid-3">
+              <div className="form-group col-span-2">
                 <label className="form-label">
                   {t.settings.companyName} <span className="form-label-required">*</span>
                 </label>
@@ -398,6 +400,7 @@ export const SettingsPage: React.FC = () => {
                 <input
                   type="text"
                   className="form-control"
+                  style={{ maxWidth: '280px' }}
                   value={formData.identificacionFiscal}
                   onChange={(e) => setFormData({ ...formData, identificacionFiscal: e.target.value.toUpperCase() })}
                   required
@@ -409,9 +412,9 @@ export const SettingsPage: React.FC = () => {
           {/* Section 2: Parámetros Monetarios & Idioma */}
           <div className="form-section-divider">
             <h3 className="form-section-title">
-              Moneda, Idioma & Capital Aportado
+              Moneda, Idioma & Parámetros Financieros
             </h3>
-            <div className="form-grid-2">
+            <div className="form-grid-3">
               {/* Dropdown 1: Moneda de América */}
               <div className="form-group">
                 <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -459,37 +462,74 @@ export const SettingsPage: React.FC = () => {
 
               {/* Tasa Impuesto */}
               <div className="form-group">
-                <label className="form-label">
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Percent size={15} style={{ color: 'var(--color-accent)' }} />
                   {t.settings.defaultTax}
                 </label>
-                <input
-                  type="number"
-                  className="form-control"
-                  value={formData.tasaImpuestoDefecto}
-                  onChange={(e) => setFormData({ ...formData, tasaImpuestoDefecto: Number(e.target.value) })}
-                  min={0}
-                  max={100}
-                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="number"
+                    className="form-control"
+                    style={{ width: '110px', textAlign: 'center', fontWeight: 600 }}
+                    value={formData.tasaImpuestoDefecto}
+                    onChange={(e) => setFormData({ ...formData, tasaImpuestoDefecto: Number(e.target.value) })}
+                    min={0}
+                    max={100}
+                  />
+                  <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-secondary)' }}>%</span>
+                </div>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block', textAlign: 'left' }}>
+                  Tasa sugerida en transacciones gravadas.
+                </span>
               </div>
 
               {/* Capital Aportado Inicial */}
               <div className="form-group">
                 <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <DollarSign size={15} style={{ color: 'var(--color-accent)' }} />
-                  Capital Aportado Inicial ({formData.monedaSimbolo || '$'})
+                  Capital Aportado Inicial
                 </label>
-                <input
-                  type="number"
-                  className="form-control"
-                  value={formData.capitalAportado !== undefined ? formData.capitalAportado : ''}
-                  onChange={(e) => setFormData({ ...formData, capitalAportado: e.target.value === '' ? 0 : Number(e.target.value) })}
-                  placeholder="0.00"
-                  min={0}
-                  step="0.01"
-                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-secondary)', minWidth: '24px' }}>
+                    {formData.monedaSimbolo || '$'}
+                  </span>
+                  <input
+                    type="number"
+                    className="form-control"
+                    style={{ maxWidth: '180px', fontWeight: 600 }}
+                    value={formData.capitalAportado !== undefined ? formData.capitalAportado : ''}
+                    onChange={(e) => setFormData({ ...formData, capitalAportado: e.target.value === '' ? 0 : Number(e.target.value) })}
+                    placeholder="0.00"
+                    min={0}
+                    step="0.01"
+                  />
+                </div>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block', textAlign: 'left' }}>
-                  Aporte inicial o capital social del propietario para el cálculo del efectivo real en el Balance General.
+                  Fondo o capital social aportado.
                 </span>
+              </div>
+
+              {/* Tarjeta informativa en las 2 columnas restantes */}
+              <div className="col-span-2" style={{
+                padding: '0.85rem 1rem',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'var(--bg-subtle)',
+                border: '1px solid var(--border-default)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.85rem',
+                fontSize: '0.825rem',
+                color: 'var(--text-secondary)',
+                lineHeight: 1.45,
+                marginTop: '0.25rem'
+              }}>
+                <Info size={20} style={{ color: 'var(--color-accent)', flexShrink: 0 }} />
+                <div>
+                  <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '2px' }}>
+                    Impacto en Balance General & Finanzas
+                  </strong>
+                  El capital aportado establece el patrimonio inicial para computar la liquidez neta y el efectivo disponible real en reportes contables.
+                </div>
               </div>
             </div>
           </div>
@@ -595,53 +635,55 @@ export const SettingsPage: React.FC = () => {
               Define la fórmula oficial con la que el sistema absorbe los gastos fijos, gastos variables y depreciaciones entre los productos del catálogo en los reportes de Costo Real y Contabilidad.
             </p>
 
-            <div className="form-group" style={{ maxWidth: '650px', marginBottom: '1rem' }}>
-              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <SlidersHorizontal size={15} style={{ color: 'var(--color-accent)' }} />
-                {t.settings.prorrateoSection} <span className="form-label-required">*</span>
-              </label>
-              <ComboboxInline
-                options={[
-                  { id: 'costo_material', label: t.settings.ruleMaterialTitle },
-                  { id: 'valor_venta', label: t.settings.rulePriceTitle },
-                  { id: 'unidades_iguales', label: t.settings.ruleUnitsTitle },
-                ]}
-                value={formData.criterioProrrateoDefecto}
-                onChange={(val) => setFormData({ ...formData, criterioProrrateoDefecto: val as any })}
-                placeholder="Seleccionar regla..."
-                hideSearch={true}
-                buttonStyle={{ width: '100%', fontWeight: 600 }}
-              />
-            </div>
-
-            {/* Informative breakdown card for the selected criterion */}
-            <div
-              style={{
-                padding: '1rem 1.25rem',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: 'var(--bg-subtle)',
-                border: '1px solid var(--border-default)',
-                fontSize: '0.85rem',
-                lineHeight: 1.5,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.35rem',
-                maxWidth: '750px',
-                textAlign: 'left'
-              }}
-            >
-              <div style={{ fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span className="badge badge-primary" style={{ fontSize: '0.75rem' }}>
-                  Criterio Activo
-                </span>
-                {formData.criterioProrrateoDefecto === 'costo_material' && 'Proporcional al Costo de Material / Compra'}
-                {formData.criterioProrrateoDefecto === 'valor_venta' && 'Proporcional al Valor de Venta (Precio)'}
-                {formData.criterioProrrateoDefecto === 'unidades_iguales' && 'Por Unidades Iguales (Lineal / Volumen)'}
+            <div className="form-grid-3">
+              <div className="form-group">
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <SlidersHorizontal size={15} style={{ color: 'var(--color-accent)' }} />
+                  {t.settings.prorrateoSection} <span className="form-label-required">*</span>
+                </label>
+                <ComboboxInline
+                  options={[
+                    { id: 'costo_material', label: t.settings.ruleMaterialTitle },
+                    { id: 'valor_venta', label: t.settings.rulePriceTitle },
+                    { id: 'unidades_iguales', label: t.settings.ruleUnitsTitle },
+                  ]}
+                  value={formData.criterioProrrateoDefecto}
+                  onChange={(val) => setFormData({ ...formData, criterioProrrateoDefecto: val as any })}
+                  placeholder="Seleccionar regla..."
+                  hideSearch={true}
+                  buttonStyle={{ width: '100%', fontWeight: 600 }}
+                />
               </div>
-              <div style={{ color: 'var(--text-secondary)' }}>
-                {formData.criterioProrrateoDefecto === 'costo_material' && t.settings.ruleMaterialDesc}
-                {formData.criterioProrrateoDefecto === 'valor_venta' && t.settings.rulePriceDesc}
-                {formData.criterioProrrateoDefecto === 'unidades_iguales' && t.settings.ruleUnitsDesc}
+
+              {/* Informative breakdown card for the selected criterion occupying 2 columns */}
+              <div
+                className="col-span-2"
+                style={{
+                  padding: '1rem 1.25rem',
+                  borderRadius: 'var(--radius-md)',
+                  backgroundColor: 'var(--bg-subtle)',
+                  border: '1px solid var(--border-default)',
+                  fontSize: '0.85rem',
+                  lineHeight: 1.5,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.35rem',
+                  textAlign: 'left'
+                }}
+              >
+                <div style={{ fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span className="badge badge-primary" style={{ fontSize: '0.75rem' }}>
+                    Criterio Activo
+                  </span>
+                  {formData.criterioProrrateoDefecto === 'costo_material' && 'Proporcional al Costo de Material / Compra'}
+                  {formData.criterioProrrateoDefecto === 'valor_venta' && 'Proporcional al Valor de Venta (Precio)'}
+                  {formData.criterioProrrateoDefecto === 'unidades_iguales' && 'Por Unidades Iguales (Lineal / Volumen)'}
+                </div>
+                <div style={{ color: 'var(--text-secondary)' }}>
+                  {formData.criterioProrrateoDefecto === 'costo_material' && t.settings.ruleMaterialDesc}
+                  {formData.criterioProrrateoDefecto === 'valor_venta' && t.settings.rulePriceDesc}
+                  {formData.criterioProrrateoDefecto === 'unidades_iguales' && t.settings.ruleUnitsDesc}
+                </div>
               </div>
             </div>
           </div>
@@ -659,7 +701,7 @@ export const SettingsPage: React.FC = () => {
             </p>
 
             {/* 3 Modes Selection Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div className="form-grid-3" style={{ marginBottom: '1.5rem' }}>
               
               {/* Mode 1: Sin Restricción */}
               <div
@@ -807,45 +849,61 @@ export const SettingsPage: React.FC = () => {
 
             </div>
 
-            {/* Inputs: Días de margen y Opción avanzada */}
-            <div className="form-grid-2">
+            {/* Inputs: Días de margen y Opción avanzada en form-grid-3 */}
+            <div className="form-grid-3">
               <div className="form-group">
                 <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <Clock size={15} style={{ color: 'var(--color-accent)' }} />
-                  Días de margen a futuro permitidos
+                  Margen a futuro
                 </label>
-                <input
-                  type="number"
-                  className="form-control"
-                  value={formData.diasMargenFuturo}
-                  onChange={(e) => setFormData({ ...formData, diasMargenFuturo: Math.max(0, parseInt(e.target.value) || 0) })}
-                  min={0}
-                  max={30}
-                  required
-                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="number"
+                    className="form-control"
+                    style={{ width: '100px', textAlign: 'center', fontWeight: 600 }}
+                    value={formData.diasMargenFuturo}
+                    onChange={(e) => setFormData({ ...formData, diasMargenFuturo: Math.max(0, parseInt(e.target.value) || 0) })}
+                    min={0}
+                    max={30}
+                    required
+                  />
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
+                    día(s)
+                  </span>
+                </div>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block', textAlign: 'left' }}>
-                  Margen de tolerancia para registros con fecha posterior a hoy (default: 1 día para cubrir zonas horarias). Aplica en modo Advertencia y Bloqueo.
+                  Tolerancia para registros futuros (default: 1 día por husos horarios).
                 </span>
               </div>
 
-              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <div className="form-group col-span-2" style={{ display: 'flex', flexDirection: 'column' }}>
                 <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
                   <Lock size={15} style={{ color: 'var(--color-accent)' }} />
-                  Exigir cierre del periodo anterior antes de registrar en el actual
+                  Control de periodos consecutivos
                   <span className="badge badge-neutral" style={{ fontSize: '0.7rem' }}>Avanzado</span>
                 </label>
-                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer', padding: '0.5rem 0', textAlign: 'left' }}>
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '0.75rem',
+                  cursor: 'pointer',
+                  padding: '0.75rem 1rem',
+                  borderRadius: 'var(--radius-md)',
+                  backgroundColor: 'var(--bg-subtle)',
+                  border: '1px solid var(--border-default)',
+                  textAlign: 'left'
+                }}>
                   <input
                     type="checkbox"
                     checked={formData.exigirCierrePeriodoAnterior}
                     onChange={(e) => setFormData({ ...formData, exigirCierrePeriodoAnterior: e.target.checked })}
-                    style={{ marginTop: '0.2rem', width: '17px', height: '17px', cursor: 'pointer' }}
+                    style={{ marginTop: '0.2rem', width: '17px', height: '17px', cursor: 'pointer', flexShrink: 0 }}
                   />
                   <span style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                    <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '2px' }}>
+                      Exigir cierre formal del periodo anterior
+                    </strong>
                     Bloquear o advertir registros en el mes en curso si el mes anterior con movimientos aún no ha sido cerrado formalmente en Contabilidad.
-                    <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                      (Desactivado por defecto. Añade alta disciplina contable pero puede generar fricción operativa si no cierras puntualmente).
-                    </span>
                   </span>
                 </label>
               </div>
@@ -972,7 +1030,7 @@ export const SettingsPage: React.FC = () => {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             {/* 3.1 Export & Backup Actions Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+            <div className="form-grid-3">
               {/* Card 1: Descarga JSON */}
               <div style={{
                 padding: '1.25rem',
