@@ -503,10 +503,25 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
           ) : (
             <button
               type="button"
-              className="btn btn-outline btn-sm"
+              className={`btn btn-sm ${isPastMonth ? 'btn-primary' : 'btn-outline'}`}
               onClick={() => setIsClosePeriodModalOpen(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-              title="Cerrar y congelar mes contable"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                ...(isPastMonth
+                  ? {
+                      backgroundColor: 'var(--color-accent)',
+                      color: 'var(--text-on-accent)',
+                      boxShadow: '0 2px 6px var(--color-accent-glow)',
+                      fontWeight: 600
+                    }
+                  : {
+                      color: 'var(--text-muted)',
+                      borderColor: 'var(--border-default)'
+                    })
+              }}
+              title={isPastMonth ? "Mes concluido pendiente de cierre contable (Clic para cerrar)" : "Cerrar y congelar mes contable"}
             >
               <Lock size={15} />
               Cerrar Mes
@@ -544,10 +559,20 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
             color: 'var(--text-primary)'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <AlertTriangle size={20} style={{ color: '#d97706', flexShrink: 0 }} />
             <div style={{ fontSize: '0.9rem' }}>
               <strong>Recordatorio de Periodo:</strong> Tienes el periodo anterior sin cerrar (<strong>{unclosedInfo.unclosedMonth}</strong>). Cuando termines de revisarlo, ciérralo para congelar tus estados financieros y proteger el inventario.
+              {unclosedInfo.unclosedMonth && selectedMonth !== unclosedInfo.unclosedMonth && (
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline"
+                  onClick={() => setSelectedMonth(unclosedInfo.unclosedMonth!)}
+                  style={{ marginLeft: '0.65rem', padding: '0.2rem 0.55rem', fontSize: '0.8rem', verticalAlign: 'middle' }}
+                >
+                  Ir al mes {unclosedInfo.unclosedMonth}
+                </button>
+              )}
             </div>
           </div>
           <button
@@ -1080,10 +1105,6 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <ExcelExportButton filename={`Gastos_Operativos_${selectedMonth}`} />
-              <button type="button" className="btn btn-primary btn-sm" onClick={() => setIsExpenseModalOpen(true)}>
-                <Plus size={16} />
-                + Nuevo Gasto
-              </button>
             </div>
           </div>
 
@@ -1263,10 +1284,6 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <ExcelExportButton filename="Activos_Fijos_Depreciacion" />
-              <button type="button" className="btn btn-primary btn-sm" onClick={() => setIsAssetModalOpen(true)}>
-                <Plus size={16} />
-                + Nuevo Activo Fijo
-              </button>
             </div>
           </div>
 

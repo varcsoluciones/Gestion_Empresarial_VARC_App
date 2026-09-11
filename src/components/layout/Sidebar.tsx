@@ -43,13 +43,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpenMobile,
   onCloseMobile
 }) => {
-  const { products, invoices, purchases } = useERP();
+  const { products, invoices, purchases, hasUnclosedPreviousPeriod } = useERP();
   const { t } = useTranslation();
 
   // Calculate badge alerts
   const lowStockCount = products.filter(p => p.stockActual <= p.stockMinimo).length;
   const pendingInvoicesCount = invoices.filter(i => i.estado === 'emitida' && i.saldoPendiente > 0).length;
   const pendingPurchasesCount = purchases.filter(p => p.estado === 'recibida' && p.saldoPendiente > 0).length;
+  const unclosedPeriodCheck = hasUnclosedPreviousPeriod();
+  const unclosedPeriodsCount = unclosedPeriodCheck.hasUnclosed ? 1 : 0;
 
   const navItems: { id: NavigationTab; label: string; icon: React.ReactNode; badge?: number }[] = [
     {
@@ -83,7 +85,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'accounting',
       label: t.nav.accounting,
-      icon: <Calculator size={19} />
+      icon: <Calculator size={19} />,
+      badge: unclosedPeriodsCount > 0 ? unclosedPeriodsCount : undefined
     },
     {
       id: 'reports',
@@ -146,8 +149,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 }}
                 title={isCollapsed ? item.label : undefined}
               >
-                <span className="nav-item-icon-wrapper">
+                <span className="nav-item-icon-wrapper" style={{ position: 'relative' }}>
                   {item.icon}
+                  {isCollapsed && item.badge !== undefined && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: '-2px',
+                        right: '-2px',
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: 'var(--color-accent)',
+                        border: '1.5px solid var(--bg-sidebar)',
+                        boxShadow: '0 0 6px var(--color-accent-glow)'
+                      }}
+                      aria-hidden="true"
+                    />
+                  )}
                 </span>
                 {!isCollapsed && (
                   <>
