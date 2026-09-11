@@ -1492,8 +1492,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: 1050;
   padding: 1.5rem;
+  overflow-y: auto;
   animation: fadeIn 150ms ease-out;
 }
 
@@ -1504,11 +1505,12 @@ body {
   box-shadow: var(--shadow-xl);
   width: 100%;
   max-width: min(600px, calc(100vw - 2rem));
-  max-height: 90vh;
+  max-height: calc(100vh - 3rem);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   box-sizing: border-box;
+  margin: auto;
   animation: modalScale 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 

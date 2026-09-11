@@ -96,7 +96,7 @@ export const Topbar: React.FC<TopbarProps> = ({
           type="button"
           className="btn-icon"
           onClick={() => setIsLicenseModalOpen(true)}
-          title={`Licencia VARC ERP: ${license?.email || 'Activa'}`}
+          title={`Licencia Gestor Modular: ${license?.email || 'Activa'}`}
           style={{ position: 'relative' }}
           aria-label="Ver estado de licencia del sistema"
         >

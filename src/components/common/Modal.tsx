@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import type { ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -35,7 +36,7 @@ export const Modal: React.FC<ModalProps> = ({
 
   const sizeClass = size === 'lg' ? 'modal-lg' : size === 'xl' ? 'modal-xl' : '';
 
-  return (
+  const modalNode = (
     <div className="modal-overlay" onClick={onClose}>
       <div
         className={`modal-card ${sizeClass}`}
@@ -70,4 +71,6 @@ export const Modal: React.FC<ModalProps> = ({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalNode, document.body) : modalNode;
 };
