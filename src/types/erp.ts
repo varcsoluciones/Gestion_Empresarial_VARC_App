@@ -324,6 +324,8 @@ export interface FixedAsset {
 export type AppLanguage = 'es' | 'en' | 'pt';
 
 // 6. Configuración General & Respaldos
+export type DateRestrictionMode = 'none' | 'warning' | 'strict';
+
 export interface CompanySettings {
   nombreEmpresa: string;
   identificacionFiscal: string;
@@ -343,6 +345,63 @@ export interface CompanySettings {
   respaldoAutomaticoActivo: boolean;
   ultimoRespaldoAutomatico?: string;
   ultimoRespaldoPeriodo?: string; // YYYY-MM
+  // Control de Restricción de Fechas
+  restriccionFechasModo: DateRestrictionMode; // 'none' | 'warning' | 'strict'
+  diasMargenFuturo: number; // default: 1
+  exigirCierrePeriodoAnterior: boolean; // default: false
+}
+
+// 7. Cierre Manual de Periodos & Snapshots Inmutables
+export interface ClosedPeriodAudit {
+  accion: 'cierre' | 'reapertura';
+  fecha: string;
+  usuario: string;
+  motivo?: string;
+}
+
+export interface ProductPeriodSnapshot {
+  productId: string;
+  stock: number;
+  costoPromedio: number;
+  valuacionCompra: number;
+  costoReal: number;
+  valuacionReal: number;
+}
+
+export interface ClosedPeriod {
+  mes: string; // YYYY-MM
+  cerradoEn: string; // ISO
+  cerradoPor: string;
+  notas?: string;
+  historial: ClosedPeriodAudit[];
+  pnlSnapshot: {
+    totalGrossSales: number;
+    totalDiscounts: number;
+    totalNetSales: number;
+    totalCOGS: number;
+    grossProfit: number;
+    grossMarginPercent: string;
+    totalOperatingExpenses: number;
+    totalDepreciation: number;
+    netOperatingIncome: number;
+    netMarginPercent: string;
+  };
+  balanceSnapshot: {
+    realCash: number;
+    totalReceivablesCxC: number;
+    totalInventoryAssetValue: number;
+    totalFixedAssetsNet: number;
+    totalAssets: number;
+    totalPayablesCxP: number;
+    totalLiabilities: number;
+    totalEquity: number;
+    initialCapital: number;
+    accumulatedRetainedEarnings: number;
+  };
+  productsSnapshot: Record<string, ProductPeriodSnapshot>;
+  totalStockUnits: number;
+  totalValuationCompra: number;
+  totalValuationReal: number;
 }
 
 export interface ERPBackupPayload {
@@ -361,6 +420,7 @@ export interface ERPBackupPayload {
     inventoryMovements: InventoryMovement[];
     expenses: OperatingExpense[];
     fixedAssets: FixedAsset[];
+    closedPeriods?: ClosedPeriod[];
   };
 }
 

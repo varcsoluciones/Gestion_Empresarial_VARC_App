@@ -16,7 +16,8 @@ import {
   ArrowDownRight,
   PieChart,
   Search,
-  Filter
+  Filter,
+  Lock
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { ExcelExportButton } from '../components/common/ExcelExportButton';
@@ -43,7 +44,10 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
     settings,
     getProrrateoMensual,
     getProductRealCost,
-    getProductStockAndCostAtMonth
+    getProductStockAndCostAtMonth,
+    closedPeriods,
+    isPeriodClosed,
+    getClosedPeriod
   } = useERP();
 
   const [selectedMonth, setSelectedMonth] = useState(getMonthKey());
@@ -61,8 +65,11 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
       if (e.periodoMes) set.add(e.periodoMes);
       if (e.fecha) set.add(e.fecha.slice(0, 7));
     });
+    closedPeriods.forEach(cp => {
+      if (cp.mes) set.add(cp.mes);
+    });
     return Array.from(set).filter(Boolean);
-  }, [invoices, expenses]);
+  }, [invoices, expenses, closedPeriods]);
 
   React.useEffect(() => {
     if (initialReport) {
@@ -82,6 +89,8 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
     setExpandedClients(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const isPastMonth = selectedMonth < getMonthKey();
+  const closedSnapshot = isPeriodClosed(selectedMonth) ? getClosedPeriod(selectedMonth) : undefined;
   const prorrateo = getProrrateoMensual(selectedMonth);
 
   // 1. Calculations for P&L (Estado de Resultados)
@@ -90,12 +99,17 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
     (i.fechaEmision.startsWith(selectedMonth))
   );
 
-  const totalGrossSales = monthInvoices.reduce((sum, i) => sum + (i.subtotal + i.descuentoTotal), 0);
-  const totalDiscounts = monthInvoices.reduce((sum, i) => sum + i.descuentoTotal, 0);
-  const totalNetSales = monthInvoices.reduce((sum, i) => sum + i.subtotal, 0);
+  const dynamicGrossSales = monthInvoices.reduce((sum, i) => sum + (i.subtotal + i.descuentoTotal), 0);
+  const totalGrossSales = closedSnapshot ? closedSnapshot.pnlSnapshot.totalGrossSales : dynamicGrossSales;
+
+  const dynamicDiscounts = monthInvoices.reduce((sum, i) => sum + i.descuentoTotal, 0);
+  const totalDiscounts = closedSnapshot ? closedSnapshot.pnlSnapshot.totalDiscounts : dynamicDiscounts;
+
+  const dynamicNetSales = monthInvoices.reduce((sum, i) => sum + i.subtotal, 0);
+  const totalNetSales = closedSnapshot ? closedSnapshot.pnlSnapshot.totalNetSales : dynamicNetSales;
 
   // Cost of Goods Sold (Costo histórico congelado de las ventas del periodo)
-  const totalCOGS = monthInvoices.reduce((sum, inv) => {
+  const dynamicCOGS = monthInvoices.reduce((sum, inv) => {
     return sum + inv.items.reduce((iSum, item) => {
       let itemCost = item.costoUnitarioHistorico;
       if (!itemCost) {
@@ -111,14 +125,21 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
       return iSum + (item.cantidad * itemCost);
     }, 0);
   }, 0);
+  const totalCOGS = closedSnapshot ? closedSnapshot.pnlSnapshot.totalCOGS : dynamicCOGS;
 
-  const grossProfit = totalNetSales - totalCOGS;
-  const grossMarginPercent = totalNetSales > 0 ? ((grossProfit / totalNetSales) * 100).toFixed(1) : '0';
+  const dynamicGrossProfit = totalNetSales - totalCOGS;
+  const grossProfit = closedSnapshot ? closedSnapshot.pnlSnapshot.grossProfit : dynamicGrossProfit;
+  const grossMarginPercent = closedSnapshot ? closedSnapshot.pnlSnapshot.grossMarginPercent : (totalNetSales > 0 ? ((grossProfit / totalNetSales) * 100).toFixed(1) : '0');
 
-  const totalOperatingExpenses = prorrateo.gastosFijos + prorrateo.gastosVariables;
-  const totalDepreciation = prorrateo.depreciacionActivos;
-  const netOperatingIncome = grossProfit - totalOperatingExpenses - totalDepreciation;
-  const netMarginPercent = totalNetSales > 0 ? ((netOperatingIncome / totalNetSales) * 100).toFixed(1) : '0';
+  const dynamicOperatingExpenses = prorrateo.gastosFijos + prorrateo.gastosVariables;
+  const totalOperatingExpenses = closedSnapshot ? closedSnapshot.pnlSnapshot.totalOperatingExpenses : dynamicOperatingExpenses;
+
+  const dynamicDepreciation = prorrateo.depreciacionActivos;
+  const totalDepreciation = closedSnapshot ? closedSnapshot.pnlSnapshot.totalDepreciation : dynamicDepreciation;
+
+  const dynamicNetOperatingIncome = grossProfit - totalOperatingExpenses - totalDepreciation;
+  const netOperatingIncome = closedSnapshot ? closedSnapshot.pnlSnapshot.netOperatingIncome : dynamicNetOperatingIncome;
+  const netMarginPercent = closedSnapshot ? closedSnapshot.pnlSnapshot.netMarginPercent : (totalNetSales > 0 ? ((netOperatingIncome / totalNetSales) * 100).toFixed(1) : '0');
 
   // 2. Calculations for Balance Sheet (Balance General)
   const initialCapital = Number(settings.capitalAportado) || 0;
@@ -131,25 +152,35 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
   }, 0);
 
   const totalExpensesPaid = expenses.reduce((sum, e) => sum + e.monto, 0);
-  const realCash = initialCapital + totalClientPaymentsReceived - totalSupplierPaymentsMade - totalExpensesPaid;
+  const dynamicRealCash = initialCapital + totalClientPaymentsReceived - totalSupplierPaymentsMade - totalExpensesPaid;
+  const realCash = closedSnapshot ? closedSnapshot.balanceSnapshot.realCash : dynamicRealCash;
 
-  const totalReceivablesCxC = invoices
+  const dynamicReceivablesCxC = invoices
     .filter(i => (i.estado === 'emitida' || i.estado === 'borrador') && i.saldoPendiente > 0)
     .reduce((sum, i) => sum + i.saldoPendiente, 0);
+  const totalReceivablesCxC = closedSnapshot ? closedSnapshot.balanceSnapshot.totalReceivablesCxC : dynamicReceivablesCxC;
 
-  const totalInventoryAssetValue = products.reduce((sum, p) => sum + (p.stockActual * p.costoPromedio), 0);
-  const totalFixedAssetsNet = fixedAssets.reduce((sum, a) => sum + a.valorEnLibros, 0);
+  const dynamicInventoryAssetValue = products.reduce((sum, p) => {
+    const stockInfo = isPastMonth ? getProductStockAndCostAtMonth(p.id, selectedMonth) : { stock: p.stockActual, costoPromedio: p.costoPromedio };
+    return sum + (stockInfo.stock * stockInfo.costoPromedio);
+  }, 0);
+  const totalInventoryAssetValue = closedSnapshot ? closedSnapshot.balanceSnapshot.totalInventoryAssetValue : dynamicInventoryAssetValue;
 
-  const totalAssets = realCash + totalReceivablesCxC + totalInventoryAssetValue + totalFixedAssetsNet;
+  const dynamicFixedAssetsNet = fixedAssets.reduce((sum, a) => sum + a.valorEnLibros, 0);
+  const totalFixedAssetsNet = closedSnapshot ? closedSnapshot.balanceSnapshot.totalFixedAssetsNet : dynamicFixedAssetsNet;
+
+  const dynamicTotalAssets = realCash + totalReceivablesCxC + totalInventoryAssetValue + totalFixedAssetsNet;
+  const totalAssets = closedSnapshot ? closedSnapshot.balanceSnapshot.totalAssets : dynamicTotalAssets;
 
   // Liabilities (Pasivos):
-  const totalPayablesCxP = purchases
+  const dynamicPayablesCxP = purchases
     .filter(p => (p.estado === 'recibida' || p.estado === 'borrador') && p.saldoPendiente > 0)
     .reduce((sum, p) => sum + p.saldoPendiente, 0);
 
-  const totalLiabilities = totalPayablesCxP;
-  const totalEquity = totalAssets - totalLiabilities;
-  const accumulatedRetainedEarnings = totalEquity - initialCapital;
+  const totalPayablesCxP = closedSnapshot ? closedSnapshot.balanceSnapshot.totalPayablesCxP : dynamicPayablesCxP;
+  const totalLiabilities = closedSnapshot ? closedSnapshot.balanceSnapshot.totalLiabilities : totalPayablesCxP;
+  const totalEquity = closedSnapshot ? closedSnapshot.balanceSnapshot.totalEquity : (totalAssets - totalLiabilities);
+  const accumulatedRetainedEarnings = closedSnapshot ? closedSnapshot.balanceSnapshot.accumulatedRetainedEarnings : (totalEquity - initialCapital);
 
   // 3. Detailed Aggregations for Sales Report: By Product and By Client
   const productSalesMap = new Map<string, {
@@ -301,23 +332,24 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
   const clientSalesList = Array.from(clientSalesMap.values()).sort((a, b) => b.totalMonto - a.totalMonto);
 
   // 4. Calculations for Cost Comparison with Available Stock and Real Inventory Valuation
-  const isPastMonth = selectedMonth < getMonthKey();
-
-  const totalStockUnits = products.reduce((sum, p) => {
+  const dynamicStockUnits = products.reduce((sum, p) => {
     const stock = isPastMonth ? getProductStockAndCostAtMonth(p.id, selectedMonth).stock : p.stockActual;
     return sum + stock;
   }, 0);
+  const totalStockUnits = closedSnapshot ? closedSnapshot.totalStockUnits : dynamicStockUnits;
 
-  const totalValuationCompra = products.reduce((sum, p) => {
+  const dynamicValuationCompra = products.reduce((sum, p) => {
     const data = isPastMonth ? getProductStockAndCostAtMonth(p.id, selectedMonth) : { stock: p.stockActual, costoPromedio: p.costoPromedio };
     return sum + (data.stock * data.costoPromedio);
   }, 0);
+  const totalValuationCompra = closedSnapshot ? closedSnapshot.totalValuationCompra : dynamicValuationCompra;
 
-  const totalValuationReal = products.reduce((sum, p) => {
+  const dynamicValuationReal = products.reduce((sum, p) => {
     const costs = getProductRealCost(p.id, selectedMonth);
     const stock = isPastMonth ? getProductStockAndCostAtMonth(p.id, selectedMonth).stock : p.stockActual;
     return sum + (stock * costs.costoReal);
   }, 0);
+  const totalValuationReal = closedSnapshot ? closedSnapshot.totalValuationReal : dynamicValuationReal;
 
   // 5. Calculations for SKU-Level Profitability Analysis (Análisis de Rentabilidad por SKU)
   const [profitabilitySearch, setProfitabilitySearch] = useState('');
@@ -618,6 +650,31 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
           Costos y Rentabilidad
         </button>
       </div>
+
+      {/* Closed Period Immutable Snapshot Banner */}
+      {closedSnapshot && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            padding: '0.85rem 1.25rem',
+            marginBottom: '1.25rem',
+            borderRadius: 'var(--radius-md)',
+            backgroundColor: 'rgba(59, 130, 246, 0.08)',
+            border: '1px solid rgba(59, 130, 246, 0.25)',
+            color: 'var(--text-primary)',
+            fontSize: '0.9rem'
+          }}
+        >
+          <div style={{ padding: '6px', borderRadius: '50%', backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#2563eb', flexShrink: 0 }}>
+            <Lock size={16} />
+          </div>
+          <div>
+            <strong>Periodo Contable Cerrado ({selectedMonth}):</strong> Este reporte presenta una fotografía financiera congelada e inmutable (snapshot). Cualquier movimiento registrado o modificado posteriormente no altera estas cifras oficiales.
+          </div>
+        </div>
+      )}
 
       {/* Report 1: Estado de Resultados (P&L) */}
       {activeReport === 'pnl' && (

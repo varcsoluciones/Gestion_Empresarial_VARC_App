@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, ChevronDown, Check } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, ChevronDown, Check, Lock } from 'lucide-react';
 import { formatMonthLabel, getMonthKey } from '../../utils/formatters';
+import { useERP } from '../../context/ERPContext';
 
 interface PeriodSelectorProps {
   value: string; // e.g. "2026-09"
@@ -31,6 +32,9 @@ export const PeriodSelector: React.FC<PeriodSelectorProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const { isPeriodClosed } = useERP();
+  const isCurrentClosed = isPeriodClosed(value);
 
   // Parse current year and month from value (e.g. "2026-09")
   const currentMonthKey = getMonthKey();
@@ -184,6 +188,44 @@ export const PeriodSelector: React.FC<PeriodSelectorProps> = ({
           <span style={{ color: 'var(--text-primary)', fontWeight: 700, letterSpacing: '-0.01em' }}>
             {formatMonthLabel(value)}
           </span>
+          {isCurrentClosed ? (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.2rem',
+                fontSize: '0.675rem',
+                fontWeight: 700,
+                padding: '0.1rem 0.35rem',
+                borderRadius: 'var(--radius-sm)',
+                backgroundColor: 'var(--bg-subtle)',
+                color: 'var(--text-secondary)',
+                border: '1px solid var(--border-default)',
+                marginLeft: '0.15rem'
+              }}
+              title="Periodo cerrado formalmente (inmutable)"
+            >
+              <Lock size={10} style={{ color: 'var(--text-muted)' }} />
+              Cerrado
+            </span>
+          ) : (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                fontSize: '0.675rem',
+                fontWeight: 600,
+                padding: '0.1rem 0.35rem',
+                borderRadius: 'var(--radius-sm)',
+                backgroundColor: 'var(--color-success-bg)',
+                color: 'var(--color-success-text)',
+                marginLeft: '0.15rem'
+              }}
+              title="Periodo abierto / en curso"
+            >
+              Abierto
+            </span>
+          )}
           <ChevronDown
             size={13}
             style={{
@@ -313,13 +355,14 @@ export const PeriodSelector: React.FC<PeriodSelectorProps> = ({
               const isSelected = monthKey === value;
               const isCurrent = monthKey === currentMonthKey;
               const hasActivity = availableMonths.includes(monthKey);
+              const isClosedMonth = isPeriodClosed(monthKey);
 
               return (
                 <button
                   key={shortName}
                   type="button"
                   onClick={() => handleSelectMonth(idx)}
-                  title={`${MONTH_NAMES_FULL[idx]} ${pickerYear}`}
+                  title={`${MONTH_NAMES_FULL[idx]} ${pickerYear}${isClosedMonth ? ' (Periodo Cerrado)' : ''}`}
                   style={{
                     position: 'relative',
                     padding: '0.4rem 0.2rem',
@@ -360,6 +403,15 @@ export const PeriodSelector: React.FC<PeriodSelectorProps> = ({
                   }}
                 >
                   <span>{shortName}</span>
+                  {isClosedMonth && (
+                    <Lock
+                      size={10}
+                      style={{
+                        opacity: isSelected ? 0.9 : 0.6,
+                        color: isSelected ? 'inherit' : 'var(--text-muted)'
+                      }}
+                    />
+                  )}
                   {isSelected && <Check size={11} />}
                   {hasActivity && !isSelected && (
                     <span

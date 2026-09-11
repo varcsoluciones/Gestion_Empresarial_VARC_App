@@ -11,7 +11,8 @@ import type {
   InventoryMovement,
   OperatingExpense,
   FixedAsset,
-  ERPBackupPayload
+  ERPBackupPayload,
+  ClosedPeriod
 } from '../types/erp';
 
 export interface FullERPData {
@@ -26,6 +27,7 @@ export interface FullERPData {
   inventoryMovements: InventoryMovement[];
   expenses: OperatingExpense[];
   fixedAssets: FixedAsset[];
+  closedPeriods?: ClosedPeriod[];
 }
 
 /**
@@ -85,7 +87,8 @@ export const validateAndParseBackupJSON = (jsonString: string): { success: boole
       invoices: Array.isArray(rawData.invoices) ? rawData.invoices : [],
       inventoryMovements: Array.isArray(rawData.inventoryMovements) ? rawData.inventoryMovements : [],
       expenses: Array.isArray(rawData.expenses) ? rawData.expenses : [],
-      fixedAssets: Array.isArray(rawData.fixedAssets) ? rawData.fixedAssets : []
+      fixedAssets: Array.isArray(rawData.fixedAssets) ? rawData.fixedAssets : [],
+      closedPeriods: Array.isArray(rawData.closedPeriods) ? rawData.closedPeriods : []
     };
 
     return { success: true, data: validatedData };

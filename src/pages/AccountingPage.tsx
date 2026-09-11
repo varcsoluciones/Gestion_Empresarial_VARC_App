@@ -58,7 +58,14 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
     deleteExpense,
     addFixedAsset,
     getProrrateoMensual,
-    getProductRealCost
+    getProductRealCost,
+    closedPeriods,
+    isPeriodClosed,
+    getClosedPeriod,
+    closePeriod,
+    reopenPeriod,
+    hasUnclosedPreviousPeriod,
+    validateOperationDate
   } = useERP();
 
   const { t } = useTranslation();
@@ -68,6 +75,29 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
   const [costAnalysisProductId, setCostAnalysisProductId] = useState<string>('');
 
   const isPastMonth = selectedMonth < getMonthKey();
+  const isCurrentMonthClosed = isPeriodClosed(selectedMonth);
+  const currentClosedPeriod = getClosedPeriod(selectedMonth);
+  const unclosedInfo = hasUnclosedPreviousPeriod(selectedMonth);
+
+  // Modals for Period Closing & Reopening
+  const [isClosePeriodModalOpen, setIsClosePeriodModalOpen] = useState(false);
+  const [closePeriodNotes, setClosePeriodNotes] = useState('');
+  const [isReopenModalOpen, setIsReopenModalOpen] = useState(false);
+  const [reopenReason, setReopenReason] = useState('');
+  const [isReminderDismissed, setIsReminderDismissed] = useState(false);
+
+  // Date restriction modal
+  const [dateWarningData, setDateWarningData] = useState<{
+    isOpen: boolean;
+    message: string;
+    riskWarning?: string;
+    isBlocked: boolean;
+    onConfirm?: () => void;
+  }>({
+    isOpen: false,
+    message: '',
+    isBlocked: false
+  });
 
   const availableMonths = React.useMemo(() => {
     const set = new Set<string>();
@@ -78,8 +108,11 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
     inventoryMovements.forEach(m => {
       if (m.fecha) set.add(m.fecha.slice(0, 7));
     });
+    closedPeriods.forEach(cp => {
+      if (cp.mes) set.add(cp.mes);
+    });
     return Array.from(set).filter(Boolean);
-  }, [expenses, inventoryMovements]);
+  }, [expenses, inventoryMovements, closedPeriods]);
 
   React.useEffect(() => {
     if (initialTab) {
@@ -124,12 +157,8 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
   const prorrateo = getProrrateoMensual(selectedMonth, activeCriterio);
 
   // Handlers
-  const handleSaveExpense = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!expMonto || Number(expMonto) <= 0 || !expDesc.trim()) return;
-
+  const doSaveExpense = () => {
     const expenseDate = buildLocalDateISO(expFecha);
-
     addExpense({
       fecha: expenseDate,
       periodoMes: expFecha.slice(0, 7),
@@ -146,6 +175,37 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
     setExpReferenciaFactura('');
   };
 
+  const handleSaveExpense = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!expMonto || Number(expMonto) <= 0 || !expDesc.trim()) return;
+
+    const dateCheck = validateOperationDate(expFecha);
+    if (dateCheck.status === 'blocked') {
+      setDateWarningData({
+        isOpen: true,
+        message: dateCheck.message || 'La fecha seleccionada no está permitida por restricciones del sistema.',
+        isBlocked: true
+      });
+      return;
+    }
+
+    if (dateCheck.status === 'warning') {
+      setDateWarningData({
+        isOpen: true,
+        message: dateCheck.message || 'Advertencia sobre la fecha seleccionada.',
+        riskWarning: dateCheck.riskWarning,
+        isBlocked: false,
+        onConfirm: () => {
+          doSaveExpense();
+          setDateWarningData({ isOpen: false, message: '', isBlocked: false });
+        }
+      });
+      return;
+    }
+
+    doSaveExpense();
+  };
+
   const handleConfirmCancelExpense = () => {
     if (expenseToCancel) {
       deleteExpense(expenseToCancel.id);
@@ -153,10 +213,7 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
     }
   };
 
-  const handleSaveAsset = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!astNombre.trim() || !astValor || Number(astValor) <= 0 || !astVidaMeses || Number(astVidaMeses) <= 0) return;
-
+  const doSaveAsset = () => {
     addFixedAsset({
       nombre: astNombre.trim(),
       categoriaActivo: astCategoria,
@@ -172,6 +229,50 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
     setAstValor('');
     setAstVidaMeses(36);
     setAstNotas('');
+  };
+
+  const handleSaveAsset = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!astNombre.trim() || !astValor || Number(astValor) <= 0 || !astVidaMeses || Number(astVidaMeses) <= 0) return;
+
+    const dateCheck = validateOperationDate(astFecha);
+    if (dateCheck.status === 'blocked') {
+      setDateWarningData({
+        isOpen: true,
+        message: dateCheck.message || 'La fecha seleccionada no está permitida por restricciones del sistema.',
+        isBlocked: true
+      });
+      return;
+    }
+
+    if (dateCheck.status === 'warning') {
+      setDateWarningData({
+        isOpen: true,
+        message: dateCheck.message || 'Advertencia sobre la fecha seleccionada.',
+        riskWarning: dateCheck.riskWarning,
+        isBlocked: false,
+        onConfirm: () => {
+          doSaveAsset();
+          setDateWarningData({ isOpen: false, message: '', isBlocked: false });
+        }
+      });
+      return;
+    }
+
+    doSaveAsset();
+  };
+
+  const handleConfirmClosePeriod = () => {
+    closePeriod(selectedMonth, 'Usuario Administrador', closePeriodNotes);
+    setIsClosePeriodModalOpen(false);
+    setClosePeriodNotes('');
+  };
+
+  const handleConfirmReopenPeriod = () => {
+    if (!reopenReason.trim()) return;
+    reopenPeriod(selectedMonth, 'Usuario Administrador', reopenReason.trim());
+    setIsReopenModalOpen(false);
+    setReopenReason('');
   };
 
   // Filtered queries
@@ -388,6 +489,30 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
             availableMonths={availableMonths}
           />
 
+          {isCurrentMonthClosed ? (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => setIsReopenModalOpen(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              title="Reabrir periodo para ajustes"
+            >
+              <Lock size={15} />
+              Reabrir Mes
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={() => setIsClosePeriodModalOpen(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              title="Cerrar y congelar mes contable"
+            >
+              <Lock size={15} />
+              Cerrar Mes
+            </button>
+          )}
+
           {activeTab === 'expenses' && (
             <button type="button" className="btn btn-primary btn-sm" onClick={() => setIsExpenseModalOpen(true)}>
               <Plus size={16} />
@@ -403,6 +528,83 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
           )}
         </div>
       </div>
+
+      {/* Reminder Banner for Unclosed Previous Months */}
+      {!isReminderDismissed && unclosedInfo.hasUnclosed && !isCurrentMonthClosed && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '1.25rem',
+            padding: '0.85rem 1.25rem',
+            borderRadius: 'var(--radius-md)',
+            backgroundColor: 'var(--color-warning-subtle, rgba(245, 158, 11, 0.1))',
+            border: '1px solid var(--color-warning, #f59e0b)',
+            color: 'var(--text-primary)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <AlertTriangle size={20} style={{ color: '#d97706', flexShrink: 0 }} />
+            <div style={{ fontSize: '0.9rem' }}>
+              <strong>Recordatorio de Periodo:</strong> Tienes el periodo anterior sin cerrar (<strong>{unclosedInfo.unclosedMonth}</strong>). Cuando termines de revisarlo, ciérralo para congelar tus estados financieros y proteger el inventario.
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost"
+            onClick={() => setIsReminderDismissed(true)}
+            title="Descartar recordatorio"
+            style={{ padding: '0.2rem 0.5rem', cursor: 'pointer', border: 'none', background: 'transparent' }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Period Closed Immutable Info Bar */}
+      {isCurrentMonthClosed && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '1.25rem',
+            padding: '0.85rem 1.25rem',
+            borderRadius: 'var(--radius-md)',
+            backgroundColor: 'rgba(59, 130, 246, 0.08)',
+            border: '1px solid rgba(59, 130, 246, 0.3)',
+            color: 'var(--text-primary)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ padding: '6px', borderRadius: '50%', backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#2563eb' }}>
+              <Lock size={18} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                Periodo {selectedMonth} Cerrado
+                <span className="badge badge-success" style={{ fontSize: '0.75rem', padding: '0.15rem 0.45rem' }}>
+                  Snapshot Congelado
+                </span>
+              </div>
+              <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                Cerrado el {currentClosedPeriod ? formatDate(currentClosedPeriod.cerradoEn) : ''} por {currentClosedPeriod?.cerradoPor || 'Administrador'}. Los reportes, valuaciones de existencias y costos de este periodo están protegidos e inmutables.
+                {currentClosedPeriod?.notas && <span> — <em>"{currentClosedPeriod.notas}"</em></span>}
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn btn-sm btn-outline"
+            onClick={() => setIsReopenModalOpen(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}
+          >
+            <Lock size={13} />
+            Reabrir...
+          </button>
+        </div>
+      )}
 
       {/* 1. Monthly Summary Cards Banner (Arriba de la selección de pestañas en todas las vistas) */}
       {activeTab !== 'cost_analysis' ? (
@@ -1807,6 +2009,198 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
             />
           </div>
         </form>
+      </Modal>
+
+      {/* Close Period Modal */}
+      <Modal
+        isOpen={isClosePeriodModalOpen}
+        onClose={() => setIsClosePeriodModalOpen(false)}
+        title={`Cerrar Periodo Contable: ${selectedMonth}`}
+        subtitle="Congela los estados financieros, valuaciones y costos del mes"
+        size="md"
+        footer={
+          <>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setIsClosePeriodModalOpen(false)}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleConfirmClosePeriod}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              <Lock size={15} />
+              Confirmar Cierre de Periodo
+            </button>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div
+            style={{
+              padding: '1rem',
+              backgroundColor: 'rgba(59, 130, 246, 0.08)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid rgba(59, 130, 246, 0.25)',
+              fontSize: '0.9rem',
+              lineHeight: 1.5
+            }}
+          >
+            <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <ShieldCheck size={18} style={{ color: 'var(--color-primary)' }} />
+              Fotografía Inmutable (Snapshot)
+            </div>
+            <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
+              Al cerrar este periodo, el sistema generará una fotografía inmutable de los reportes financieros: <strong>Estado de Resultados (P&amp;L)</strong>, <strong>Balance General</strong> y las <strong>valuaciones y existencias por producto</strong>.
+            </p>
+            <p style={{ margin: '0.5rem 0 0 0', color: 'var(--text-secondary)' }}>
+              A partir de este momento, cualquier consulta futura a <strong>{selectedMonth}</strong> presentará exactamente estos números congelados, garantizando coherencia absoluta incluso si se introducen compras retroactivas.
+            </p>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Notas o Referencia del Cierre (opcional)</label>
+            <textarea
+              className="form-control"
+              rows={2}
+              placeholder="Ej. Cierre contable mensual validado con inventario físico..."
+              value={closePeriodNotes}
+              onChange={(e) => setClosePeriodNotes(e.target.value)}
+            />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Reopen Period Modal */}
+      <Modal
+        isOpen={isReopenModalOpen}
+        onClose={() => setIsReopenModalOpen(false)}
+        title={`Reabrir Periodo Contable: ${selectedMonth}`}
+        subtitle="Acción de auditoría para permitir modificaciones"
+        size="md"
+        footer={
+          <>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setIsReopenModalOpen(false)}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="btn btn-warning"
+              disabled={!reopenReason.trim()}
+              onClick={handleConfirmReopenPeriod}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Confirmar Reapertura
+            </button>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div
+            style={{
+              padding: '1rem',
+              backgroundColor: 'rgba(239, 68, 68, 0.08)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid rgba(239, 68, 68, 0.25)',
+              fontSize: '0.9rem',
+              lineHeight: 1.5
+            }}
+          >
+            <div style={{ fontWeight: 600, color: '#dc2626', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <AlertTriangle size={18} />
+              Riesgo de Modificación Retroactiva
+            </div>
+            <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
+              Reabrir el mes eliminará la fotografía inmutable y reactivará el recálculo dinámico de costos y stock. Las cifras de reportes históricos podrían variar si se alteran movimientos del periodo.
+            </p>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label" style={{ fontWeight: 600 }}>
+              Motivo de Reapertura * <span style={{ color: 'var(--color-danger)', fontSize: '0.8rem' }}>(Requerido para auditoría)</span>
+            </label>
+            <textarea
+              className="form-control"
+              rows={3}
+              placeholder="Explica la razón por la que es necesario reabrir este periodo (ej. Corrección de factura proveedor faltante)..."
+              value={reopenReason}
+              onChange={(e) => setReopenReason(e.target.value)}
+              required
+              autoFocus
+            />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Date Restriction / Block Modal */}
+      <Modal
+        isOpen={dateWarningData.isOpen}
+        onClose={() => setDateWarningData({ isOpen: false, message: '', isBlocked: false })}
+        title={dateWarningData.isBlocked ? 'Operación No Permitida' : 'Advertencia de Fecha'}
+        subtitle={dateWarningData.isBlocked ? 'Restricción activa del sistema' : 'Revisa las condiciones del periodo'}
+        size="md"
+        footer={
+          dateWarningData.isBlocked ? (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => setDateWarningData({ isOpen: false, message: '', isBlocked: false })}
+            >
+              Entendido
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setDateWarningData({ isOpen: false, message: '', isBlocked: false })}
+              >
+                Cancelar y Cambiar Fecha
+              </button>
+              <button
+                type="button"
+                className="btn btn-warning"
+                onClick={() => {
+                  const cb = dateWarningData.onConfirm;
+                  setDateWarningData({ isOpen: false, message: '', isBlocked: false });
+                  if (cb) cb();
+                }}
+              >
+                Continuar de Todos Modos
+              </button>
+            </>
+          )
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div
+            style={{
+              padding: '1rem',
+              backgroundColor: dateWarningData.isBlocked ? 'rgba(239, 68, 68, 0.08)' : 'rgba(245, 158, 11, 0.1)',
+              borderRadius: 'var(--radius-md)',
+              border: `1px solid ${dateWarningData.isBlocked ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+              fontSize: '0.9rem'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', fontWeight: 600 }}>
+              <AlertTriangle size={18} style={{ color: dateWarningData.isBlocked ? '#dc2626' : '#d97706' }} />
+              <span>{dateWarningData.message}</span>
+            </div>
+            {dateWarningData.riskWarning && (
+              <div style={{ marginTop: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                <strong>Riesgo:</strong> {dateWarningData.riskWarning}
+              </div>
+            )}
+          </div>
+        </div>
       </Modal>
     </div>
   );

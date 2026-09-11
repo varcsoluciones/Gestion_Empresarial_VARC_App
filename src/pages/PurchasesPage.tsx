@@ -11,7 +11,8 @@ import {
   Trash2,
   DollarSign,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  AlertTriangle
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
@@ -31,7 +32,8 @@ export const PurchasesPage: React.FC = () => {
     createPurchase,
     receivePurchase,
     cancelPurchase,
-    addSupplierPayment
+    addSupplierPayment,
+    validateOperationDate
   } = useERP();
 
   const activeSuppliers = useMemo(() => suppliers.filter(s => s.activo !== false), [suppliers]);
@@ -42,6 +44,19 @@ export const PurchasesPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedSupplierFilter, setSelectedSupplierFilter] = useState<string>('all');
   const [monthFilter, setMonthFilter] = useState<string>('all');
+
+  // Date restriction modal state
+  const [dateWarningData, setDateWarningData] = useState<{
+    isOpen: boolean;
+    message: string;
+    riskWarning?: string;
+    isBlocked: boolean;
+    onConfirm?: () => void;
+  }>({
+    isOpen: false,
+    message: '',
+    isBlocked: false
+  });
 
   // Modals state
   const [isNewPurchaseModalOpen, setIsNewPurchaseModalOpen] = useState(false);
@@ -170,7 +185,7 @@ export const PurchasesPage: React.FC = () => {
     : formTotal;
   const formImpuestos = Number((formTotal - formSubtotal).toFixed(2));
 
-  const handleSavePurchase = (directReceive = false) => {
+  const executeSavePurchase = (directReceive = false) => {
     if (isSubmitting || !formProveedorId || formItems.length === 0) return;
     setIsSubmitting(true);
     try {
@@ -195,6 +210,36 @@ export const PurchasesPage: React.FC = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSavePurchase = (directReceive = false) => {
+    if (isSubmitting || !formProveedorId || formItems.length === 0) return;
+
+    const dateCheck = validateOperationDate(formFecha);
+    if (dateCheck.status === 'blocked') {
+      setDateWarningData({
+        isOpen: true,
+        message: dateCheck.message || 'La fecha seleccionada no está permitida por restricciones del sistema.',
+        isBlocked: true
+      });
+      return;
+    }
+
+    if (dateCheck.status === 'warning') {
+      setDateWarningData({
+        isOpen: true,
+        message: dateCheck.message || 'Advertencia sobre la fecha de compra seleccionada.',
+        riskWarning: dateCheck.riskWarning,
+        isBlocked: false,
+        onConfirm: () => {
+          executeSavePurchase(directReceive);
+          setDateWarningData({ isOpen: false, message: '', isBlocked: false });
+        }
+      });
+      return;
+    }
+
+    executeSavePurchase(directReceive);
   };
 
   // Payment Handler
@@ -1241,6 +1286,69 @@ export const PurchasesPage: React.FC = () => {
         onClose={() => setIsQuickProductOpen(false)}
         onProductCreated={(newId) => handleSelectProductForLine(newId)}
       />
+
+      {/* Date Restriction / Block Modal */}
+      <Modal
+        isOpen={dateWarningData.isOpen}
+        onClose={() => setDateWarningData({ isOpen: false, message: '', isBlocked: false })}
+        title={dateWarningData.isBlocked ? 'Operación No Permitida' : 'Advertencia de Fecha'}
+        subtitle={dateWarningData.isBlocked ? 'Restricción activa del sistema' : 'Revisa las condiciones del periodo'}
+        size="md"
+        footer={
+          dateWarningData.isBlocked ? (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => setDateWarningData({ isOpen: false, message: '', isBlocked: false })}
+            >
+              Entendido
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setDateWarningData({ isOpen: false, message: '', isBlocked: false })}
+              >
+                Cancelar y Cambiar Fecha
+              </button>
+              <button
+                type="button"
+                className="btn btn-warning"
+                onClick={() => {
+                  const cb = dateWarningData.onConfirm;
+                  setDateWarningData({ isOpen: false, message: '', isBlocked: false });
+                  if (cb) cb();
+                }}
+              >
+                Continuar de Todos Modos
+              </button>
+            </>
+          )
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div
+            style={{
+              padding: '1rem',
+              backgroundColor: dateWarningData.isBlocked ? 'rgba(239, 68, 68, 0.08)' : 'rgba(245, 158, 11, 0.1)',
+              borderRadius: 'var(--radius-md)',
+              border: `1px solid ${dateWarningData.isBlocked ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+              fontSize: '0.9rem'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', fontWeight: 600 }}>
+              <AlertTriangle size={18} style={{ color: dateWarningData.isBlocked ? '#dc2626' : '#d97706' }} />
+              <span>{dateWarningData.message}</span>
+            </div>
+            {dateWarningData.riskWarning && (
+              <div style={{ marginTop: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                <strong>Riesgo:</strong> {dateWarningData.riskWarning}
+              </div>
+            )}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

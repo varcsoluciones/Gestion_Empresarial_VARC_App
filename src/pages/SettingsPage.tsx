@@ -22,7 +22,9 @@ import {
   Database,
   DollarSign,
   Languages,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Calendar,
+  Lock
 } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
 import { ComboboxInline } from '../components/common/ComboboxInline';
@@ -84,7 +86,10 @@ export const SettingsPage: React.FC = () => {
     telefono: settings.telefono,
     email: settings.email,
     website: settings.website || '',
-    pieFactura: settings.pieFactura || ''
+    pieFactura: settings.pieFactura || '',
+    restriccionFechasModo: settings.restriccionFechasModo || 'warning',
+    diasMargenFuturo: typeof settings.diasMargenFuturo === 'number' ? settings.diasMargenFuturo : 1,
+    exigirCierrePeriodoAnterior: settings.exigirCierrePeriodoAnterior || false
   });
 
   const [isSaved, setIsSaved] = useState(false);
@@ -503,6 +508,207 @@ export const SettingsPage: React.FC = () => {
                 </span>
               </div>
             </div>
+          </div>
+
+          {/* Section: Restricción de Fechas en Registros & Control de Periodos */}
+          <div className="form-section-divider">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
+              <h3 className="form-section-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Calendar size={17} style={{ color: 'var(--color-accent)' }} />
+                Restricción de Fechas en Registros & Control de Periodos
+              </h3>
+            </div>
+            <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
+              Configura el comportamiento del sistema al ingresar fechas en facturas, cotizaciones, compras, gastos y activos fijos para proteger los periodos cerrados y evitar registros extemporáneos.
+            </p>
+
+            {/* 3 Modes Selection Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+              
+              {/* Mode 1: Sin Restricción */}
+              <div
+                onClick={() => setFormData({ ...formData, restriccionFechasModo: 'none' })}
+                style={{
+                  padding: '1.15rem',
+                  borderRadius: 'var(--radius-md)',
+                  border: formData.restriccionFechasModo === 'none' ? '2px solid var(--color-accent)' : '1px solid var(--border-default)',
+                  backgroundColor: formData.restriccionFechasModo === 'none' ? 'var(--color-accent-subtle)' : 'var(--bg-surface)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.75rem',
+                  transition: 'all var(--transition-fast)'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{
+                      width: '18px',
+                      height: '18px',
+                      borderRadius: '50%',
+                      border: formData.restriccionFechasModo === 'none' ? '5px solid var(--color-accent)' : '2px solid var(--border-default)',
+                      backgroundColor: 'transparent'
+                    }} />
+                    <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                      Sin restricción
+                    </span>
+                  </div>
+                  <span className="badge badge-neutral" style={{ fontSize: '0.7rem' }}>Comportamiento actual</span>
+                </div>
+                <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>
+                  Permite cualquier fecha pasada o futura, sin avisos ni confirmaciones adicionales.
+                </p>
+                <div style={{
+                  padding: '0.65rem 0.8rem',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: 'var(--bg-subtle)',
+                  borderLeft: '3px solid var(--color-warning)',
+                  fontSize: '0.775rem',
+                  color: 'var(--text-secondary)',
+                  lineHeight: 1.35
+                }}>
+                  <strong>Riesgo:</strong> Los reportes de meses ya cerrados pueden verse alterados si registras algo con fecha atrasada por error.
+                </div>
+              </div>
+
+              {/* Mode 2: Advertencia (Recomendado) */}
+              <div
+                onClick={() => setFormData({ ...formData, restriccionFechasModo: 'warning' })}
+                style={{
+                  padding: '1.15rem',
+                  borderRadius: 'var(--radius-md)',
+                  border: formData.restriccionFechasModo === 'warning' ? '2px solid var(--color-accent)' : '1px solid var(--border-default)',
+                  backgroundColor: formData.restriccionFechasModo === 'warning' ? 'var(--color-accent-subtle)' : 'var(--bg-surface)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.75rem',
+                  transition: 'all var(--transition-fast)'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{
+                      width: '18px',
+                      height: '18px',
+                      borderRadius: '50%',
+                      border: formData.restriccionFechasModo === 'warning' ? '5px solid var(--color-accent)' : '2px solid var(--border-default)',
+                      backgroundColor: 'transparent'
+                    }} />
+                    <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                      Advertencia
+                    </span>
+                  </div>
+                  <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Recomendado (Default)</span>
+                </div>
+                <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>
+                  Si la fecha cae en un mes ya cerrado o es fecha futura, muestra confirmación explicando la consecuencia antes de guardar.
+                </p>
+                <div style={{
+                  padding: '0.65rem 0.8rem',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: 'var(--bg-subtle)',
+                  borderLeft: '3px solid var(--color-accent)',
+                  fontSize: '0.775rem',
+                  color: 'var(--text-secondary)',
+                  lineHeight: 1.35
+                }}>
+                  <strong>Riesgo:</strong> Vas a poder continuar incluso si el sistema te advierte, así que un clic apresurado en "Confirmar" no te protege del todo.
+                </div>
+              </div>
+
+              {/* Mode 3: Bloqueo Total */}
+              <div
+                onClick={() => setFormData({ ...formData, restriccionFechasModo: 'strict' })}
+                style={{
+                  padding: '1.15rem',
+                  borderRadius: 'var(--radius-md)',
+                  border: formData.restriccionFechasModo === 'strict' ? '2px solid var(--color-accent)' : '1px solid var(--border-default)',
+                  backgroundColor: formData.restriccionFechasModo === 'strict' ? 'var(--color-accent-subtle)' : 'var(--bg-surface)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.75rem',
+                  transition: 'all var(--transition-fast)'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{
+                      width: '18px',
+                      height: '18px',
+                      borderRadius: '50%',
+                      border: formData.restriccionFechasModo === 'strict' ? '5px solid var(--color-accent)' : '2px solid var(--border-default)',
+                      backgroundColor: 'transparent'
+                    }} />
+                    <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                      Bloqueo total
+                    </span>
+                  </div>
+                  <span className="badge badge-danger" style={{ fontSize: '0.7rem' }}>Máximo Control</span>
+                </div>
+                <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>
+                  No permite guardar si la fecha cae en un mes cerrado o es una fecha futura más allá del margen permitido.
+                </p>
+                <div style={{
+                  padding: '0.65rem 0.8rem',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: 'var(--bg-subtle)',
+                  borderLeft: '3px solid var(--color-danger)',
+                  fontSize: '0.775rem',
+                  color: 'var(--text-secondary)',
+                  lineHeight: 1.35
+                }}>
+                  <strong>Riesgo:</strong> Si necesitas corregir algo de un mes cerrado, vas a tener que reabrir el periodo primero (ver función de cierre de periodo).
+                </div>
+              </div>
+
+            </div>
+
+            {/* Inputs: Días de margen y Opción avanzada */}
+            <div className="form-grid-2">
+              <div className="form-group">
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Clock size={15} style={{ color: 'var(--color-accent)' }} />
+                  Días de margen a futuro permitidos
+                </label>
+                <input
+                  type="number"
+                  className="form-control"
+                  value={formData.diasMargenFuturo}
+                  onChange={(e) => setFormData({ ...formData, diasMargenFuturo: Math.max(0, parseInt(e.target.value) || 0) })}
+                  min={0}
+                  max={30}
+                  required
+                />
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                  Margen de tolerancia para registros con fecha posterior a hoy (default: 1 día para cubrir zonas horarias). Aplica en modo Advertencia y Bloqueo.
+                </span>
+              </div>
+
+              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
+                  <Lock size={15} style={{ color: 'var(--color-accent)' }} />
+                  Exigir cierre del periodo anterior antes de registrar en el actual
+                  <span className="badge badge-neutral" style={{ fontSize: '0.7rem' }}>Avanzado</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer', padding: '0.5rem 0' }}>
+                  <input
+                    type="checkbox"
+                    checked={formData.exigirCierrePeriodoAnterior}
+                    onChange={(e) => setFormData({ ...formData, exigirCierrePeriodoAnterior: e.target.checked })}
+                    style={{ marginTop: '0.2rem', width: '17px', height: '17px', cursor: 'pointer' }}
+                  />
+                  <span style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                    Bloquear o advertir registros en el mes en curso si el mes anterior con movimientos aún no ha sido cerrado formalmente en Contabilidad.
+                    <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                      (Desactivado por defecto. Añade alta disciplina contable pero puede generar fricción operativa si no cierras puntualmente).
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </div>
+
           </div>
 
           {/* Section 3: Ubicación y Contacto */}

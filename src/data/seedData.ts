@@ -29,7 +29,10 @@ export const initialSettings: CompanySettings = {
   colorAcento: 'blue',
   respaldoAutomaticoActivo: true,
   ultimoRespaldoAutomatico: new Date().toISOString(),
-  ultimoRespaldoPeriodo: new Date().toISOString().slice(0, 7)
+  ultimoRespaldoPeriodo: new Date().toISOString().slice(0, 7),
+  restriccionFechasModo: 'warning',
+  diasMargenFuturo: 1,
+  exigirCierrePeriodoAnterior: false
 };
 
 export const initialCategories: Category[] = [

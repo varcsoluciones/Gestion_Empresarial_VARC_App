@@ -18,7 +18,10 @@ import type {
   CompanySettings,
   ProrrateoCriterion,
   MonthlyProrrateo,
-  ProductRealCostResult
+  ProductRealCostResult,
+  ClosedPeriod,
+  ProductPeriodSnapshot,
+  DateRestrictionMode
 } from '../types/erp';
 import {
   initialSettings,
@@ -110,6 +113,21 @@ export interface ERPContextType {
   getProductRealCost: (productoId: string, mesKey?: string, overrideCriterio?: ProrrateoCriterion) => ProductRealCostResult;
   getProductStockAndCostAtMonth: (productoId: string, mesKey?: string) => { stock: number; costoPromedio: number };
 
+  // Cierre de Periodos & Control de Fechas
+  closedPeriods: ClosedPeriod[];
+  isPeriodClosed: (monthKey: string) => boolean;
+  getClosedPeriod: (monthKey: string) => ClosedPeriod | undefined;
+  closePeriod: (monthKey: string, cerradoPor?: string, notas?: string) => ClosedPeriod;
+  reopenPeriod: (monthKey: string, reabiertoPor?: string, motivo?: string) => void;
+  hasUnclosedPreviousPeriod: (targetMonth?: string) => { hasUnclosed: boolean; unclosedMonth?: string };
+  validateOperationDate: (fechaStr: string) => {
+    allowed: boolean;
+    status: 'ok' | 'warning' | 'blocked';
+    message?: string;
+    riskWarning?: string;
+    reason?: 'closed_period' | 'future_date' | 'previous_unclosed';
+  };
+
   // Gestión de Datos & Respaldos
   getFullERPData: () => FullERPData;
   restoreERPData: (data: FullERPData) => void;
@@ -196,6 +214,11 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return saved ? JSON.parse(saved) : initialFixedAssets;
   });
 
+  const [closedPeriods, setClosedPeriods] = useState<ClosedPeriod[]>(() => {
+    const saved = localStorage.getItem(STORAGE_PREFIX + 'closed_periods');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Sync state changes to LocalStorage
   useEffect(() => {
     localStorage.setItem(STORAGE_PREFIX + 'settings', JSON.stringify(settings));
@@ -216,6 +239,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   useEffect(() => { localStorage.setItem(STORAGE_PREFIX + 'movements', JSON.stringify(inventoryMovements)); }, [inventoryMovements]);
   useEffect(() => { localStorage.setItem(STORAGE_PREFIX + 'expenses', JSON.stringify(expenses)); }, [expenses]);
   useEffect(() => { localStorage.setItem(STORAGE_PREFIX + 'assets', JSON.stringify(fixedAssets)); }, [fixedAssets]);
+  useEffect(() => { localStorage.setItem(STORAGE_PREFIX + 'closed_periods', JSON.stringify(closedPeriods)); }, [closedPeriods]);
 
   // Actions: Clients & Suppliers
   const addClient = (data: Omit<Client, 'id' | 'creadoEn'>): Client => {
@@ -703,6 +727,13 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const getProductStockAndCostAtMonth = (productId: string, mesKey = getMonthKey()): { stock: number; costoPromedio: number } => {
+    // 1. Si el mes está formalmente cerrado en closedPeriods, devolver el snapshot inmutable congelado
+    const closedPeriod = closedPeriods.find(cp => cp.mes === mesKey);
+    if (closedPeriod && closedPeriod.productsSnapshot && closedPeriod.productsSnapshot[productId]) {
+      const snap = closedPeriod.productsSnapshot[productId];
+      return { stock: Math.max(0, snap.stock), costoPromedio: snap.costoPromedio || 0 };
+    }
+
     const product = products.find(p => p.id === productId);
     if (!product) return { stock: 0, costoPromedio: 0 };
 
@@ -1619,6 +1650,22 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const getProductRealCost = (productoId: string, mesKey = getMonthKey(), overrideCriterio?: ProrrateoCriterion): ProductRealCostResult => {
+    // 1. Si el mes está en closedPeriods, retornar los costos unitarios congelados en el snapshot
+    const closedPeriod = closedPeriods.find(cp => cp.mes === mesKey);
+    if (closedPeriod && closedPeriod.productsSnapshot && closedPeriod.productsSnapshot[productoId]) {
+      const snap = closedPeriod.productsSnapshot[productoId];
+      const prorrateo = getProrrateoMensual(mesKey, overrideCriterio);
+      return {
+        costoCompra: snap.costoPromedio,
+        gastoOperativoUnitario: 0,
+        gastoDepreciacionUnitario: 0,
+        costoOperativoProrrateado: Number(Math.max(0, snap.costoReal - snap.costoPromedio).toFixed(2)),
+        costoReal: snap.costoReal,
+        tasaAbsorcionPorcentaje: prorrateo.tasaAbsorcionPorcentaje,
+        criterio: prorrateo.criterio
+      };
+    }
+
     const product = products.find(p => p.id === productoId);
     const currentMonth = getMonthKey();
     const isPast = mesKey < currentMonth;
@@ -1635,19 +1682,16 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     let gastoDepreciacionUnitario = 0;
 
     if (prorrateo.criterio === 'costo_material') {
-      // Proporcional al costo de compra directo
       const tasaOp = (gastosFijosYVar / base);
       const tasaDep = (gastosDepr / base);
       gastoOperativoUnitario = Number((costoCompra * tasaOp).toFixed(2));
       gastoDepreciacionUnitario = Number((costoCompra * tasaDep).toFixed(2));
     } else if (prorrateo.criterio === 'valor_venta') {
-      // Proporcional al precio de venta
       const tasaOp = (gastosFijosYVar / base);
       const tasaDep = (gastosDepr / base);
       gastoOperativoUnitario = Number((precioVenta * tasaOp).toFixed(2));
       gastoDepreciacionUnitario = Number((precioVenta * tasaDep).toFixed(2));
     } else {
-      // Por partes iguales
       const totalU = prorrateo.totalUnidadesPeriodo > 0 ? prorrateo.totalUnidadesPeriodo : 1;
       gastoOperativoUnitario = Number((gastosFijosYVar / totalU).toFixed(2));
       gastoDepreciacionUnitario = Number((gastosDepr / totalU).toFixed(2));
@@ -1667,6 +1711,330 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
   };
 
+  // -------------------------------------------------------------
+  // Cierre de Periodos Contables, Snapshots Inmutables & Validación
+  // -------------------------------------------------------------
+
+  const isPeriodClosed = (monthKey: string): boolean => {
+    return closedPeriods.some(cp => cp.mes === monthKey);
+  };
+
+  const getClosedPeriod = (monthKey: string): ClosedPeriod | undefined => {
+    return closedPeriods.find(cp => cp.mes === monthKey);
+  };
+
+  const closePeriod = (monthKey: string, cerradoPor = 'Usuario Administrador', notas = ''): ClosedPeriod => {
+    // 1. Snapshot P&L inmutable
+    const monthInvoices = invoices.filter(i =>
+      (i.estado === 'emitida' || i.estado === 'pagada') &&
+      (i.fechaEmision && i.fechaEmision.startsWith(monthKey))
+    );
+
+    const totalGrossSales = monthInvoices.reduce((sum, i) => sum + (i.subtotal + i.descuentoTotal), 0);
+    const totalDiscounts = monthInvoices.reduce((sum, i) => sum + i.descuentoTotal, 0);
+    const totalNetSales = monthInvoices.reduce((sum, i) => sum + i.subtotal, 0);
+
+    const totalCOGS = monthInvoices.reduce((sum, inv) => {
+      return sum + inv.items.reduce((iSum, item) => {
+        let itemCost = item.costoUnitarioHistorico;
+        if (!itemCost) {
+          const move = inventoryMovements.find(m => m.referenciaDoc === inv.numeroFactura && m.productoId === item.productoId && m.tipo === 'SALIDA_VENTA');
+          if (move && move.costoUnitario > 0) {
+            itemCost = move.costoUnitario;
+          }
+        }
+        if (!itemCost) {
+          const prod = products.find(p => p.id === item.productoId);
+          itemCost = prod?.costoPromedio || 0;
+        }
+        return iSum + (item.cantidad * itemCost);
+      }, 0);
+    }, 0);
+
+    const grossProfit = totalNetSales - totalCOGS;
+    const grossMarginPercent = totalNetSales > 0 ? ((grossProfit / totalNetSales) * 100).toFixed(1) : '0';
+
+    const prorr = getProrrateoMensual(monthKey);
+    const totalOperatingExpenses = prorr.gastosFijos + prorr.gastosVariables;
+    const totalDepreciation = prorr.depreciacionActivos;
+    const netOperatingIncome = grossProfit - totalOperatingExpenses - totalDepreciation;
+    const netMarginPercent = totalNetSales > 0 ? ((netOperatingIncome / totalNetSales) * 100).toFixed(1) : '0';
+
+    // 2. Snapshot Balance General inmutable al corte del mes
+    const initialCapital = Number(settings.capitalAportado) || 0;
+    const totalClientPaymentsReceived = invoices.reduce((sum, inv) => {
+      return sum + inv.pagos
+        .filter(p => p.fecha && p.fecha.slice(0, 7) <= monthKey)
+        .reduce((pSum, p) => pSum + p.monto, 0);
+    }, 0);
+
+    const totalSupplierPaymentsMade = purchases.reduce((sum, pur) => {
+      return sum + pur.pagos
+        .filter(p => p.fecha && p.fecha.slice(0, 7) <= monthKey)
+        .reduce((pSum, p) => pSum + p.monto, 0);
+    }, 0);
+
+    const totalExpensesPaid = expenses
+      .filter(e => (e.periodoMes || (e.fecha && e.fecha.slice(0, 7))) <= monthKey)
+      .reduce((sum, e) => sum + e.monto, 0);
+
+    const realCash = initialCapital + totalClientPaymentsReceived - totalSupplierPaymentsMade - totalExpensesPaid;
+
+    const totalReceivablesCxC = invoices
+      .filter(i => (i.estado === 'emitida' || i.estado === 'borrador') && i.fechaEmision && i.fechaEmision.slice(0, 7) <= monthKey)
+      .reduce((sum, i) => {
+        const pagosHastaMes = i.pagos
+          .filter(p => p.fecha && p.fecha.slice(0, 7) <= monthKey)
+          .reduce((pSum, p) => pSum + p.monto, 0);
+        return sum + Math.max(0, i.total - pagosHastaMes);
+      }, 0);
+
+    const totalPayablesCxP = purchases
+      .filter(p => (p.estado === 'recibida' || p.estado === 'borrador') && p.fecha && p.fecha.slice(0, 7) <= monthKey)
+      .reduce((sum, pur) => {
+        const pagosHastaMes = pur.pagos
+          .filter(p => p.fecha && p.fecha.slice(0, 7) <= monthKey)
+          .reduce((pSum, p) => pSum + p.monto, 0);
+        return sum + Math.max(0, pur.total - pagosHastaMes);
+      }, 0);
+
+    // 3. Snapshot de existencias y costos por producto
+    const productsSnapshot: Record<string, ProductPeriodSnapshot> = {};
+    let sumStock = 0;
+    let sumValCompra = 0;
+    let sumValReal = 0;
+
+    products.forEach(p => {
+      const stockAndCost = getProductStockAndCostAtMonth(p.id, monthKey);
+      const realCostRes = getProductRealCost(p.id, monthKey);
+      const valCompra = Number((stockAndCost.stock * stockAndCost.costoPromedio).toFixed(2));
+      const valReal = Number((stockAndCost.stock * realCostRes.costoReal).toFixed(2));
+
+      productsSnapshot[p.id] = {
+        productId: p.id,
+        stock: stockAndCost.stock,
+        costoPromedio: stockAndCost.costoPromedio,
+        valuacionCompra: valCompra,
+        costoReal: realCostRes.costoReal,
+        valuacionReal: valReal
+      };
+
+      sumStock += stockAndCost.stock;
+      sumValCompra += valCompra;
+      sumValReal += valReal;
+    });
+
+    const totalInventoryAssetValue = sumValCompra;
+
+    // Depreciación acumulada de activos fijos hasta monthKey
+    const totalFixedAssetsNet = fixedAssets
+      .filter(a => a.fechaAdquisicion && a.fechaAdquisicion.slice(0, 7) <= monthKey)
+      .reduce((sum, a) => {
+        const [aY, aM] = a.fechaAdquisicion.slice(0, 7).split('-').map(Number);
+        const [mY, mM] = monthKey.split('-').map(Number);
+        const diffMonths = Math.max(0, (mY - aY) * 12 + (mM - aM) + 1);
+        const monthsDepreciated = Math.min(a.vidaUtilMeses, diffMonths);
+        const depAcum = monthsDepreciated * a.depreciacionMensual;
+        const bookValue = Math.max(0, a.valorAdquisicion - depAcum);
+        return sum + bookValue;
+      }, 0);
+
+    const totalAssets = realCash + totalReceivablesCxC + totalInventoryAssetValue + totalFixedAssetsNet;
+    const totalLiabilities = totalPayablesCxP;
+    const totalEquity = totalAssets - totalLiabilities;
+    const accumulatedRetainedEarnings = totalEquity - initialCapital;
+
+    // Historial previo si existiera
+    const existing = closedPeriods.find(cp => cp.mes === monthKey);
+    const historial = existing ? [...existing.historial] : [];
+    historial.push({
+      accion: 'cierre',
+      fecha: new Date().toISOString(),
+      usuario: cerradoPor,
+      motivo: notas || 'Cierre formal de periodo contable'
+    });
+
+    const newClosedPeriod: ClosedPeriod = {
+      mes: monthKey,
+      cerradoEn: new Date().toISOString(),
+      cerradoPor,
+      notas,
+      historial,
+      pnlSnapshot: {
+        totalGrossSales,
+        totalDiscounts,
+        totalNetSales,
+        totalCOGS,
+        grossProfit,
+        grossMarginPercent,
+        totalOperatingExpenses,
+        totalDepreciation,
+        netOperatingIncome,
+        netMarginPercent
+      },
+      balanceSnapshot: {
+        realCash,
+        totalReceivablesCxC,
+        totalInventoryAssetValue,
+        totalFixedAssetsNet,
+        totalAssets,
+        totalPayablesCxP,
+        totalLiabilities,
+        totalEquity,
+        initialCapital,
+        accumulatedRetainedEarnings
+      },
+      productsSnapshot,
+      totalStockUnits: sumStock,
+      totalValuationCompra: sumValCompra,
+      totalValuationReal: sumValReal
+    };
+
+    setClosedPeriods(prev => {
+      const filtered = prev.filter(cp => cp.mes !== monthKey);
+      return [...filtered, newClosedPeriod].sort((a, b) => a.mes.localeCompare(b.mes));
+    });
+
+    return newClosedPeriod;
+  };
+
+  const reopenPeriod = (monthKey: string, reabiertoPor = 'Usuario Administrador', motivo = '') => {
+    setClosedPeriods(prev => {
+      const target = prev.find(cp => cp.mes === monthKey);
+      if (!target) return prev;
+
+      try {
+        const auditLog = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'period_audit') || '[]');
+        auditLog.push({
+          mes: monthKey,
+          accion: 'reapertura',
+          fecha: new Date().toISOString(),
+          usuario: reabiertoPor,
+          motivo: motivo || 'Reapertura para ajustes contables'
+        });
+        localStorage.setItem(STORAGE_PREFIX + 'period_audit', JSON.stringify(auditLog));
+      } catch (e) {
+        console.error('Error saving period audit log:', e);
+      }
+
+      return prev.filter(cp => cp.mes !== monthKey);
+    });
+  };
+
+  const hasUnclosedPreviousPeriod = (targetMonth = getMonthKey()): { hasUnclosed: boolean; unclosedMonth?: string } => {
+    const monthsWithActivity = new Set<string>();
+    invoices.forEach(i => { if (i.fechaEmision) monthsWithActivity.add(i.fechaEmision.slice(0, 7)); });
+    purchases.forEach(p => { if (p.fecha) monthsWithActivity.add(p.fecha.slice(0, 7)); });
+    expenses.forEach(e => {
+      if (e.periodoMes) monthsWithActivity.add(e.periodoMes);
+      else if (e.fecha) monthsWithActivity.add(e.fecha.slice(0, 7));
+    });
+
+    const pastActiveMonths = Array.from(monthsWithActivity)
+      .filter(m => m < targetMonth)
+      .sort();
+
+    for (const m of pastActiveMonths) {
+      if (!closedPeriods.some(cp => cp.mes === m)) {
+        return { hasUnclosed: true, unclosedMonth: m };
+      }
+    }
+
+    return { hasUnclosed: false };
+  };
+
+  const validateOperationDate = (fechaStr: string): {
+    allowed: boolean;
+    status: 'ok' | 'warning' | 'blocked';
+    message?: string;
+    riskWarning?: string;
+    reason?: 'closed_period' | 'future_date' | 'previous_unclosed';
+  } => {
+    if (!fechaStr) return { allowed: true, status: 'ok' };
+    const fechaYMD = fechaStr.slice(0, 10);
+    const fechaMes = fechaStr.slice(0, 7);
+    const mode: DateRestrictionMode = settings.restriccionFechasModo || 'warning';
+
+    if (mode === 'none') {
+      return { allowed: true, status: 'ok' };
+    }
+
+    // 1. Periodo Cerrado
+    if (closedPeriods.some(cp => cp.mes === fechaMes)) {
+      if (mode === 'strict') {
+        return {
+          allowed: false,
+          status: 'blocked',
+          reason: 'closed_period',
+          message: `El periodo ${fechaMes} está cerrado formalmente. Para registrar operaciones en este mes, debes reabrir el periodo en el módulo de Contabilidad.`
+        };
+      } else {
+        return {
+          allowed: true,
+          status: 'warning',
+          reason: 'closed_period',
+          message: `La fecha seleccionada (${fechaYMD}) corresponde al periodo ${fechaMes}, el cual ya está cerrado formalmente. Registrar movimientos en periodos cerrados puede generar inconsistencias si decides recalcular reportes.`,
+          riskWarning: 'Vas a poder continuar incluso si el sistema te advierte, así que un clic apresurado en "Confirmar" no te protege del todo.'
+        };
+      }
+    }
+
+    // 2. Fecha Futura
+    const todayStr = getTodayLocalDateString();
+    const parsedTarget = parseDateSafe(fechaYMD);
+    const parsedToday = parseDateSafe(todayStr);
+
+    if (parsedTarget && parsedToday) {
+      const diffMs = parsedTarget.getTime() - parsedToday.getTime();
+      const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+      const allowedMargin = typeof settings.diasMargenFuturo === 'number' ? settings.diasMargenFuturo : 1;
+
+      if (diffDays > allowedMargin) {
+        if (mode === 'strict') {
+          return {
+            allowed: false,
+            status: 'blocked',
+            reason: 'future_date',
+            message: `La fecha seleccionada (${fechaYMD}) es futura y excede el margen permitido de ${allowedMargin} día(s). Modifica la fecha o amplía el margen en Configuraciones.`
+          };
+        } else {
+          return {
+            allowed: true,
+            status: 'warning',
+            reason: 'future_date',
+            message: `La fecha seleccionada (${fechaYMD}) es una fecha futura que excede el margen habitual (${allowedMargin} día(s)). Asegúrate de que la fecha sea la deseada antes de continuar.`,
+            riskWarning: 'Vas a poder continuar incluso si el sistema te advierte, así que un clic apresurado en "Confirmar" no te protege del todo.'
+          };
+        }
+      }
+    }
+
+    // 3. Exigir Cierre del Periodo Anterior
+    if (settings.exigirCierrePeriodoAnterior) {
+      const unclosedCheck = hasUnclosedPreviousPeriod(fechaMes);
+      if (unclosedCheck.hasUnclosed && unclosedCheck.unclosedMonth) {
+        if (mode === 'strict') {
+          return {
+            allowed: false,
+            status: 'blocked',
+            reason: 'previous_unclosed',
+            message: `La opción 'Exigir cierre del periodo anterior' está activa y el periodo ${unclosedCheck.unclosedMonth} aún no ha sido cerrado formalmente. Debes cerrar ${unclosedCheck.unclosedMonth} en Contabilidad antes de registrar operaciones en ${fechaMes}.`
+          };
+        } else {
+          return {
+            allowed: true,
+            status: 'warning',
+            reason: 'previous_unclosed',
+            message: `El periodo anterior (${unclosedCheck.unclosedMonth}) tiene operaciones pendientes y aún no ha sido cerrado formalmente. Se recomienda cerrarlo antes de operar en ${fechaMes}.`,
+            riskWarning: 'Vas a poder continuar incluso si el sistema te advierte, así que un clic apresurado en "Confirmar" no te protege del todo.'
+          };
+        }
+      }
+    }
+
+    return { allowed: true, status: 'ok' };
+  };
+
   // Gestión de Datos & Respaldos (Exportación JSON & Excel)
   const [autoBackupToast, setAutoBackupToast] = useState<string | null>(null);
 
@@ -1681,7 +2049,8 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     invoices,
     inventoryMovements,
     expenses,
-    fixedAssets
+    fixedAssets,
+    closedPeriods
   });
 
   const restoreERPData = (data: FullERPData) => {
@@ -1696,6 +2065,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (data.inventoryMovements) setInventoryMovements(data.inventoryMovements);
     if (data.expenses) setExpenses(data.expenses);
     if (data.fixedAssets) setFixedAssets(data.fixedAssets);
+    if (data.closedPeriods) setClosedPeriods(data.closedPeriods);
   };
 
   const resetAllERPData = () => {
@@ -1709,6 +2079,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setInventoryMovements([]);
     setExpenses([]);
     setFixedAssets([]);
+    setClosedPeriods([]);
   };
 
   const exportBackupJSON = (isAuto = false) => {
@@ -1818,6 +2189,13 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         getProrrateoMensual,
         getProductRealCost,
         getProductStockAndCostAtMonth,
+        closedPeriods,
+        isPeriodClosed,
+        getClosedPeriod,
+        closePeriod,
+        reopenPeriod,
+        hasUnclosedPreviousPeriod,
+        validateOperationDate,
         getFullERPData,
         restoreERPData,
         resetAllERPData,
