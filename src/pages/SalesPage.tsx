@@ -1082,6 +1082,30 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
                                         </tr>
                                       ))}
                                     </tbody>
+                                    <tfoot>
+                                      <tr style={{ borderTop: '2px solid var(--border-default)', backgroundColor: 'var(--bg-subtle)' }}>
+                                        <td colSpan={5} style={{ padding: '0.5rem 0.6rem', textAlign: 'right', fontWeight: 700 }}>
+                                          Total Abonado:
+                                        </td>
+                                        <td style={{ padding: '0.5rem 0.6rem', textAlign: 'right', fontWeight: 800, color: 'var(--color-success-text)', fontSize: '0.85rem' }}>
+                                          +{formatCurrency(inv.pagos.reduce((s, pago) => s + (pago.monto || 0), 0))}
+                                        </td>
+                                      </tr>
+                                      <tr style={{ backgroundColor: 'var(--bg-subtle)' }}>
+                                        <td colSpan={5} style={{ padding: '0.35rem 0.6rem', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)' }}>
+                                          Saldo Pendiente:
+                                        </td>
+                                        <td style={{
+                                          padding: '0.35rem 0.6rem',
+                                          textAlign: 'right',
+                                          fontWeight: 800,
+                                          color: inv.saldoPendiente > 0 ? 'var(--color-danger-text, var(--color-danger))' : 'var(--color-success-text)',
+                                          fontSize: '0.85rem'
+                                        }}>
+                                          {formatCurrency(inv.saldoPendiente)}
+                                        </td>
+                                      </tr>
+                                    </tfoot>
                                   </table>
                                 </div>
                               ) : (

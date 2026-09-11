@@ -700,6 +700,30 @@ export const PurchasesPage: React.FC = () => {
                                       </tr>
                                     ))}
                                   </tbody>
+                                  <tfoot>
+                                    <tr style={{ borderTop: '2px solid var(--border-default)', backgroundColor: 'var(--bg-subtle)' }}>
+                                      <td colSpan={5} style={{ padding: '0.5rem 0.6rem', textAlign: 'right', fontWeight: 700 }}>
+                                        Total Abonado:
+                                      </td>
+                                      <td style={{ padding: '0.5rem 0.6rem', textAlign: 'right', fontWeight: 800, color: 'var(--color-success-text)', fontSize: '0.85rem' }}>
+                                        +{formatCurrency(p.pagos.reduce((s, pay) => s + (pay.monto || 0), 0))}
+                                      </td>
+                                    </tr>
+                                    <tr style={{ backgroundColor: 'var(--bg-subtle)' }}>
+                                      <td colSpan={5} style={{ padding: '0.35rem 0.6rem', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)' }}>
+                                        Saldo Pendiente:
+                                      </td>
+                                      <td style={{
+                                        padding: '0.35rem 0.6rem',
+                                        textAlign: 'right',
+                                        fontWeight: 800,
+                                        color: p.saldoPendiente > 0 ? 'var(--color-danger-text, var(--color-danger))' : 'var(--color-success-text)',
+                                        fontSize: '0.85rem'
+                                      }}>
+                                        {formatCurrency(p.saldoPendiente)}
+                                      </td>
+                                    </tr>
+                                  </tfoot>
                                 </table>
                               </div>
                             ) : (
@@ -1101,7 +1125,7 @@ export const PurchasesPage: React.FC = () => {
 
             {/* Totals Breakdown in Detail Modal */}
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <div style={{ minWidth: '240px', backgroundColor: 'var(--bg-subtle)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)' }}>
+              <div style={{ minWidth: '260px', backgroundColor: 'var(--bg-subtle)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.825rem', marginBottom: '0.25rem' }}>
                   <span style={{ color: 'var(--text-muted)' }}>Subtotal (Base sin IVA):</span>
                   <span style={{ fontWeight: 600 }}>{formatCurrency(selectedPurchase.subtotal)}</span>
@@ -1114,18 +1138,39 @@ export const PurchasesPage: React.FC = () => {
                   <span>Total Factura:</span>
                   <span>{formatCurrency(selectedPurchase.total)}</span>
                 </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.825rem', marginTop: '0.35rem', paddingTop: '0.35rem', borderTop: '1px dashed var(--border-default)' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Total Abonado:</span>
+                  <span style={{ fontWeight: 700, color: 'var(--color-success-text)' }}>
+                    +{formatCurrency(selectedPurchase.pagos?.reduce((s, pay) => s + (pay.monto || 0), 0) || 0)}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginTop: '0.25rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Saldo Pendiente:</span>
+                  <span style={{ fontWeight: 800, color: selectedPurchase.saldoPendiente > 0 ? 'var(--color-danger-text, var(--color-danger))' : 'var(--color-success-text)' }}>
+                    {formatCurrency(selectedPurchase.saldoPendiente)}
+                  </span>
+                </div>
               </div>
             </div>
 
             {/* Payments history */}
             <div>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-                Historial de Pagos y Abonos (CxP)
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>
+                  Historial de Pagos y Abonos (CxP)
+                </div>
+                {selectedPurchase.pagos.length > 0 && (
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    {selectedPurchase.pagos.length} {selectedPurchase.pagos.length === 1 ? 'abono registrado' : 'abonos registrados'}
+                  </span>
+                )}
               </div>
               {selectedPurchase.pagos.length === 0 ? (
-                <div style={{ fontSize: '0.825rem', color: 'var(--text-muted)' }}>No hay pagos registrados para esta compra.</div>
+                <div style={{ fontSize: '0.825rem', color: 'var(--text-muted)', padding: '0.75rem', backgroundColor: 'var(--bg-subtle)', borderRadius: 'var(--radius-md)' }}>
+                  No hay pagos registrados para esta compra.
+                </div>
               ) : (
-                <table className="table" style={{ fontSize: '0.825rem' }}>
+                <table className="table" style={{ fontSize: '0.825rem', width: '100%' }}>
                   <thead>
                     <tr>
                       <th>Fecha / Hora</th>
@@ -1139,13 +1184,37 @@ export const PurchasesPage: React.FC = () => {
                       <tr key={p.id}>
                         <td>{formatDateTime(p.fecha)}</td>
                         <td style={{ textTransform: 'capitalize' }}>{p.metodoPago}</td>
-                        <td>{p.referencia}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{p.referencia || '—'}</td>
                         <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--color-success-text)' }}>
-                          {formatCurrency(p.monto)}
+                          +{formatCurrency(p.monto)}
                         </td>
                       </tr>
                     ))}
                   </tbody>
+                  <tfoot>
+                    <tr style={{ borderTop: '2px solid var(--border-default)', backgroundColor: 'var(--bg-subtle)' }}>
+                      <td colSpan={3} style={{ textAlign: 'right', fontWeight: 700, padding: '0.6rem 0.75rem' }}>
+                        Total Abonado:
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--color-success-text)', fontSize: '0.9rem', padding: '0.6rem 0.75rem' }}>
+                        +{formatCurrency(selectedPurchase.pagos.reduce((sum, p) => sum + (p.monto || 0), 0))}
+                      </td>
+                    </tr>
+                    <tr style={{ backgroundColor: 'var(--bg-subtle)' }}>
+                      <td colSpan={3} style={{ textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', padding: '0.4rem 0.75rem' }}>
+                        Saldo Pendiente:
+                      </td>
+                      <td style={{
+                        textAlign: 'right',
+                        fontWeight: 800,
+                        color: selectedPurchase.saldoPendiente > 0 ? 'var(--color-danger-text, var(--color-danger))' : 'var(--color-success-text)',
+                        fontSize: '0.9rem',
+                        padding: '0.4rem 0.75rem'
+                      }}>
+                        {formatCurrency(selectedPurchase.saldoPendiente)}
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
               )}
             </div>
