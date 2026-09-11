@@ -134,7 +134,8 @@ export const QuickNavigationModal: React.FC<QuickNavigationModalProps> = ({
       subTabs: [
         { id: 'prorrateo', name: 'Prorrateo de Costos', desc: 'Absorción de gastos en productos para costo real', icon: <PieChart size={15} /> },
         { id: 'expenses', name: 'Gastos Operativos', desc: 'Rentas, nóminas, servicios fijos y variables', icon: <DollarSign size={15} /> },
-        { id: 'assets', name: 'Activos Fijos & Depreciación', desc: 'Control de maquinaria y depreciación mensual', icon: <Building size={15} /> }
+        { id: 'assets', name: 'Activos Fijos & Depreciación', desc: 'Control de maquinaria y depreciación mensual', icon: <Building size={15} /> },
+        { id: 'cost_analysis', name: 'Análisis de Costo', desc: 'Flujo de costos por material, inventario inicial, compras y consumo', icon: <Boxes size={15} /> }
       ]
     },
     {
