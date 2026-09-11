@@ -67,7 +67,7 @@ const Sparkline: React.FC<{
 
   const lastPoint = coords[coords.length - 1];
   const areaPath = `${path} L ${lastPoint.x.toFixed(1)} ${height} L ${coords[0].x.toFixed(1)} ${height} Z`;
-  const gradId = `spark-grad-${color.replace('#', '')}-${Math.random().toString(36).substring(2, 6)}`;
+  const gradId = `spark-grad-${Math.random().toString(36).substring(2, 9)}`;
 
   return (
     <svg width={width} height={height} style={{ overflow: 'visible' }}>
@@ -515,14 +515,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         <div className="stat-sparkline-card">
           <div className="stat-sparkline-header">
             <span className="stat-sparkline-title">Ventas del Mes</span>
-            <div className="stat-sparkline-icon" style={{ backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success)' }}>
+            <div className="stat-sparkline-icon" style={{ backgroundColor: 'var(--color-accent-subtle)', color: 'var(--color-accent)' }}>
               <TrendingUp size={14} />
             </div>
           </div>
           <div className="stat-sparkline-main">
             <div className="stat-sparkline-val">{formatCurrency(totalSalesMonth)}</div>
             <div className="stat-sparkline-graph">
-              <Sparkline values={sparklineSales} color="#10b981" />
+              <Sparkline values={sparklineSales} color="var(--color-accent)" />
             </div>
           </div>
           <div className="stat-sparkline-footer">
@@ -543,16 +543,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         <div className="stat-sparkline-card">
           <div className="stat-sparkline-header">
             <span className="stat-sparkline-title">Utilidad Neta Real</span>
-            <div className="stat-sparkline-icon" style={{ backgroundColor: 'rgba(14, 165, 233, 0.12)', color: '#0ea5e9' }}>
+            <div className="stat-sparkline-icon" style={{ backgroundColor: 'var(--color-accent-subtle)', color: 'var(--color-accent)' }}>
               <DollarSign size={14} />
             </div>
           </div>
           <div className="stat-sparkline-main">
-            <div className="stat-sparkline-val" style={{ color: netOperatingProfit >= 0 ? 'inherit' : 'var(--color-danger-text)' }}>
+            <div className="stat-sparkline-val">
               {formatCurrency(netOperatingProfit)}
             </div>
             <div className="stat-sparkline-graph">
-              <Sparkline values={sparklineProfit} color="#0ea5e9" />
+              <Sparkline values={sparklineProfit} color="var(--color-accent)" />
             </div>
           </div>
           <div className="stat-sparkline-footer">
@@ -570,16 +570,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         <div className="stat-sparkline-card">
           <div className="stat-sparkline-header">
             <span className="stat-sparkline-title">Por Cobrar (CxC)</span>
-            <div className="stat-sparkline-icon" style={{ backgroundColor: 'var(--color-info-bg)', color: 'var(--color-info)' }}>
+            <div className="stat-sparkline-icon" style={{ backgroundColor: 'var(--color-accent-subtle)', color: 'var(--color-accent)' }}>
               <CreditCard size={14} />
             </div>
           </div>
           <div className="stat-sparkline-main">
-            <div className="stat-sparkline-val" style={{ color: pendingReceivables > 0 ? 'var(--color-info-text)' : 'inherit' }}>
+            <div className="stat-sparkline-val">
               {formatCurrency(pendingReceivables)}
             </div>
             <div className="stat-sparkline-graph">
-              <Sparkline values={sparklineMargins} color="#f59e0b" />
+              <Sparkline values={sparklineMargins} color="var(--color-accent)" />
             </div>
           </div>
           <div className="stat-sparkline-footer">
@@ -600,16 +600,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         <div className="stat-sparkline-card">
           <div className="stat-sparkline-header">
             <span className="stat-sparkline-title">Por Pagar (CxP)</span>
-            <div className="stat-sparkline-icon" style={{ backgroundColor: 'var(--color-warning-bg)', color: 'var(--color-warning)' }}>
+            <div className="stat-sparkline-icon" style={{ backgroundColor: 'var(--color-accent-subtle)', color: 'var(--color-accent)' }}>
               <ShoppingBag size={14} />
             </div>
           </div>
           <div className="stat-sparkline-main">
-            <div className="stat-sparkline-val" style={{ color: pendingPayables > 0 ? 'var(--color-warning-text)' : 'inherit' }}>
+            <div className="stat-sparkline-val">
               {formatCurrency(pendingPayables)}
             </div>
             <div className="stat-sparkline-graph">
-              <Sparkline values={sparklineCostos} color="#ec4899" />
+              <Sparkline values={sparklineCostos} color="var(--color-accent)" />
             </div>
           </div>
           <div className="stat-sparkline-footer">
@@ -631,7 +631,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
           <div className="stat-sparkline-main">
             <div className="stat-sparkline-val">{formatCurrency(totalInventoryValue)}</div>
             <div className="stat-sparkline-graph">
-              <Sparkline values={sparklineSales.map((v, i) => v * 0.7 + i * 100)} color="#6366f1" />
+              <Sparkline values={sparklineSales.map((v, i) => v * 0.7 + i * 100)} color="var(--color-accent)" />
             </div>
           </div>
           <div className="stat-sparkline-footer">
@@ -760,6 +760,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                           <line x1={xPos} y1={padTop} x2={xPos} y2={padTop + chartH} stroke="var(--color-accent)" strokeWidth="1.5" strokeDasharray="2 2" />
                         )}
 
+                        {/* Ventas Circle */}
                         <circle
                           cx={xPos}
                           cy={getY(stat.ventas)}
@@ -769,6 +770,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                           strokeWidth="2"
                         />
 
+                        {/* Costos Circle */}
                         <circle
                           cx={xPos}
                           cy={getY(stat.costoTotal)}
@@ -777,44 +779,44 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                           stroke="var(--bg-surface)"
                           strokeWidth="1.5"
                         />
+
+                        {/* Utilidad Circle (Punto azul interactivo) */}
+                        <circle
+                          cx={xPos}
+                          cy={getY(Math.max(0, stat.utilidad))}
+                          r={isHovered ? 4.5 : 3}
+                          fill="#0ea5e9"
+                          stroke="var(--bg-surface)"
+                          strokeWidth="1.5"
+                        />
                       </g>
                     );
                   })}
                 </svg>
 
-                {/* Tooltip Flotante */}
+                {/* Tooltip Flotante Adaptativo (Tema Claro / Oscuro) */}
                 {hoveredMonthIndex !== null && historicalStats[hoveredMonthIndex] && (
                   <div
+                    className="dashboard-chart-tooltip"
                     style={{
-                      position: 'absolute',
                       top: '6px',
                       left: `${(hoveredMonthIndex / (numPoints - 1 || 1)) * 100}%`,
                       transform: hoveredMonthIndex > numPoints / 2 ? 'translateX(-85%)' : 'translateX(-15%)',
-                      backgroundColor: 'rgba(15, 23, 42, 0.94)',
-                      color: '#ffffff',
-                      padding: '0.45rem 0.65rem',
-                      borderRadius: 'var(--radius-sm)',
-                      boxShadow: '0 8px 20px rgba(0,0,0,0.3)',
-                      fontSize: '0.725rem',
-                      pointerEvents: 'none',
-                      zIndex: 10,
-                      whiteSpace: 'nowrap',
-                      border: '1px solid rgba(255,255,255,0.12)'
                     }}
                   >
-                    <div style={{ fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.15)', paddingBottom: '0.2rem', marginBottom: '0.25rem' }}>
+                    <div style={{ fontWeight: 700, borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.2rem', marginBottom: '0.3rem', color: 'var(--text-primary)' }}>
                       {historicalStats[hoveredMonthIndex].label}
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', color: '#34d399' }}>
-                      <span>Ventas:</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.85rem', color: '#10b981', marginBottom: '0.15rem' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Ventas:</span>
                       <strong>{formatCurrency(historicalStats[hoveredMonthIndex].ventas)}</strong>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', color: '#fb7185' }}>
-                      <span>Costos:</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.85rem', color: '#f43f5e', marginBottom: '0.15rem' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Costos:</span>
                       <strong>{formatCurrency(historicalStats[hoveredMonthIndex].costoTotal)}</strong>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', color: '#38bdf8' }}>
-                      <span>Utilidad Neta:</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.85rem', color: '#0ea5e9' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Utilidad Neta:</span>
                       <strong>
                         {formatCurrency(historicalStats[hoveredMonthIndex].utilidad)} ({historicalStats[hoveredMonthIndex].margen.toFixed(0)}%)
                       </strong>
@@ -950,34 +952,29 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
               })}
             </div>
 
-            {/* Tooltip Flotante Waterfall */}
+            {/* Tooltip Flotante Waterfall Adaptativo (Tema Claro / Oscuro) */}
             {hoveredWaterfallStep !== null && waterfallSteps[hoveredWaterfallStep] && (
               <div
+                className="dashboard-chart-tooltip"
                 style={{
-                  position: 'absolute',
                   top: '4px',
                   right: '6px',
-                  backgroundColor: 'rgba(15, 23, 42, 0.94)',
-                  color: '#ffffff',
-                  padding: '0.45rem 0.65rem',
-                  borderRadius: 'var(--radius-sm)',
-                  boxShadow: '0 8px 20px rgba(0,0,0,0.3)',
-                  fontSize: '0.725rem',
-                  zIndex: 10,
-                  border: `1px solid ${waterfallSteps[hoveredWaterfallStep].color}`,
+                  borderLeft: `3px solid ${waterfallSteps[hoveredWaterfallStep].color}`,
                   maxWidth: '260px',
-                  pointerEvents: 'none'
+                  whiteSpace: 'normal'
                 }}
               >
-                <div style={{ fontWeight: 700, color: waterfallSteps[hoveredWaterfallStep].color, marginBottom: '0.15rem' }}>
+                <div style={{ fontWeight: 700, color: waterfallSteps[hoveredWaterfallStep].color, marginBottom: '0.2rem' }}>
                   {waterfallSteps[hoveredWaterfallStep].label}
                 </div>
-                <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.675rem', lineHeight: 1.3 }}>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '0.675rem', lineHeight: 1.35 }}>
                   {waterfallSteps[hoveredWaterfallStep].description}
                 </div>
-                <div style={{ marginTop: '0.3rem', paddingTop: '0.2rem', borderTop: '1px solid rgba(255,255,255,0.15)', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Impacto:</span>
-                  <strong>{formatCurrency(waterfallSteps[hoveredWaterfallStep].amount)}</strong>
+                <div style={{ marginTop: '0.35rem', paddingTop: '0.25rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Impacto:</span>
+                  <strong style={{ color: waterfallSteps[hoveredWaterfallStep].color }}>
+                    {formatCurrency(waterfallSteps[hoveredWaterfallStep].amount)}
+                  </strong>
                 </div>
               </div>
             )}

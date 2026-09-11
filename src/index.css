@@ -2246,9 +2246,13 @@ body {
   font-size: 1.25rem;
   font-weight: 800;
   letter-spacing: -0.02em;
-  color: var(--text-primary);
+  color: #000000;
   line-height: 1.1;
   font-family: var(--font-sans);
+}
+
+[data-theme="dark"] .stat-sparkline-val {
+  color: var(--text-primary);
 }
 
 .stat-sparkline-graph {
@@ -2357,6 +2361,29 @@ body {
   border-color: var(--border-strong);
   box-shadow: var(--shadow-md);
 }
+
+/* Dashboard Interactive Chart Tooltips (Adapts dynamically to Light / Dark Theme) */
+.dashboard-chart-tooltip {
+  position: absolute;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  box-shadow: var(--shadow-lg), 0 8px 24px rgba(0, 0, 0, 0.12);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.725rem;
+  z-index: 20;
+  pointer-events: none;
+  white-space: nowrap;
+  backdrop-filter: blur(10px);
+  transition: opacity 0.15s ease;
+}
+
+[data-theme="dark"] .dashboard-chart-tooltip {
+  background: #1e293b;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
 
 
 
