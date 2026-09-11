@@ -2144,11 +2144,29 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
             </button>
             <button
               type="button"
-              className="btn btn-warning"
+              className={`btn ${reopenReason.trim() ? 'btn-primary' : 'btn-secondary'}`}
               disabled={!reopenReason.trim()}
               onClick={handleConfirmReopenPeriod}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                fontWeight: 600,
+                ...(reopenReason.trim()
+                  ? {
+                      backgroundColor: 'var(--color-accent)',
+                      color: 'var(--text-on-accent)',
+                      borderColor: 'var(--color-accent)',
+                      boxShadow: '0 2px 8px var(--color-accent-glow)',
+                      cursor: 'pointer'
+                    }
+                  : {
+                      opacity: 0.5,
+                      cursor: 'not-allowed'
+                    })
+              }}
             >
+              <RotateCcw size={15} />
               Confirmar Reapertura
             </button>
           </>

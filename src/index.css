@@ -1047,6 +1047,15 @@ body {
   background-color: #059669;
 }
 
+.btn-warning {
+  background-color: #f59e0b;
+  color: white;
+}
+
+.btn-warning:hover:not(:disabled) {
+  background-color: #d97706;
+}
+
 .btn-ghost {
   background-color: transparent;
   color: var(--text-secondary);
