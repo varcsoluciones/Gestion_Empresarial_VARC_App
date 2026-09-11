@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useERP } from '../context/ERPContext';
-import { formatCurrency, getMonthKey, formatMonthLabel } from '../utils/formatters';
+import { formatCurrency, formatCompactCurrency, getMonthKey, formatMonthLabel } from '../utils/formatters';
 import {
   TrendingUp,
   ShoppingBag,
@@ -665,14 +665,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
             </div>
 
             {/* Leyenda con indicadores de color y totales acumulados */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.75rem', flexWrap: 'wrap' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--text-secondary)' }}>
                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981' }} />
-                Ventas ({formatCurrency(totalVentasHist)})
+                Ventas ({formatCompactCurrency(totalVentasHist)})
               </span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--text-secondary)' }}>
                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#f43f5e' }} />
-                Costos ({formatCurrency(totalCostosHist)})
+                Costos ({formatCompactCurrency(totalCostosHist)})
               </span>
               <span style={{
                 display: 'inline-flex',
@@ -682,7 +682,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                 fontWeight: 600
               }}>
                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#0ea5e9' }} />
-                Utilidad ({margenPromedioHist.toFixed(0)}%)
+                Utilidad ({formatCompactCurrency(totalUtilidadHist)} · {margenPromedioHist.toFixed(0)}%)
               </span>
             </div>
           </div>

@@ -38,6 +38,33 @@ export function formatCurrency(amount: number, _currency = 'MXN', symbol?: strin
   })}`;
 }
 
+export function formatCompactCurrency(amount: number, symbol?: string): string {
+  const activeSymbol = symbol !== undefined ? symbol : getActiveCurrencySymbol();
+  if (isNaN(amount) || amount === null || amount === undefined) {
+    return `${activeSymbol}0`;
+  }
+  const absVal = Math.abs(amount);
+  const sign = amount < 0 ? '-' : '';
+  if (absVal >= 1_000_000) {
+    const formatted = (absVal / 1_000_000).toLocaleString('es-MX', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 1
+    });
+    return `${sign}${activeSymbol}${formatted}M`;
+  }
+  if (absVal >= 1_000) {
+    const formatted = (absVal / 1_000).toLocaleString('es-MX', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 1
+    });
+    return `${sign}${activeSymbol}${formatted}k`;
+  }
+  return `${sign}${activeSymbol}${absVal.toLocaleString('es-MX', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  })}`;
+}
+
 export function parseDateSafe(dateString?: string): Date | null {
   if (!dateString) return null;
   const str = String(dateString).trim();

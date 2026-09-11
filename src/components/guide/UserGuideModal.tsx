@@ -178,8 +178,8 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
     {
       tab: 'nomenclatures' as GuideTab,
       tabLabel: '10. Nomenclaturas',
-      title: 'Folios y Prefijos Inteligentes (FA, CB, PA, CA, GA, DE...)',
-      desc: 'Catálogo de nomenclatura consecutiva para facturas, cobros CxC, pagos CxP, gastos, compras y ajustes.'
+      title: 'Folios y Prefijos Inteligentes (FA, CB, PA, CO, CT, CA, GA, DE...)',
+      desc: 'Catálogo de nomenclatura consecutiva para facturas, cobros CxC, pagos CxP, órdenes de compra, cotizaciones, categorías, gastos y ajustes.'
     },
     {
       tab: 'nomenclatures' as GuideTab,
@@ -876,30 +876,30 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
                     </tr>
                     <tr>
                       <td style={{ textAlign: 'center' }}>
-                        <span style={{ padding: '0.2rem 0.5rem', backgroundColor: 'rgba(99, 102, 241, 0.15)', color: '#6366f1', fontWeight: 800, borderRadius: '4px', fontFamily: 'var(--font-mono)' }}>CO</span>
+                        <span style={{ padding: '0.2rem 0.5rem', backgroundColor: 'rgba(236, 72, 153, 0.15)', color: '#db2777', fontWeight: 800, borderRadius: '4px', fontFamily: 'var(--font-mono)' }}>CO</span>
                       </td>
                       <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>CO0001</td>
+                      <td><strong>Orden de Compra</strong></td>
+                      <td><span className="badge badge-subtle">Compras & CxP</span></td>
+                      <td style={{ color: 'var(--text-secondary)' }}>Compras de mercancía y materias primas a proveedores. Al recibirse, ingresa al Kardex recalculando el costo promedio ponderado.</td>
+                    </tr>
+                    <tr>
+                      <td style={{ textAlign: 'center' }}>
+                        <span style={{ padding: '0.2rem 0.5rem', backgroundColor: 'rgba(99, 102, 241, 0.15)', color: '#6366f1', fontWeight: 800, borderRadius: '4px', fontFamily: 'var(--font-mono)' }}>CT</span>
+                      </td>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>CT0001</td>
                       <td><strong>Cotización / Presupuesto</strong></td>
                       <td><span className="badge badge-subtle">Ventas</span></td>
                       <td style={{ color: 'var(--text-secondary)' }}>Propuesta comercial formal enviada a prospectos y clientes. No descuenta inventario hasta convertirse en factura en 1 clic.</td>
                     </tr>
                     <tr>
                       <td style={{ textAlign: 'center' }}>
-                        <span style={{ padding: '0.2rem 0.5rem', backgroundColor: 'rgba(139, 92, 246, 0.15)', color: '#8b5cf6', fontWeight: 800, borderRadius: '4px', fontFamily: 'var(--font-mono)' }}>CT</span>
-                      </td>
-                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>CT0001</td>
-                      <td><strong>Contrato Comercial</strong></td>
-                      <td><span className="badge badge-subtle">Ventas</span></td>
-                      <td style={{ color: 'var(--text-secondary)' }}>Convenios de suministro, proyectos o pólizas de servicio pactadas con clientes.</td>
-                    </tr>
-                    <tr>
-                      <td style={{ textAlign: 'center' }}>
-                        <span style={{ padding: '0.2rem 0.5rem', backgroundColor: 'rgba(236, 72, 153, 0.15)', color: '#db2777', fontWeight: 800, borderRadius: '4px', fontFamily: 'var(--font-mono)' }}>CA</span>
+                        <span style={{ padding: '0.2rem 0.5rem', backgroundColor: 'rgba(139, 92, 246, 0.15)', color: '#8b5cf6', fontWeight: 800, borderRadius: '4px', fontFamily: 'var(--font-mono)' }}>CA</span>
                       </td>
                       <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>CA0001</td>
-                      <td><strong>Orden de Compra</strong></td>
-                      <td><span className="badge badge-subtle">Compras</span></td>
-                      <td style={{ color: 'var(--text-secondary)' }}>Compras de mercancía y materias primas a proveedores. Al recibirse, ingresa al Kardex recalculando el costo promedio ponderado.</td>
+                      <td><strong>Categoría de Catálogo</strong></td>
+                      <td><span className="badge badge-subtle">Datos Maestros</span></td>
+                      <td style={{ color: 'var(--text-secondary)' }}>Clasificación correlativa de familias, subfamilias y categorías de productos y materiales en datos maestros.</td>
                     </tr>
                     <tr>
                       <td style={{ textAlign: 'center' }}>

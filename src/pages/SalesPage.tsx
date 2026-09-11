@@ -399,6 +399,8 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
       subtotal: inv.subtotal,
       tasaImpuesto: inv.tasaImpuesto,
       impuestos: inv.impuestos,
+      costoTransporte: inv.costoTransporte,
+      tipoTransporte: inv.tipoTransporte,
       total: inv.total,
       deficitItems: deficits,
       onConfirm: () => {
