@@ -1158,6 +1158,99 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
       {/* 4. Tab 4: Product Cost Analysis */}
       {activeTab === 'cost_analysis' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {costAnalysisResult && (
+            /* 5 KPI Cards for the Selected Product (Viñetas al inicio, idéntico a las demás pestañas) */
+            <div className="grid-5" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '1rem' }}>
+              {/* 1. Inventario Inicial */}
+              <div className="stat-card">
+                <div className="stat-header">
+                  <span>1. Inv. Inicial (1° {selectedMonth.slice(-2)})</span>
+                  <div className="stat-icon" style={{ backgroundColor: 'var(--color-info-bg)', color: 'var(--color-info)' }}>
+                    <Package size={18} />
+                  </div>
+                </div>
+                <div className="stat-value">{costAnalysisResult.initStock} {costAnalysisResult.product.unidadMedida || 'pzas'}</div>
+                <div className="stat-footer">
+                  <span style={{ color: 'var(--text-muted)' }}>
+                    Valuación: <strong>{formatCurrency(costAnalysisResult.stages[0].valuacionTotalReal)}</strong>
+                  </span>
+                </div>
+              </div>
+
+              {/* 2. Compras */}
+              <div className="stat-card">
+                <div className="stat-header">
+                  <span>2. Entradas / Compras</span>
+                  <div className="stat-icon" style={{ backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success)' }}>
+                    <ArrowDownRight size={18} />
+                  </div>
+                </div>
+                <div className="stat-value" style={{ color: 'var(--color-success-text)' }}>
+                  +{costAnalysisResult.comprasQty} {costAnalysisResult.product.unidadMedida || 'pzas'}
+                </div>
+                <div className="stat-footer">
+                  <span style={{ color: 'var(--text-muted)' }}>
+                    Inversión: <strong>{formatCurrency(costAnalysisResult.comprasTotalCost)}</strong>
+                  </span>
+                </div>
+              </div>
+
+              {/* 3. Ventas */}
+              <div className="stat-card">
+                <div className="stat-header">
+                  <span>3. Salidas / Ventas</span>
+                  <div className="stat-icon" style={{ backgroundColor: 'var(--color-danger-bg)', color: 'var(--color-danger)' }}>
+                    <ArrowUpRight size={18} />
+                  </div>
+                </div>
+                <div className="stat-value" style={{ color: 'var(--color-danger-text)' }}>
+                  -{costAnalysisResult.ventasQty} {costAnalysisResult.product.unidadMedida || 'pzas'}
+                </div>
+                <div className="stat-footer">
+                  <span style={{ color: 'var(--text-muted)' }}>
+                    Costo Ventas (COGS): <strong>{formatCurrency(costAnalysisResult.ventasTotalCost)}</strong>
+                  </span>
+                </div>
+              </div>
+
+              {/* 4. Inventario Final */}
+              <div className="stat-card">
+                <div className="stat-header">
+                  <span>4. Inv. Final ({selectedMonth})</span>
+                  <div className="stat-icon" style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--color-accent)' }}>
+                    <Boxes size={18} />
+                  </div>
+                </div>
+                <div className="stat-value" style={{ color: 'var(--color-accent)' }}>
+                  {costAnalysisResult.finalStock} {costAnalysisResult.product.unidadMedida || 'pzas'}
+                </div>
+                <div className="stat-footer">
+                  <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
+                    Valuación: <strong>{formatCurrency(costAnalysisResult.stages[4].valuacionTotalReal)}</strong>
+                  </span>
+                </div>
+              </div>
+
+              {/* 5. Costo Real Unitario */}
+              <div className="stat-card" style={{ borderColor: 'var(--color-accent)', boxShadow: '0 4px 12px var(--color-accent-glow)' }}>
+                <div className="stat-header">
+                  <span style={{ color: 'var(--color-accent)', fontWeight: 700 }}>5. Costo Real Total Unit.</span>
+                  <div className="stat-icon" style={{ backgroundColor: 'var(--color-accent)', color: 'white' }}>
+                    <Layers size={18} />
+                  </div>
+                </div>
+                <div className="stat-value" style={{ color: 'var(--color-accent)' }}>
+                  {formatCurrency(costAnalysisResult.costs.costoReal)}
+                </div>
+                <div className="stat-footer">
+                  <span style={{ color: 'var(--text-muted)' }}>
+                    Compra {formatCurrency(costAnalysisResult.finalCost)} + Absorb. {formatCurrency(costAnalysisResult.costs.costoOperativoProrrateado)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Controls & Product Selector Header Card */}
           <div className="card" style={{ padding: '1.25rem 1.5rem' }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '1.25rem' }}>
@@ -1196,96 +1289,6 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
 
           {costAnalysisResult && (
             <>
-              {/* 5 KPI Cards for the Selected Product */}
-              <div className="grid-5" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '1rem' }}>
-                {/* 1. Inventario Inicial */}
-                <div className="stat-card">
-                  <div className="stat-header">
-                    <span>1. Inv. Inicial (1° {selectedMonth.slice(-2)})</span>
-                    <div className="stat-icon" style={{ backgroundColor: 'var(--color-info-bg)', color: 'var(--color-info)' }}>
-                      <Package size={18} />
-                    </div>
-                  </div>
-                  <div className="stat-value">{costAnalysisResult.initStock} {costAnalysisResult.product.unidadMedida || 'pzas'}</div>
-                  <div className="stat-footer">
-                    <span style={{ color: 'var(--text-muted)' }}>
-                      Valuación: <strong>{formatCurrency(costAnalysisResult.stages[0].valuacionTotalReal)}</strong>
-                    </span>
-                  </div>
-                </div>
-
-                {/* 2. Compras */}
-                <div className="stat-card">
-                  <div className="stat-header">
-                    <span>2. Entradas / Compras</span>
-                    <div className="stat-icon" style={{ backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success)' }}>
-                      <ArrowDownRight size={18} />
-                    </div>
-                  </div>
-                  <div className="stat-value" style={{ color: 'var(--color-success-text)' }}>
-                    +{costAnalysisResult.comprasQty} {costAnalysisResult.product.unidadMedida || 'pzas'}
-                  </div>
-                  <div className="stat-footer">
-                    <span style={{ color: 'var(--text-muted)' }}>
-                      Inversión: <strong>{formatCurrency(costAnalysisResult.comprasTotalCost)}</strong>
-                    </span>
-                  </div>
-                </div>
-
-                {/* 3. Ventas */}
-                <div className="stat-card">
-                  <div className="stat-header">
-                    <span>3. Salidas / Ventas</span>
-                    <div className="stat-icon" style={{ backgroundColor: 'var(--color-danger-bg)', color: 'var(--color-danger)' }}>
-                      <ArrowUpRight size={18} />
-                    </div>
-                  </div>
-                  <div className="stat-value" style={{ color: 'var(--color-danger-text)' }}>
-                    -{costAnalysisResult.ventasQty} {costAnalysisResult.product.unidadMedida || 'pzas'}
-                  </div>
-                  <div className="stat-footer">
-                    <span style={{ color: 'var(--text-muted)' }}>
-                      Costo Ventas (COGS): <strong>{formatCurrency(costAnalysisResult.ventasTotalCost)}</strong>
-                    </span>
-                  </div>
-                </div>
-
-                {/* 4. Inventario Final */}
-                <div className="stat-card">
-                  <div className="stat-header">
-                    <span>4. Inv. Final ({selectedMonth})</span>
-                    <div className="stat-icon" style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--color-accent)' }}>
-                      <Boxes size={18} />
-                    </div>
-                  </div>
-                  <div className="stat-value" style={{ color: 'var(--color-accent)' }}>
-                    {costAnalysisResult.finalStock} {costAnalysisResult.product.unidadMedida || 'pzas'}
-                  </div>
-                  <div className="stat-footer">
-                    <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
-                      Valuación: <strong>{formatCurrency(costAnalysisResult.stages[4].valuacionTotalReal)}</strong>
-                    </span>
-                  </div>
-                </div>
-
-                {/* 5. Costo Real Unitario */}
-                <div className="stat-card" style={{ borderColor: 'var(--color-accent)', boxShadow: '0 4px 12px var(--color-accent-glow)' }}>
-                  <div className="stat-header">
-                    <span style={{ color: 'var(--color-accent)', fontWeight: 700 }}>5. Costo Real Total Unit.</span>
-                    <div className="stat-icon" style={{ backgroundColor: 'var(--color-accent)', color: 'white' }}>
-                      <Layers size={18} />
-                    </div>
-                  </div>
-                  <div className="stat-value" style={{ color: 'var(--color-accent)' }}>
-                    {formatCurrency(costAnalysisResult.costs.costoReal)}
-                  </div>
-                  <div className="stat-footer">
-                    <span style={{ color: 'var(--text-muted)' }}>
-                      Compra {formatCurrency(costAnalysisResult.finalCost)} + Absorb. {formatCurrency(costAnalysisResult.costs.costoOperativoProrrateado)}
-                    </span>
-                  </div>
-                </div>
-              </div>
 
               {/* Matrix Table: Actual Costing Material Ledger */}
               <div className="card">
