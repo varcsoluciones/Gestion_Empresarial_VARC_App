@@ -53,7 +53,6 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
     expenses,
     fixedAssets,
     products,
-    categories,
     inventoryMovements,
     addExpense,
     deleteExpense,
@@ -404,72 +403,7 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
         </div>
       </div>
 
-      {/* 1. Monthly Summary Cards Banner (Matching Inventory Order: Header -> Stat Cards -> Tabs -> Content) */}
-      <div className="grid-4" style={{ marginBottom: '1.75rem' }}>
-        <div className="stat-card">
-          <div className="stat-header">
-            <span>{t.accounting.fixedExpensesMonth}</span>
-            <div className="stat-icon" style={{ backgroundColor: 'var(--color-accent-subtle)', color: 'var(--color-accent)' }}>
-              <Calculator size={18} />
-            </div>
-          </div>
-          <div className="stat-value">{formatCurrency(prorrateo.gastosFijos)}</div>
-          <div className="stat-footer">
-            <span style={{ color: 'var(--text-muted)' }}>Renta, servicios, nóminas</span>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-header">
-            <span>{t.accounting.variableExpensesMonth}</span>
-            <div className="stat-icon" style={{ backgroundColor: 'var(--color-warning-bg)', color: 'var(--color-warning)' }}>
-              <PieChart size={18} />
-            </div>
-          </div>
-          <div className="stat-value">{formatCurrency(prorrateo.gastosVariables)}</div>
-          <div className="stat-footer">
-            <span style={{ color: 'var(--text-muted)' }}>Publicidad, empaques, varios</span>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-header">
-            <span>{t.accounting.depreciationMonth}</span>
-            <div className="stat-icon" style={{ backgroundColor: 'var(--color-info-bg)', color: 'var(--color-info)' }}>
-              <TrendingDown size={18} />
-            </div>
-          </div>
-          <div className="stat-value">{formatCurrency(prorrateo.depreciacionActivos)}</div>
-          <div className="stat-footer">
-            <span style={{ color: 'var(--text-muted)' }}>Método lineal ({fixedAssets.length} activos)</span>
-          </div>
-        </div>
-
-        <div className="stat-card" style={{ borderColor: 'var(--color-accent)', boxShadow: '0 4px 12px var(--color-accent-glow)' }}>
-          <div className="stat-header">
-            <span style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{t.accounting.totalOperatingExpense}</span>
-            <div className="stat-icon" style={{ backgroundColor: 'var(--color-accent)', color: 'white' }}>
-              <Sparkles size={18} />
-            </div>
-          </div>
-          <div className="stat-value" style={{ color: 'var(--color-accent)' }}>{formatCurrency(prorrateo.gastoOperativoTotal)}</div>
-          <div className="stat-footer">
-            <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
-              {activeCriterio === 'costo_material' && (
-                <>{t.accounting.absorptionRate}: <strong>+{prorrateo.tasaAbsorcionPorcentaje}% s/ costo</strong></>
-              )}
-              {activeCriterio === 'valor_venta' && (
-                <>{t.accounting.absorptionRate}: <strong>+{prorrateo.tasaAbsorcionPorcentaje}% s/ venta</strong></>
-              )}
-              {activeCriterio === 'unidades_iguales' && (
-                <>Carga fija: <strong>{formatCurrency(prorrateo.costoOperativoProrrateadoPorUnidad)} / pza</strong></>
-              )}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. Tabs Navigation */}
+      {/* Tabs Navigation */}
       <div className="tabs-nav">
         <button
           type="button"
@@ -776,8 +710,74 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
 
       {/* Tab 2: Expenses List Table */}
       {activeTab === 'expenses' && (
-        <div className="card">
-          <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Monthly Summary Cards Banner (Gastos Fijos y Variables) */}
+          <div className="grid-4">
+            <div className="stat-card">
+              <div className="stat-header">
+                <span>{t.accounting.fixedExpensesMonth}</span>
+                <div className="stat-icon" style={{ backgroundColor: 'var(--color-accent-subtle)', color: 'var(--color-accent)' }}>
+                  <Calculator size={18} />
+                </div>
+              </div>
+              <div className="stat-value">{formatCurrency(prorrateo.gastosFijos)}</div>
+              <div className="stat-footer">
+                <span style={{ color: 'var(--text-muted)' }}>Renta, servicios, nóminas</span>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-header">
+                <span>{t.accounting.variableExpensesMonth}</span>
+                <div className="stat-icon" style={{ backgroundColor: 'var(--color-warning-bg)', color: 'var(--color-warning)' }}>
+                  <PieChart size={18} />
+                </div>
+              </div>
+              <div className="stat-value">{formatCurrency(prorrateo.gastosVariables)}</div>
+              <div className="stat-footer">
+                <span style={{ color: 'var(--text-muted)' }}>Publicidad, empaques, varios</span>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-header">
+                <span>{t.accounting.depreciationMonth}</span>
+                <div className="stat-icon" style={{ backgroundColor: 'var(--color-info-bg)', color: 'var(--color-info)' }}>
+                  <TrendingDown size={18} />
+                </div>
+              </div>
+              <div className="stat-value">{formatCurrency(prorrateo.depreciacionActivos)}</div>
+              <div className="stat-footer">
+                <span style={{ color: 'var(--text-muted)' }}>Método lineal ({fixedAssets.length} activos)</span>
+              </div>
+            </div>
+
+            <div className="stat-card" style={{ borderColor: 'var(--color-accent)', boxShadow: '0 4px 12px var(--color-accent-glow)' }}>
+              <div className="stat-header">
+                <span style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{t.accounting.totalOperatingExpense}</span>
+                <div className="stat-icon" style={{ backgroundColor: 'var(--color-accent)', color: 'white' }}>
+                  <Sparkles size={18} />
+                </div>
+              </div>
+              <div className="stat-value" style={{ color: 'var(--color-accent)' }}>{formatCurrency(prorrateo.gastoOperativoTotal)}</div>
+              <div className="stat-footer">
+                <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
+                  {activeCriterio === 'costo_material' && (
+                    <>{t.accounting.absorptionRate}: <strong>+{prorrateo.tasaAbsorcionPorcentaje}% s/ costo</strong></>
+                  )}
+                  {activeCriterio === 'valor_venta' && (
+                    <>{t.accounting.absorptionRate}: <strong>+{prorrateo.tasaAbsorcionPorcentaje}% s/ venta</strong></>
+                  )}
+                  {activeCriterio === 'unidades_iguales' && (
+                    <>Carga fija: <strong>{formatCurrency(prorrateo.costoOperativoProrrateadoPorUnidad)} / pza</strong></>
+                  )}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <h2 className="card-title">Registro de Gastos del Periodo ({selectedMonth})</h2>
               <p className="card-subtitle">Gastos operativos fijos y variables devengados</p>
@@ -955,7 +955,8 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
             </table>
           </div>
         </div>
-      )}
+      </div>
+    )}
 
       {/* Tab 3: Fixed Assets & Depreciation with Progress Bar */}
       {activeTab === 'assets' && (
@@ -1176,22 +1177,6 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
                     placeholder="Buscar producto o material..."
                   />
                 </div>
-
-                {selectedCostProduct && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', paddingBottom: '0.2rem' }}>
-                    <span className="badge badge-neutral" style={{ fontWeight: 600, fontSize: '0.8rem' }}>
-                      SKU: <strong style={{ fontFamily: 'var(--font-mono)' }}>{selectedCostProduct.codigo}</strong>
-                    </span>
-                    <span className="badge badge-info" style={{ fontWeight: 600, fontSize: '0.8rem' }}>
-                      Unidad: {selectedCostProduct.unidadMedida || 'pzas'}
-                    </span>
-                    {categories.find(c => c.id === selectedCostProduct.categoriaId)?.nombre && (
-                      <span className="badge badge-neutral" style={{ fontWeight: 600, fontSize: '0.8rem' }}>
-                        {categories.find(c => c.id === selectedCostProduct.categoriaId)?.nombre}
-                      </span>
-                    )}
-                  </div>
-                )}
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
