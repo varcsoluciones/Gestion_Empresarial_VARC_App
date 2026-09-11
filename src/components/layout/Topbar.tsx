@@ -1,7 +1,9 @@
-import React from 'react';
-import { Sun, Moon, TrendingUp, ShoppingBag, Settings, Menu, BookOpen } from 'lucide-react';
+import React, { useState } from 'react';
+import { Sun, Moon, TrendingUp, ShoppingBag, Settings, Menu, BookOpen, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { useTranslation } from '../../i18n/useTranslation';
+import { useLicense } from '../../context/LicenseContext';
+import { LicenseInfoModal } from '../license/LicenseInfoModal';
 import type { NavigationTab } from './Sidebar';
 
 interface TopbarProps {
@@ -22,6 +24,8 @@ export const Topbar: React.FC<TopbarProps> = ({
 }) => {
   const { settings, updateSettings } = useERP();
   const { t } = useTranslation();
+  const { license, status } = useLicense();
+  const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
 
   const tabTitles: Record<NavigationTab, { title: string; category: string }> = {
     dashboard: { title: t.nav.dashboard, category: 'General' },
@@ -87,6 +91,34 @@ export const Topbar: React.FC<TopbarProps> = ({
           </button>
         )}
 
+        {/* License Status Button */}
+        <button
+          type="button"
+          className="btn-icon"
+          onClick={() => setIsLicenseModalOpen(true)}
+          title={`Licencia VARC ERP: ${license?.email || 'Activa'}`}
+          style={{ position: 'relative' }}
+          aria-label="Ver estado de licencia del sistema"
+        >
+          {status === 'offline_grace' ? (
+            <ShieldAlert size={18} style={{ color: '#f59e0b' }} />
+          ) : (
+            <ShieldCheck size={18} style={{ color: '#10b981' }} />
+          )}
+          <span
+            style={{
+              position: 'absolute',
+              top: '5px',
+              right: '5px',
+              width: '7px',
+              height: '7px',
+              borderRadius: '50%',
+              backgroundColor: status === 'offline_grace' ? '#f59e0b' : '#10b981',
+              boxShadow: `0 0 4px ${status === 'offline_grace' ? '#f59e0b' : '#10b981'}`
+            }}
+          />
+        </button>
+
         {/* Settings Button */}
         <button
           type="button"
@@ -96,6 +128,11 @@ export const Topbar: React.FC<TopbarProps> = ({
         >
           <Settings size={18} />
         </button>
+
+        <LicenseInfoModal
+          isOpen={isLicenseModalOpen}
+          onClose={() => setIsLicenseModalOpen(false)}
+        />
 
         {/* Quick Actions */}
         <button

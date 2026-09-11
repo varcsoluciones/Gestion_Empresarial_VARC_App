@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { LicenseProvider } from './context/LicenseContext';
+import { LicenseGuard } from './components/license/LicenseGuard';
 import { ERPProvider } from './context/ERPContext';
 import { Sidebar } from './components/layout/Sidebar';
 import type { NavigationTab } from './components/layout/Sidebar';
@@ -94,8 +96,12 @@ const AppContent: React.FC = () => {
 
 export default function App() {
   return (
-    <ERPProvider>
-      <AppContent />
-    </ERPProvider>
+    <LicenseProvider>
+      <LicenseGuard>
+        <ERPProvider>
+          <AppContent />
+        </ERPProvider>
+      </LicenseGuard>
+    </LicenseProvider>
   );
 }

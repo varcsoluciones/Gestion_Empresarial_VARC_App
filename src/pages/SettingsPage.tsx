@@ -26,11 +26,17 @@ import {
   Calendar,
   Lock,
   Percent,
-  Info
+  Info,
+  ShieldCheck,
+  ShieldAlert,
+  RotateCcw,
+  LogOut,
+  Loader2
 } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
 import { ComboboxInline } from '../components/common/ComboboxInline';
-import { formatDateTime } from '../utils/formatters';
+import { formatDateTime, formatDate } from '../utils/formatters';
+import { useLicense } from '../context/LicenseContext';
 import { validateAndParseBackupJSON, type FullERPData } from '../utils/backupExportUtils';
 import { APP_NAME, APP_BRAND, APP_VERSION } from '../config/version';
 
@@ -74,6 +80,21 @@ export const SettingsPage: React.FC = () => {
   } = useERP();
 
   const { t, lang } = useTranslation();
+  const {
+    license,
+    status: licenseStatus,
+    revalidate: revalidateLicense,
+    logout: logoutLicense,
+    isRevalidating: isRevalidatingLicense
+  } = useLicense();
+  const [licenseFeedback, setLicenseFeedback] = useState<string | null>(null);
+
+  const handleRevalidateLicense = async () => {
+    setLicenseFeedback(null);
+    const res = await revalidateLicense();
+    setLicenseFeedback(res.message);
+    setTimeout(() => setLicenseFeedback(null), 4000);
+  };
 
   const [formData, setFormData] = useState({
     nombreEmpresa: settings.nombreEmpresa,
@@ -1223,7 +1244,92 @@ export const SettingsPage: React.FC = () => {
               </div>
             </div>
 
-            {/* 3.3 Danger Zone: Reset and Wipe all database */}
+            {/* 3.3 Control Centralizado de Licencia VARC */}
+            <div style={{
+              padding: '1.25rem 1.5rem',
+              borderRadius: 'var(--radius-lg)',
+              border: '1px solid var(--border-default)',
+              backgroundColor: 'var(--bg-surface)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem',
+              marginTop: '0.25rem'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: licenseStatus === 'offline_grace' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                    color: licenseStatus === 'offline_grace' ? '#b45309' : '#059669',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    {licenseStatus === 'offline_grace' ? <ShieldAlert size={20} /> : <ShieldCheck size={20} />}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span>Licencia del Sistema (VARC ERP)</span>
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          padding: '0.15rem 0.5rem',
+                          borderRadius: '12px',
+                          backgroundColor: licenseStatus === 'offline_grace' ? '#fef3c7' : '#d1fae5',
+                          color: licenseStatus === 'offline_grace' ? '#b45309' : '#059669'
+                        }}
+                      >
+                        {licenseStatus === 'offline_grace' ? 'Modo Gracia Sin Conexión' : 'Activa en Supabase'}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)' }}>
+                      Validada para: <strong>{license?.email || 'N/A'}</strong> — Vigente hasta: <strong>{license?.vigente_hasta ? formatDate(license.vigente_hasta) : 'Indefinida'}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={handleRevalidateLicense}
+                    disabled={isRevalidatingLicense}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                  >
+                    {isRevalidatingLicense ? <Loader2 size={14} className="spin" /> : <RotateCcw size={14} />}
+                    Revalidar Ahora
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={logoutLicense}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--color-danger)' }}
+                    title="Cerrar sesión de la licencia actual"
+                  >
+                    <LogOut size={14} />
+                    Cambiar Licencia
+                  </button>
+                </div>
+              </div>
+
+              {licenseFeedback && (
+                <div style={{
+                  fontSize: '0.8rem',
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: 'var(--bg-subtle)',
+                  color: 'var(--text-secondary)'
+                }}>
+                  {licenseFeedback}
+                </div>
+              )}
+            </div>
+
+            {/* 3.4 Danger Zone: Reset and Wipe all database */}
             <div style={{
               padding: '1.25rem 1.5rem',
               borderRadius: 'var(--radius-lg)',
