@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useERP } from '../context/ERPContext';
 import type { Invoice, Quote, PaymentMethod, PaymentTerm } from '../types/erp';
-import { formatCurrency, formatDate, formatDateTime, generateDocNumber, formatMonthLabel, getTodayLocalDateString, getFutureLocalDateString, buildLocalDateISO } from '../utils/formatters';
+import { formatCurrency, formatDate, formatDateTime, generateDocNumber, getNextDocNumber, formatMonthLabel, getTodayLocalDateString, getFutureLocalDateString, buildLocalDateISO } from '../utils/formatters';
 import {
   TrendingUp,
   Plus,
@@ -447,7 +447,9 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
     setSelectedInvoice(invoice);
     setPaymentAmount(invoice.saldoPendiente);
     setPaymentMethod('transferencia');
-    setPaymentRef('');
+    const allPayments = invoices.flatMap(inv => inv.pagos || []);
+    const nextCobroRef = getNextDocNumber('CB', allPayments);
+    setPaymentRef(nextCobroRef);
     setPaymentNotes('');
     setIsPaymentModalOpen(true);
   };
@@ -457,12 +459,13 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
     if (isSubmitting || !selectedInvoice || !paymentAmount || Number(paymentAmount) <= 0) return;
     setIsSubmitting(true);
     try {
+      const allPayments = invoices.flatMap(inv => inv.pagos || []);
       addClientPayment({
         facturaId: selectedInvoice.id,
         fecha: new Date().toISOString(),
         monto: Number(paymentAmount),
         metodoPago: paymentMethod,
-        referencia: paymentRef || `COBRO-${Date.now().toString().slice(-4)}`,
+        referencia: paymentRef?.trim() || getNextDocNumber('CB', allPayments),
         notas: paymentNotes
       });
 
@@ -1801,14 +1804,17 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Número de Referencia / Autorización</label>
+              <label className="form-label">Número de Referencia / Comprobante</label>
               <input
                 type="text"
                 className="form-control"
-                placeholder="Ej. SPEI-4481"
+                placeholder="Ej. CB0001, SPEI-4481..."
                 value={paymentRef}
                 onChange={(e) => setPaymentRef(e.target.value)}
               />
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem', display: 'block' }}>
+                Si se deja vacío, el sistema asignará automáticamente el folio correlativo (CB0001).
+              </span>
             </div>
           </div>
 

@@ -184,6 +184,7 @@ export function getNextDocNumber(
         item?.numeroCotizacion,
         item?.numero,
         item?.referenciaDoc,
+        (item as any)?.referencia,
         item?.codigo,
         item?.id
       ];

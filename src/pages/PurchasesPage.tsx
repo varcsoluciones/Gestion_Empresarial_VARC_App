@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useERP } from '../context/ERPContext';
 import type { Purchase, PaymentMethod } from '../types/erp';
-import { formatCurrency, formatDateTime, formatMonthLabel, getTodayLocalDateString, buildLocalDateISO } from '../utils/formatters';
+import { formatCurrency, formatDateTime, formatMonthLabel, getTodayLocalDateString, buildLocalDateISO, getNextDocNumber } from '../utils/formatters';
 import {
   Plus,
   Search,
@@ -201,7 +201,9 @@ export const PurchasesPage: React.FC = () => {
     setSelectedPurchase(purchase);
     setPaymentAmount(purchase.saldoPendiente);
     setPaymentMethod('transferencia');
-    setPaymentRef('');
+    const allPayments = purchases.flatMap(pur => pur.pagos || []);
+    const nextPagoRef = getNextDocNumber('PA', allPayments);
+    setPaymentRef(nextPagoRef);
     setPaymentNotes('');
     setIsPaymentModalOpen(true);
   };
@@ -211,12 +213,13 @@ export const PurchasesPage: React.FC = () => {
     if (isSubmitting || !selectedPurchase || !paymentAmount || Number(paymentAmount) <= 0) return;
     setIsSubmitting(true);
     try {
+      const allPayments = purchases.flatMap(pur => pur.pagos || []);
       addSupplierPayment({
         compraId: selectedPurchase.id,
         fecha: new Date().toISOString(),
         monto: Number(paymentAmount),
         metodoPago: paymentMethod,
-        referencia: paymentRef || `PAGO-${Date.now().toString().slice(-4)}`,
+        referencia: paymentRef?.trim() || getNextDocNumber('PA', allPayments),
         notas: paymentNotes
       });
 
@@ -1157,14 +1160,17 @@ export const PurchasesPage: React.FC = () => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Número de Referencia / Folio</label>
+              <label className="form-label">Número de Referencia / Comprobante</label>
               <input
                 type="text"
                 className="form-control"
-                placeholder="Ej. SPEI-8921"
+                placeholder="Ej. PA0001, SPEI-8921..."
                 value={paymentRef}
                 onChange={(e) => setPaymentRef(e.target.value)}
               />
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem', display: 'block' }}>
+                Si se deja vacío, el sistema asignará automáticamente el folio correlativo (PA0001).
+              </span>
             </div>
           </div>
 

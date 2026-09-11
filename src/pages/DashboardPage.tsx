@@ -486,24 +486,24 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
 
   return (
     <div className="dashboard-page-container">
-      {/* 1. Header Compacto de Mando */}
+      {/* 1. Header de Mando */}
       <div className="page-header" style={{ marginBottom: 0, paddingBottom: 0 }}>
         <div>
-          <h1 className="page-title" style={{ fontSize: '1.35rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Sparkles size={20} style={{ color: 'var(--color-accent)' }} />
+          <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Sparkles size={22} style={{ color: 'var(--color-accent)' }} />
             Tablero de Control & Centro de Mando
           </h1>
-          <p className="page-description" style={{ fontSize: '0.775rem', marginTop: '0.1rem' }}>
+          <p className="page-description">
             Monitoreo en tiempo real de operaciones, liquidez, inventario y evolución de rentabilidad contable ({currentMonthKey}).
           </p>
         </div>
         <div className="page-actions" style={{ gap: '0.5rem' }}>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={() => onNavigate('accounting')} style={{ fontSize: '0.775rem', padding: '0.35rem 0.65rem' }}>
-            <Calculator size={14} />
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => onNavigate('accounting')}>
+            <Calculator size={15} />
             Prorrateo & Costos
           </button>
-          <button type="button" className="btn btn-primary btn-sm" onClick={() => onNavigate('reports')} style={{ fontSize: '0.775rem', padding: '0.35rem 0.65rem' }}>
-            <BarChart3 size={14} />
+          <button type="button" className="btn btn-primary btn-sm" onClick={() => onNavigate('reports')}>
+            <BarChart3 size={15} />
             Reportes Financieros
           </button>
         </div>
@@ -655,29 +655,29 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         <div className="chart-card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
             <div>
-              <h2 style={{ fontSize: '0.925rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.45rem', margin: 0 }}>
-                <TrendingUp size={16} style={{ color: 'var(--color-accent)' }} />
+              <h2 style={{ fontSize: '1.05rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, color: 'var(--text-primary)' }}>
+                <TrendingUp size={18} style={{ color: 'var(--color-accent)' }} />
                 Evolución Financiera Histórica
               </h2>
-              <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: '0.1rem 0 0 0' }}>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', margin: '0.15rem 0 0 0' }}>
                 Ventas, Costos y Utilidad Neta ({historicalStats.length} {historicalStats.length === 1 ? 'mes' : 'meses'})
               </p>
             </div>
 
             {/* Leyenda con indicadores de color y totales acumulados */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.675rem' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--text-secondary)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.75rem' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--text-secondary)' }}>
                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981' }} />
                 Ventas ({formatCurrency(totalVentasHist)})
               </span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--text-secondary)' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--text-secondary)' }}>
                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#f43f5e' }} />
                 Costos ({formatCurrency(totalCostosHist)})
               </span>
               <span style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.25rem',
+                gap: '0.3rem',
                 color: totalUtilidadHist >= 0 ? '#0284c7' : 'var(--color-danger-text)',
                 fontWeight: 600
               }}>
@@ -695,7 +695,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                 {[1, 0.66, 0.33, 0].map((frac, idx) => {
                   const val = maxChartVal * frac;
                   return (
-                    <span key={idx} style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', lineHeight: 1 }}>
+                    <span key={idx} style={{ fontSize: '0.725rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', lineHeight: 1 }}>
                       ${val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val.toFixed(0)}
                     </span>
                   );
@@ -836,7 +836,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                     onMouseEnter={() => setHoveredMonthIndex(idx)}
                     onMouseLeave={() => setHoveredMonthIndex(null)}
                     style={{
-                      fontSize: '0.675rem',
+                      fontSize: '0.75rem',
                       fontWeight: isHovered ? 700 : 500,
                       color: isHovered ? 'var(--color-accent)' : 'var(--text-muted)',
                       cursor: 'pointer',
@@ -855,24 +855,24 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         <div className="chart-card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
             <div>
-              <h2 style={{ fontSize: '0.925rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.45rem', margin: 0 }}>
-                <BarChart3 size={16} style={{ color: '#0ea5e9' }} />
+              <h2 style={{ fontSize: '1.05rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, color: 'var(--text-primary)' }}>
+                <BarChart3 size={18} style={{ color: '#0ea5e9' }} />
                 Puente de Utilidad (Waterfall)
               </h2>
-              <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: '0.1rem 0 0 0' }}>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', margin: '0.15rem 0 0 0' }}>
                 De Ventas a Utilidad Neta Real ({currentMonthKey})
               </p>
             </div>
 
             <div style={{
-              padding: '0.2rem 0.5rem',
+              padding: '0.25rem 0.55rem',
               backgroundColor: netOperatingProfit >= 0 ? 'rgba(16, 185, 129, 0.12)' : 'var(--color-danger-bg)',
               border: `1px solid ${netOperatingProfit >= 0 ? 'rgba(16, 185, 129, 0.3)' : 'var(--color-danger)'}`,
-              borderRadius: '4px',
-              fontSize: '0.7rem',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '0.75rem',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.3rem'
+              gap: '0.35rem'
             }}>
               <span style={{ color: 'var(--text-muted)' }}>Neto:</span>
               <strong style={{ color: netOperatingProfit >= 0 ? '#10b981' : 'var(--color-danger-text)' }}>
@@ -907,7 +907,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                     {/* Valor numérico superior en HTML (Nítido, nunca estirado) */}
                     <div
                       style={{
-                        fontSize: '0.675rem',
+                        fontSize: '0.725rem',
                         fontWeight: 700,
                         color: step.color,
                         textAlign: 'center',
@@ -940,10 +940,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
 
                     {/* Etiquetas Inferiores en HTML (Nítidas y Proporcionales) */}
                     <div style={{ textAlign: 'center', marginTop: '6px' }}>
-                      <div style={{ fontSize: '0.675rem', fontWeight: 600, color: isHovered ? 'var(--text-primary)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 600, color: isHovered ? 'var(--text-primary)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {step.shortLabel}
                       </div>
-                      <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                         {step.marginPct.toFixed(0)}% vta
                       </div>
                     </div>
@@ -964,13 +964,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                   whiteSpace: 'normal'
                 }}
               >
-                <div style={{ fontWeight: 700, color: waterfallSteps[hoveredWaterfallStep].color, marginBottom: '0.2rem' }}>
+                <div style={{ fontWeight: 700, color: waterfallSteps[hoveredWaterfallStep].color, marginBottom: '0.2rem', fontSize: '0.8125rem' }}>
                   {waterfallSteps[hoveredWaterfallStep].label}
                 </div>
-                <div style={{ color: 'var(--text-secondary)', fontSize: '0.675rem', lineHeight: 1.35 }}>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', lineHeight: 1.35 }}>
                   {waterfallSteps[hoveredWaterfallStep].description}
                 </div>
-                <div style={{ marginTop: '0.35rem', paddingTop: '0.25rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between' }}>
+                <div style={{ marginTop: '0.35rem', paddingTop: '0.25rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
                   <span style={{ color: 'var(--text-muted)' }}>Impacto:</span>
                   <strong style={{ color: waterfallSteps[hoveredWaterfallStep].color }}>
                     {formatCurrency(waterfallSteps[hoveredWaterfallStep].amount)}
@@ -987,18 +987,18 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         {/* Columna 1: Semáforo de Cartera CxC */}
         <div className="card" style={{ padding: '0.85rem 1rem', display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem' }}>
-            <h3 style={{ fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem', margin: 0 }}>
-              <CreditCard size={15} style={{ color: 'var(--color-info)' }} />
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.45rem', margin: 0, color: 'var(--text-primary)' }}>
+              <CreditCard size={16} style={{ color: 'var(--color-info)' }} />
               Semáforo de Cobranza CxC
             </h3>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
               {cxcAlerts.length} cuentas pendientes
             </span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', flex: 1, overflowY: 'auto', maxHeight: '150px' }}>
             {cxcAlerts.length === 0 ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--color-success-text)', fontSize: '0.75rem', gap: '0.35rem', padding: '1rem 0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--color-success-text)', fontSize: '0.8125rem', gap: '0.35rem', padding: '1rem 0' }}>
                 <CheckCircle size={15} /> Cartera al 100% cobrada y al día
               </div>
             ) : (
@@ -1009,18 +1009,18 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '0.35rem 0.5rem',
+                    padding: '0.4rem 0.6rem',
                     backgroundColor: 'var(--bg-subtle)',
                     borderRadius: 'var(--radius-sm)',
                     border: `1px solid ${inv.statusCategory === 'overdue' ? 'var(--color-danger)' : 'var(--border-subtle)'}`,
-                    fontSize: '0.725rem'
+                    fontSize: '0.8125rem'
                   }}
                 >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', maxWidth: '60%' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', maxWidth: '60%' }}>
                     <span style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {inv.clientName}
                     </span>
-                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                       Folio: {inv.numeroFactura}
                     </span>
                   </div>
@@ -1029,7 +1029,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                       {formatCurrency(inv.saldoPendiente)}
                     </div>
                     <span style={{
-                      fontSize: '0.625rem',
+                      fontSize: '0.7rem',
                       fontWeight: 600,
                       color: inv.statusCategory === 'overdue' ? 'var(--color-danger-text)' : (inv.statusCategory === 'dueSoon' ? 'var(--color-warning-text)' : 'var(--color-success-text)')
                     }}>
@@ -1042,8 +1042,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
           </div>
 
           <div style={{ marginTop: '0.45rem', paddingTop: '0.35rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Total vencido:</span>
-            <strong style={{ fontSize: '0.775rem', color: totalOverdueAmount > 0 ? 'var(--color-danger-text)' : 'var(--color-success-text)' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Total vencido:</span>
+            <strong style={{ fontSize: '0.85rem', color: totalOverdueAmount > 0 ? 'var(--color-danger-text)' : 'var(--color-success-text)' }}>
               {formatCurrency(totalOverdueAmount)}
             </strong>
           </div>
@@ -1052,18 +1052,18 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         {/* Columna 2: Reabastecimiento Inteligente de Stock */}
         <div className="card" style={{ padding: '0.85rem 1rem', display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem' }}>
-            <h3 style={{ fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem', margin: 0 }}>
-              <Boxes size={15} style={{ color: 'var(--color-warning)' }} />
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.45rem', margin: 0, color: 'var(--text-primary)' }}>
+              <Boxes size={16} style={{ color: 'var(--color-warning)' }} />
               Reabastecimiento de Stock
             </h3>
-            <span style={{ fontSize: '0.7rem', color: lowStockProducts.length > 0 ? 'var(--color-warning-text)' : 'var(--color-success-text)', fontWeight: 600 }}>
+            <span style={{ fontSize: '0.75rem', color: lowStockProducts.length > 0 ? 'var(--color-warning-text)' : 'var(--color-success-text)', fontWeight: 600 }}>
               {lowStockProducts.length} bajo mínimo
             </span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', flex: 1, overflowY: 'auto', maxHeight: '150px' }}>
             {lowStockProducts.length === 0 ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--color-success-text)', fontSize: '0.75rem', gap: '0.35rem', padding: '1rem 0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--color-success-text)', fontSize: '0.8125rem', gap: '0.35rem', padding: '1rem 0' }}>
                 <CheckCircle size={15} /> Todas las existencias están sobre el mínimo
               </div>
             ) : (
@@ -1074,18 +1074,18 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '0.35rem 0.5rem',
+                    padding: '0.4rem 0.6rem',
                     backgroundColor: 'var(--bg-subtle)',
                     borderRadius: 'var(--radius-sm)',
                     border: '1px solid var(--border-subtle)',
-                    fontSize: '0.725rem'
+                    fontSize: '0.8125rem'
                   }}
                 >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', maxWidth: '60%' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', maxWidth: '60%' }}>
                     <span style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {prod.nombre}
                     </span>
-                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                       Stock: <strong style={{ color: 'var(--color-danger-text)' }}>{prod.stockActual}</strong> / Min: {prod.stockMinimo}
                     </span>
                   </div>
@@ -1093,7 +1093,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                     <div style={{ fontWeight: 700, color: 'var(--color-accent)' }}>
                       +{prod.suggestedQty} pzas
                     </div>
-                    <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)' }}>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                       Est: {formatCurrency(prod.estimatedCost)}
                     </span>
                   </div>
@@ -1103,8 +1103,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
           </div>
 
           <div style={{ marginTop: '0.45rem', paddingTop: '0.35rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Costo estimado reposición:</span>
-            <strong style={{ fontSize: '0.775rem', color: 'var(--color-accent)' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Costo estimado reposición:</span>
+            <strong style={{ fontSize: '0.85rem', color: 'var(--color-accent)' }}>
               {formatCurrency(totalRestockCost)}
             </strong>
           </div>
@@ -1120,8 +1120,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                 style={{
                   background: 'none',
                   border: 'none',
-                  padding: '0 0.2rem',
-                  fontSize: '0.825rem',
+                  padding: '0 0.3rem 0.15rem 0.3rem',
+                  fontSize: '0.875rem',
                   fontWeight: bottomColView === 'cashflow' ? 700 : 500,
                   color: bottomColView === 'cashflow' ? 'var(--color-accent)' : 'var(--text-muted)',
                   cursor: 'pointer',
@@ -1130,15 +1130,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
               >
                 Flujo 30 Días
               </button>
-              <span style={{ color: 'var(--border-default)', fontSize: '0.75rem' }}>|</span>
+              <span style={{ color: 'var(--border-default)', fontSize: '0.875rem' }}>|</span>
               <button
                 type="button"
                 onClick={() => setBottomColView('topskus')}
                 style={{
                   background: 'none',
                   border: 'none',
-                  padding: '0 0.2rem',
-                  fontSize: '0.825rem',
+                  padding: '0 0.3rem 0.15rem 0.3rem',
+                  fontSize: '0.875rem',
                   fontWeight: bottomColView === 'topskus' ? 700 : 500,
                   color: bottomColView === 'topskus' ? 'var(--color-accent)' : 'var(--text-muted)',
                   cursor: 'pointer',
@@ -1148,7 +1148,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                 Top SKUs
               </button>
             </div>
-            <span style={{ fontSize: '0.675rem', color: 'var(--text-muted)' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
               {bottomColView === 'cashflow' ? 'Entradas vs Salidas' : 'Más vendidos'}
             </span>
           </div>
@@ -1156,26 +1156,26 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', flex: 1, overflowY: 'auto', maxHeight: '150px' }}>
             {bottomColView === 'cashflow' ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', padding: '0.2rem 0' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.725rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
                   <span style={{ color: 'var(--text-muted)' }}>(+) Cobros esperados (CxC):</span>
                   <strong style={{ color: 'var(--color-success)' }}>{formatCurrency(pendingReceivables)}</strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.725rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
                   <span style={{ color: 'var(--text-muted)' }}>(-) Pagos proveedores (CxP):</span>
                   <strong style={{ color: 'var(--color-danger-text)' }}>-{formatCurrency(pendingPayables)}</strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.725rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
                   <span style={{ color: 'var(--text-muted)' }}>(-) Gastos OpEx estimados:</span>
                   <strong style={{ color: 'var(--color-warning-text)' }}>-{formatCurrency(prorrateo.gastoOperativoTotal)}</strong>
                 </div>
                 <div style={{
-                  padding: '0.35rem 0.5rem',
+                  padding: '0.35rem 0.55rem',
                   backgroundColor: netCashflowPosition >= 0 ? 'rgba(16, 185, 129, 0.1)' : 'var(--color-danger-bg)',
                   borderRadius: 'var(--radius-sm)',
                   border: `1px solid ${netCashflowPosition >= 0 ? 'rgba(16, 185, 129, 0.25)' : 'var(--color-danger)'}`,
                   display: 'flex',
                   justifyContent: 'space-between',
-                  fontSize: '0.75rem',
+                  fontSize: '0.8125rem',
                   alignItems: 'center'
                 }}>
                   <span style={{ fontWeight: 600 }}>Posición Neta Proyectada:</span>
@@ -1186,7 +1186,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
               </div>
             ) : (
               topSellingProducts.length === 0 ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)', fontSize: '0.75rem', padding: '1rem 0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)', fontSize: '0.8125rem', padding: '1rem 0' }}>
                   Sin ventas registradas en el mes actual
                 </div>
               ) : (
@@ -1197,14 +1197,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      padding: '0.35rem 0.5rem',
+                      padding: '0.4rem 0.6rem',
                       backgroundColor: 'var(--bg-subtle)',
                       borderRadius: 'var(--radius-sm)',
-                      fontSize: '0.725rem'
+                      fontSize: '0.8125rem'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', maxWidth: '65%' }}>
-                      <span style={{ width: '16px', height: '16px', borderRadius: '50%', backgroundColor: 'var(--color-accent)', color: '#fff', fontSize: '0.625rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', maxWidth: '65%' }}>
+                      <span style={{ width: '18px', height: '18px', borderRadius: '50%', backgroundColor: 'var(--color-accent)', color: '#fff', fontSize: '0.7rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, flexShrink: 0 }}>
                         {idx + 1}
                       </span>
                       <span style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -1215,7 +1215,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                       <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
                         {formatCurrency(item.total)}
                       </div>
-                      <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)' }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                         {item.qty} pzas vendidas
                       </span>
                     </div>
@@ -1226,7 +1226,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
           </div>
 
           <div style={{ marginTop: '0.45rem', paddingTop: '0.35rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Acción recomendada:</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Acción recomendada:</span>
             <button
               type="button"
               onClick={() => onNavigate('sales')}
@@ -1234,7 +1234,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                 background: 'none',
                 border: 'none',
                 color: 'var(--color-accent)',
-                fontSize: '0.7rem',
+                fontSize: '0.75rem',
                 fontWeight: 600,
                 cursor: 'pointer',
                 display: 'inline-flex',

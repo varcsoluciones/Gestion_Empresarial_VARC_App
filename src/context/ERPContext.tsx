@@ -33,7 +33,7 @@ import {
   initialOperatingExpenses,
   initialFixedAssets
 } from '../data/seedData';
-import { calculateWeightedAverageCost, generateDocNumber, getMonthKey, getNextProductSKU, getNextEntityId, formatCurrency, setActiveCurrencySymbol, getTodayLocalDateString, getFutureLocalDateString, parseDateSafe } from '../utils/formatters';
+import { calculateWeightedAverageCost, generateDocNumber, getNextDocNumber, getMonthKey, getNextProductSKU, getNextEntityId, formatCurrency, setActiveCurrencySymbol, getTodayLocalDateString, getFutureLocalDateString, parseDateSafe } from '../utils/formatters';
 import {
   downloadJSONBackup,
   downloadExcelWorkbook,
@@ -917,8 +917,14 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const addSupplierPayment = (paymentData: Omit<SupplierPayment, 'id'>) => {
+    const allSupplierPayments = purchases.flatMap(pur => pur.pagos || []);
+    const refFinal = paymentData.referencia && paymentData.referencia.trim()
+      ? paymentData.referencia.trim()
+      : getNextDocNumber('PA', allSupplierPayments);
+
     const payment: SupplierPayment = {
       ...paymentData,
+      referencia: refFinal,
       id: `pay-${Date.now()}`
     };
 
@@ -1132,8 +1138,14 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const addClientPayment = (paymentData: Omit<ClientPayment, 'id'>) => {
+    const allClientPayments = invoices.flatMap(inv => inv.pagos || []);
+    const refFinal = paymentData.referencia && paymentData.referencia.trim()
+      ? paymentData.referencia.trim()
+      : getNextDocNumber('CB', allClientPayments);
+
     const payment: ClientPayment = {
       ...paymentData,
+      referencia: refFinal,
       id: `cpay-${Date.now()}`
     };
 

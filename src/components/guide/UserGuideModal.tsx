@@ -18,7 +18,8 @@ import {
   ChevronRight,
   Lightbulb,
   Sliders,
-  RefreshCw
+  RefreshCw,
+  Hash
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { APP_NAME, APP_BRAND, APP_VERSION } from '../../config/version';
@@ -38,7 +39,8 @@ type GuideTab =
   | 'sales'
   | 'accounting'
   | 'reports'
-  | 'settings';
+  | 'settings'
+  | 'nomenclatures';
 
 export const UserGuideModal: React.FC<UserGuideModalProps> = ({
   isOpen,
@@ -60,7 +62,8 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
     { id: 'sales', label: '6. Ventas & CxC', icon: <TrendingUp size={17} /> },
     { id: 'accounting', label: '7. Gastos & Prorrateo', icon: <Calculator size={17} /> },
     { id: 'reports', label: '8. Reportes Financieros', icon: <BarChart3 size={17} /> },
-    { id: 'settings', label: '9. Configuración & PWA', icon: <Settings size={17} /> }
+    { id: 'settings', label: '9. Configuración & PWA', icon: <Settings size={17} /> },
+    { id: 'nomenclatures', label: '10. Folios y Nomenclaturas', icon: <Hash size={17} /> }
   ];
 
   const allTopics = [
@@ -171,6 +174,18 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
       tabLabel: '9. Configuración',
       title: 'Instalación en Celular (PWA)',
       desc: 'Cómo agregar la app a la pantalla de inicio de tu iPhone o Android.'
+    },
+    {
+      tab: 'nomenclatures' as GuideTab,
+      tabLabel: '10. Nomenclaturas',
+      title: 'Folios y Prefijos Inteligentes (FA, CB, PA, CA, GA, DE...)',
+      desc: 'Catálogo de nomenclatura consecutiva para facturas, cobros CxC, pagos CxP, gastos, compras y ajustes.'
+    },
+    {
+      tab: 'nomenclatures' as GuideTab,
+      tabLabel: '10. Nomenclaturas',
+      title: 'Abonos CxC (CB0001) y Pagos CxP (PA0001)',
+      desc: 'Generación automática consecutiva de folios en cobros a clientes y pagos a proveedores si se deja la referencia en blanco.'
     }
   ];
 
@@ -785,6 +800,190 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
                     En tu iPhone o Android abre el link en el navegador y selecciona <strong>"Agregar al Inicio"</strong> para tener el icono oficial del Gestor Modular y usarlo como app nativa.
                   </p>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* 10. NOMENCLATURES & PREFIXES */}
+          {searchTerm.trim() === '' && activeTab === 'nomenclatures' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div className="card" style={{ padding: '1.25rem' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--color-accent)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Hash size={18} />
+                  Guía Maestra de Folios y Prefijos Inteligentes
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
+                  El sistema utiliza una arquitectura de <strong>numeración correlativa inteligente</strong> para asignar identificadores únicos y ordenados a cada transacción comercial, movimiento contable y registro operativo.
+                </p>
+              </div>
+
+              {/* Informative Note */}
+              <div style={{
+                padding: '0.85rem 1rem',
+                backgroundColor: 'var(--color-accent-subtle)',
+                border: '1px solid var(--color-accent)',
+                borderRadius: 'var(--radius-md)',
+                display: 'flex',
+                gap: '0.65rem',
+                alignItems: 'flex-start',
+                fontSize: '0.8rem'
+              }}>
+                <Lightbulb size={18} style={{ color: 'var(--color-accent)', flexShrink: 0, marginTop: '2px' }} />
+                <div style={{ lineHeight: 1.45, color: 'var(--text-primary)' }}>
+                  <strong>¿Cómo funciona la asignación automática?</strong> Al generar cualquier comprobante o documento, el sistema analiza todos los registros históricos existentes, localiza el mayor sufijo numérico y calcula automáticamente el siguiente valor correlativo (<code>+1</code>). Esto garantiza que nunca se repitan folios ni existan colisiones, incluso si se archivan o anulan registros previos.
+                </div>
+              </div>
+
+              {/* Nomenclatures Table */}
+              <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
+                <table className="table" style={{ margin: 0, fontSize: '0.8125rem' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: 'var(--bg-subtle)' }}>
+                      <th style={{ width: '80px', textAlign: 'center' }}>Prefijo</th>
+                      <th style={{ width: '110px' }}>Folio Ejemplo</th>
+                      <th>Tipo de Documento / Registro</th>
+                      <th style={{ width: '130px' }}>Módulo</th>
+                      <th>Descripción y Regla de Generación</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td style={{ textAlign: 'center' }}>
+                        <span style={{ padding: '0.2rem 0.5rem', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10b981', fontWeight: 800, borderRadius: '4px', fontFamily: 'var(--font-mono)' }}>FA</span>
+                      </td>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>FA0001</td>
+                      <td><strong>Factura de Venta</strong></td>
+                      <td><span className="badge badge-subtle">Ventas & CxC</span></td>
+                      <td style={{ color: 'var(--text-secondary)' }}>Factura comercial definitiva con deducción inmediata de existencias en el Kardex.</td>
+                    </tr>
+                    <tr>
+                      <td style={{ textAlign: 'center' }}>
+                        <span style={{ padding: '0.2rem 0.5rem', backgroundColor: 'rgba(14, 165, 233, 0.15)', color: '#0284c7', fontWeight: 800, borderRadius: '4px', fontFamily: 'var(--font-mono)' }}>CB</span>
+                      </td>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>CB0001</td>
+                      <td><strong>Cobro de Cliente (Abono CxC)</strong></td>
+                      <td><span className="badge badge-subtle">Ventas & CxC</span></td>
+                      <td style={{ color: 'var(--text-secondary)' }}>Comprobante de cobro o abono recibido para liquidar total o parcialmente el saldo de una factura. Si se deja en blanco el folio de referencia, el sistema le asigna automáticamente este prefijo.</td>
+                    </tr>
+                    <tr>
+                      <td style={{ textAlign: 'center' }}>
+                        <span style={{ padding: '0.2rem 0.5rem', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#d97706', fontWeight: 800, borderRadius: '4px', fontFamily: 'var(--font-mono)' }}>PA</span>
+                      </td>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>PA0001</td>
+                      <td><strong>Pago a Proveedor (Abono CxP)</strong></td>
+                      <td><span className="badge badge-subtle">Compras & CxP</span></td>
+                      <td style={{ color: 'var(--text-secondary)' }}>Comprobante de pago o abono realizado a proveedores contra una orden de compra. Si no se introduce una referencia o número de autorización bancaria, el sistema asigna este consecutivo.</td>
+                    </tr>
+                    <tr>
+                      <td style={{ textAlign: 'center' }}>
+                        <span style={{ padding: '0.2rem 0.5rem', backgroundColor: 'rgba(99, 102, 241, 0.15)', color: '#6366f1', fontWeight: 800, borderRadius: '4px', fontFamily: 'var(--font-mono)' }}>CO</span>
+                      </td>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>CO0001</td>
+                      <td><strong>Cotización / Presupuesto</strong></td>
+                      <td><span className="badge badge-subtle">Ventas</span></td>
+                      <td style={{ color: 'var(--text-secondary)' }}>Propuesta comercial formal enviada a prospectos y clientes. No descuenta inventario hasta convertirse en factura en 1 clic.</td>
+                    </tr>
+                    <tr>
+                      <td style={{ textAlign: 'center' }}>
+                        <span style={{ padding: '0.2rem 0.5rem', backgroundColor: 'rgba(139, 92, 246, 0.15)', color: '#8b5cf6', fontWeight: 800, borderRadius: '4px', fontFamily: 'var(--font-mono)' }}>CT</span>
+                      </td>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>CT0001</td>
+                      <td><strong>Contrato Comercial</strong></td>
+                      <td><span className="badge badge-subtle">Ventas</span></td>
+                      <td style={{ color: 'var(--text-secondary)' }}>Convenios de suministro, proyectos o pólizas de servicio pactadas con clientes.</td>
+                    </tr>
+                    <tr>
+                      <td style={{ textAlign: 'center' }}>
+                        <span style={{ padding: '0.2rem 0.5rem', backgroundColor: 'rgba(236, 72, 153, 0.15)', color: '#db2777', fontWeight: 800, borderRadius: '4px', fontFamily: 'var(--font-mono)' }}>CA</span>
+                      </td>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>CA0001</td>
+                      <td><strong>Orden de Compra</strong></td>
+                      <td><span className="badge badge-subtle">Compras</span></td>
+                      <td style={{ color: 'var(--text-secondary)' }}>Compras de mercancía y materias primas a proveedores. Al recibirse, ingresa al Kardex recalculando el costo promedio ponderado.</td>
+                    </tr>
+                    <tr>
+                      <td style={{ textAlign: 'center' }}>
+                        <span style={{ padding: '0.2rem 0.5rem', backgroundColor: 'rgba(239, 68, 68, 0.15)', color: '#dc2626', fontWeight: 800, borderRadius: '4px', fontFamily: 'var(--font-mono)' }}>GA</span>
+                      </td>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>GA0001</td>
+                      <td><strong>Gasto Operativo (OpEx)</strong></td>
+                      <td><span className="badge badge-subtle">Contabilidad</span></td>
+                      <td style={{ color: 'var(--text-secondary)' }}>Gastos fijos, variables y financieros (rentas, nóminas, luz, publicidad) que se imputan y prorratean mensualmente.</td>
+                    </tr>
+                    <tr>
+                      <td style={{ textAlign: 'center' }}>
+                        <span style={{ padding: '0.2rem 0.5rem', backgroundColor: 'rgba(168, 85, 247, 0.15)', color: '#9333ea', fontWeight: 800, borderRadius: '4px', fontFamily: 'var(--font-mono)' }}>DE</span>
+                      </td>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>DE0001</td>
+                      <td><strong>Depreciación de Activos</strong></td>
+                      <td><span className="badge badge-subtle">Contabilidad</span></td>
+                      <td style={{ color: 'var(--text-secondary)' }}>Registro de desgaste contable mensual de mobiliario, equipo de cómputo, maquinaria y vehículos para el cálculo real de utilidad.</td>
+                    </tr>
+                    <tr>
+                      <td style={{ textAlign: 'center' }}>
+                        <span style={{ padding: '0.2rem 0.5rem', backgroundColor: 'rgba(20, 184, 166, 0.15)', color: '#0d9488', fontWeight: 800, borderRadius: '4px', fontFamily: 'var(--font-mono)' }}>PR</span>
+                      </td>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>PR0001</td>
+                      <td><strong>Cierre de Prorrateo</strong></td>
+                      <td><span className="badge badge-subtle">Contabilidad</span></td>
+                      <td style={{ color: 'var(--text-secondary)' }}>Póliza mensual de distribución de costos indirectos entre piezas vendidas por criterio de unidades, importe o margen.</td>
+                    </tr>
+                    <tr>
+                      <td style={{ textAlign: 'center' }}>
+                        <span style={{ padding: '0.2rem 0.5rem', backgroundColor: 'rgba(100, 116, 139, 0.15)', color: '#475569', fontWeight: 800, borderRadius: '4px', fontFamily: 'var(--font-mono)' }}>II</span>
+                      </td>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>II0001</td>
+                      <td><strong>Inventario Inicial</strong></td>
+                      <td><span className="badge badge-subtle">Inventario</span></td>
+                      <td style={{ color: 'var(--text-secondary)' }}>Carga o importación de balance inicial de existencias físicas para arranque del Kardex contable.</td>
+                    </tr>
+                    <tr>
+                      <td style={{ textAlign: 'center' }}>
+                        <span style={{ padding: '0.2rem 0.5rem', backgroundColor: 'rgba(249, 115, 22, 0.15)', color: '#ea580c', fontWeight: 800, borderRadius: '4px', fontFamily: 'var(--font-mono)' }}>AJ</span>
+                      </td>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>AJ0001</td>
+                      <td><strong>Ajuste Manual de Inventario</strong></td>
+                      <td><span className="badge badge-subtle">Inventario</span></td>
+                      <td style={{ color: 'var(--text-secondary)' }}>Entrada o salida manual para conciliar mermas, caducidades, diferencias en recuento físico o donaciones.</td>
+                    </tr>
+                    <tr>
+                      <td style={{ textAlign: 'center' }}>
+                        <span style={{ padding: '0.2rem 0.5rem', backgroundColor: 'rgba(79, 70, 229, 0.15)', color: '#4f46e5', fontWeight: 800, borderRadius: '4px', fontFamily: 'var(--font-mono)' }}>SKU</span>
+                      </td>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>SKU0001</td>
+                      <td><strong>Código Único de Producto</strong></td>
+                      <td><span className="badge badge-subtle">Catálogos Base</span></td>
+                      <td style={{ color: 'var(--text-secondary)' }}>Identificador individual para cada artículo comercial y variante registrada en el catálogo de productos.</td>
+                    </tr>
+                    <tr>
+                      <td style={{ textAlign: 'center' }}>
+                        <span style={{ padding: '0.2rem 0.5rem', backgroundColor: 'rgba(6, 95, 70, 0.15)', color: '#065f46', fontWeight: 800, borderRadius: '4px', fontFamily: 'var(--font-mono)' }}>CL</span>
+                      </td>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>CL0001</td>
+                      <td><strong>Código de Cliente</strong></td>
+                      <td><span className="badge badge-subtle">Catálogos Base</span></td>
+                      <td style={{ color: 'var(--text-secondary)' }}>Clave contable asignada a cada cliente para seguimiento de cuentas por cobrar y estados de cuenta.</td>
+                    </tr>
+                    <tr>
+                      <td style={{ textAlign: 'center' }}>
+                        <span style={{ padding: '0.2rem 0.5rem', backgroundColor: 'rgba(153, 27, 27, 0.15)', color: '#991b1b', fontWeight: 800, borderRadius: '4px', fontFamily: 'var(--font-mono)' }}>PR</span>
+                      </td>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>PR0001</td>
+                      <td><strong>Código de Proveedor</strong></td>
+                      <td><span className="badge badge-subtle">Catálogos Base</span></td>
+                      <td style={{ color: 'var(--text-secondary)' }}>Clave de acreedor comercial asociada a las compras y condiciones de pago.</td>
+                    </tr>
+                    <tr>
+                      <td style={{ textAlign: 'center' }}>
+                        <span style={{ padding: '0.2rem 0.5rem', backgroundColor: 'rgba(88, 28, 135, 0.15)', color: '#6b21a8', fontWeight: 800, borderRadius: '4px', fontFamily: 'var(--font-mono)' }}>AC</span>
+                      </td>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>AC0001</td>
+                      <td><strong>Activo Fijo</strong></td>
+                      <td><span className="badge badge-subtle">Catálogos Base</span></td>
+                      <td style={{ color: 'var(--text-secondary)' }}>Identificador patrimonial para bienes muebles, maquinaria, equipo de oficina y cómputo sujetos a depreciación.</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
