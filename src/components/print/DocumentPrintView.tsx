@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { Invoice, Quote } from '../../types/erp';
 import { useERP } from '../../context/ERPContext';
 import { formatCurrency, formatDate, formatDateTime } from '../../utils/formatters';
@@ -18,6 +19,18 @@ export const DocumentPrintView: React.FC<DocumentPrintViewProps> = ({
 }) => {
   const { settings, clients } = useERP();
   const client = clients.find(c => c.id === doc.clienteId);
+
+  useEffect(() => {
+    document.body.classList.add('printing-document');
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.classList.remove('printing-document');
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
 
   const isInvoice = type === 'invoice';
   const invoice = isInvoice ? (doc as Invoice) : null;
@@ -44,9 +57,9 @@ export const DocumentPrintView: React.FC<DocumentPrintViewProps> = ({
     window.print();
   };
 
-  return (
-    <div className="modal-overlay" style={{ padding: '1.5rem 1rem' }}>
-      <div className="modal-card modal-xl print-document-container">
+  return createPortal(
+    <div className="modal-overlay print-modal-overlay" style={{ padding: '1.5rem 1rem' }} onClick={onClose}>
+      <div className="modal-card modal-xl print-document-container" onClick={(e) => e.stopPropagation()}>
         {/* Action Header - Sticky & Hidden on Print */}
         <div className="no-print" style={{
           display: 'flex',
@@ -76,9 +89,9 @@ export const DocumentPrintView: React.FC<DocumentPrintViewProps> = ({
         {/* Printable Document Body with Smooth Scroll */}
         <div className="print-document-body">
           {/* Header Row */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #e2e8f0', paddingBottom: '1.5rem' }}>
+          <div className="print-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #e2e8f0', paddingBottom: '1.5rem' }}>
             <div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.03em' }}>
+              <div className="doc-company-name" style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.03em' }}>
                 {settings.nombreEmpresa}
               </div>
               <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.25rem' }}>
@@ -111,8 +124,8 @@ export const DocumentPrintView: React.FC<DocumentPrintViewProps> = ({
           </div>
 
           {/* Metadata Row: Client & Dates */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.5rem', margin: '1.5rem 0' }}>
-            <div style={{ backgroundColor: '#f8fafc', padding: '1rem 1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+          <div className="print-metadata-grid" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.5rem', margin: '1.5rem 0' }}>
+            <div className="print-card-box" style={{ backgroundColor: '#f8fafc', padding: '1rem 1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
               <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
                 Información del Cliente
               </div>
@@ -134,7 +147,7 @@ export const DocumentPrintView: React.FC<DocumentPrintViewProps> = ({
               )}
             </div>
 
-            <div style={{ backgroundColor: '#f8fafc', padding: '1rem 1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <div className="print-card-box" style={{ backgroundColor: '#f8fafc', padding: '1rem 1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
               <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
                 Detalles del Documento
               </div>
@@ -162,7 +175,7 @@ export const DocumentPrintView: React.FC<DocumentPrintViewProps> = ({
           </div>
 
           {/* Items Table */}
-          <table style={{ width: '100%', borderCollapse: 'collapse', margin: '1.5rem 0' }}>
+          <table className="print-items-table" style={{ width: '100%', borderCollapse: 'collapse', margin: '1.5rem 0' }}>
             <thead>
               <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '2px solid #cbd5e1' }}>
                 <th style={{ textAlign: 'left', padding: '0.75rem', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>Descripción</th>
@@ -196,8 +209,8 @@ export const DocumentPrintView: React.FC<DocumentPrintViewProps> = ({
           </table>
 
           {/* Totals & Notes Section */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '1.5rem', marginTop: '1.5rem' }}>
-            <div style={{ backgroundColor: '#f8fafc', padding: '1rem 1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div className="print-totals-grid" style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '1.5rem', marginTop: '1.5rem' }}>
+            <div className="print-card-box" style={{ backgroundColor: '#f8fafc', padding: '1rem 1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <div>
                 <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
                   Notas y Condiciones Comerciales
@@ -232,7 +245,7 @@ export const DocumentPrintView: React.FC<DocumentPrintViewProps> = ({
               )}
             </div>
 
-            <div style={{ backgroundColor: '#f8fafc', padding: '1rem 1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0', height: 'fit-content' }}>
+            <div className="print-card-box" style={{ backgroundColor: '#f8fafc', padding: '1rem 1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0', height: 'fit-content' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '0.25rem 0', color: '#475569' }}>
                 <span>Subtotal:</span>
                 <span>{formatCurrency(doc.subtotal)}</span>
@@ -274,12 +287,13 @@ export const DocumentPrintView: React.FC<DocumentPrintViewProps> = ({
           </div>
 
           {/* Footer note & credentials */}
-          <div style={{ marginTop: '2.5rem', paddingTop: '1.25rem', borderTop: '1px solid #e2e8f0', textAlign: 'center', fontSize: '0.75rem', color: '#94a3b8', paddingBottom: '1.5rem' }}>
+          <div className="print-footer" style={{ marginTop: '2.5rem', paddingTop: '1.25rem', borderTop: '1px solid #e2e8f0', textAlign: 'center', fontSize: '0.75rem', color: '#94a3b8', paddingBottom: '1.5rem' }}>
             <div>Documento emitido para efectos de control interno y administración empresarial por <strong>{settings.nombreEmpresa}</strong>.</div>
             <div style={{ marginTop: '0.2rem' }}>RFC: {settings.identificacionFiscal} | Tel: {settings.telefono} | {settings.email}</div>
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

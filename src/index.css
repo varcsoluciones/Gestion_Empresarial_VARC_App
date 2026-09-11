@@ -1815,45 +1815,168 @@ body {
 
 /* Print Styles */
 @media print {
-  body {
-    background: white !important;
-    color: black !important;
+  @page {
+    size: letter portrait;
+    margin: 10mm 12mm;
   }
-  .app-sidebar, .app-topbar, .page-header, .page-actions, .tabs-nav, .filters-bar, .no-print {
-    display: none !important;
-  }
-  .modal-overlay {
-    position: static !important;
+
+  html, body {
+    margin: 0 !important;
     padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Single Document Mode: hide the entire main app so ONLY the invoice/quote prints */
+  body.printing-document #root,
+  body.printing-document .app-container {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Standard Report Print Mode: hide shell chrome only when printing a report */
+  body:not(.printing-document) .app-sidebar,
+  body:not(.printing-document) .app-topbar,
+  body:not(.printing-document) .page-header,
+  body:not(.printing-document) .page-actions,
+  body:not(.printing-document) .tabs-nav,
+  body:not(.printing-document) .filters-bar,
+  .no-print {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  body:not(.printing-document) .app-main,
+  body:not(.printing-document) .app-page-body,
+  body:not(.printing-document) .page-content {
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* Single Document Print Modal & Layout Optimizations */
+  .modal-overlay.print-modal-overlay {
+    position: static !important;
+    inset: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
     background: transparent !important;
     backdrop-filter: none !important;
     display: block !important;
-    animation: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
   }
+
   .modal-card.print-document-container {
+    position: static !important;
     max-height: none !important;
     max-width: 100% !important;
     width: 100% !important;
-    overflow: visible !important;
     box-shadow: none !important;
     border: none !important;
     border-radius: 0 !important;
-    animation: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+    display: block !important;
   }
+
   .print-document-body {
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
     max-height: none !important;
-    height: auto !important;
-    overflow: visible !important;
-    padding: 0 !important;
+    width: 100% !important;
+    font-size: 9.5pt !important;
+    line-height: 1.35 !important;
+    color: #0f172a !important;
+    background: #ffffff !important;
   }
-  .app-main, .app-page-body {
-    height: auto !important;
-    overflow: visible !important;
-    padding: 0 !important;
+
+  .print-header-row {
+    padding-bottom: 0.75rem !important;
+    margin-bottom: 0.5rem !important;
+    border-bottom: 2px solid #cbd5e1 !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
-  .page-content {
-    padding: 0 !important;
-    max-width: 100% !important;
+
+  .print-header-row .doc-company-name {
+    font-size: 1.35rem !important;
+    margin-bottom: 0.2rem !important;
+  }
+
+  .print-metadata-grid {
+    margin: 0.65rem 0 !important;
+    gap: 0.75rem !important;
+    grid-template-columns: 1.2fr 1fr !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .print-card-box {
+    padding: 0.6rem 0.8rem !important;
+    background-color: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 6px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-items-table {
+    margin: 0.65rem 0 !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  .print-items-table thead {
+    display: table-header-group !important;
+  }
+
+  .print-items-table th {
+    padding: 0.4rem 0.5rem !important;
+    font-size: 8pt !important;
+    background-color: #f1f5f9 !important;
+    border-bottom: 2px solid #94a3b8 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-items-table td {
+    padding: 0.35rem 0.5rem !important;
+    font-size: 8.5pt !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+  }
+
+  .print-items-table tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .print-totals-grid {
+    margin-top: 0.65rem !important;
+    gap: 0.75rem !important;
+    grid-template-columns: 1.3fr 1fr !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .print-footer {
+    margin-top: 1rem !important;
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.25rem !important;
+    border-top: 1px solid #cbd5e1 !important;
+    font-size: 7.5pt !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
 }
 
