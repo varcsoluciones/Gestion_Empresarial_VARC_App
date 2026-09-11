@@ -435,7 +435,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         type: 'total' as const,
         startVal: 0,
         endVal: s1_gross,
-        color: '#10b981',
+        color: 'var(--color-accent)',
+        opacity: 1,
         description: 'Facturación total emitida en el periodo'
       },
       {
@@ -447,7 +448,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         type: 'deduction' as const,
         startVal: s1_gross,
         endVal: Math.max(0, s1_gross - s2_cogs),
-        color: '#f43f5e',
+        color: '#e05260',
+        opacity: 0.85,
         description: 'Costo directo promedio de los productos vendidos'
       },
       {
@@ -459,7 +461,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         type: 'subtotal' as const,
         startVal: 0,
         endVal: s3_grossMargin,
-        color: '#0284c7',
+        color: 'var(--color-accent)',
+        opacity: 0.72,
         description: 'Ganancia bruta antes de gastos de estructura y operación'
       },
       {
@@ -471,7 +474,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         type: 'deduction' as const,
         startVal: s3_grossMargin,
         endVal: Math.max(0, s3_grossMargin - s4_opex),
-        color: '#f59e0b',
+        color: '#d97706',
+        opacity: 0.85,
         description: 'Gastos fijos, variables y servicios del periodo'
       },
       {
@@ -483,7 +487,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         type: 'deduction' as const,
         startVal: Math.max(0, s3_grossMargin - s4_opex),
         endVal: Math.max(0, s3_grossMargin - s4_opex - s5_deprec),
-        color: '#a855f7',
+        color: '#64748b',
+        opacity: 0.85,
         description: 'Desgaste contable mensual de mobiliario y equipo'
       },
       {
@@ -495,7 +500,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         type: 'final' as const,
         startVal: 0,
         endVal: s6_netProfit,
-        color: s6_netProfit >= 0 ? '#059669' : '#dc2626',
+        color: s6_netProfit >= 0 ? 'var(--color-accent)' : 'var(--color-danger)',
+        opacity: 1,
         description: 'Resultado neto disponible después de todos los costos contables'
       }
     ].map(step => ({
@@ -579,8 +585,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
           <div className="stat-sparkline-footer">
             <span>Margen sobre ventas</span>
             <span className="stat-sparkline-badge" style={{
-              backgroundColor: netProfitMargin >= 15 ? 'var(--color-success-bg)' : (netProfitMargin >= 0 ? 'rgba(14, 165, 233, 0.12)' : 'var(--color-danger-bg)'),
-              color: netProfitMargin >= 15 ? 'var(--color-success-text)' : (netProfitMargin >= 0 ? '#0284c7' : 'var(--color-danger-text)')
+              backgroundColor: netProfitMargin >= 15 ? 'var(--color-success-bg)' : (netProfitMargin >= 0 ? 'var(--color-accent-subtle)' : 'var(--color-danger-bg)'),
+              color: netProfitMargin >= 15 ? 'var(--color-success-text)' : (netProfitMargin >= 0 ? 'var(--color-accent-text)' : 'var(--color-danger-text)')
             }}>
               {netProfitMargin.toFixed(1)}% margen
             </span>
@@ -687,22 +693,22 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
 
             {/* Leyenda con indicadores de color y totales acumulados */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.75rem', flexWrap: 'wrap' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--text-secondary)' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-secondary)' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-accent)' }} />
                 Ventas ({formatCompactCurrency(totalVentasHist)})
               </span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--text-secondary)' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#f43f5e' }} />
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-secondary)' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--text-muted)' }} />
                 Costos ({formatCompactCurrency(totalCostosHist)})
               </span>
               <span style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.3rem',
-                color: totalUtilidadHist >= 0 ? '#0284c7' : 'var(--color-danger-text)',
+                gap: '0.35rem',
+                color: totalUtilidadHist >= 0 ? 'var(--color-accent-text)' : 'var(--color-danger-text)',
                 fontWeight: 600
               }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#0ea5e9' }} />
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-accent)' }} />
                 Utilidad ({formatCompactCurrency(totalUtilidadHist)} · {margenPromedioHist.toFixed(0)}%)
               </span>
             </div>
@@ -732,20 +738,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                 >
                   <defs>
                     <linearGradient id="areaVentasGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#10b981" stopOpacity="0.18" />
-                      <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
-                    </linearGradient>
-                    <linearGradient id="lineVentasGrad" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="#34d399" />
-                      <stop offset="100%" stopColor="#10b981" />
-                    </linearGradient>
-                    <linearGradient id="lineCostoGrad" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="#fb7185" />
-                      <stop offset="100%" stopColor="#f43f5e" />
-                    </linearGradient>
-                    <linearGradient id="lineUtilidadGrad" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="#38bdf8" />
-                      <stop offset="100%" stopColor="#0ea5e9" />
+                      <stop offset="0%" stopColor="var(--color-accent)" stopOpacity="0.16" />
+                      <stop offset="100%" stopColor="var(--color-accent)" stopOpacity="0.0" />
                     </linearGradient>
                   </defs>
 
@@ -759,9 +753,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
 
                   {/* Curvas y Áreas Suaves */}
                   {ventasAreaPath && <path d={ventasAreaPath} fill="url(#areaVentasGrad)" />}
-                  {costoLinePath && <path d={costoLinePath} fill="none" stroke="url(#lineCostoGrad)" strokeWidth="2.2" strokeLinecap="round" strokeDasharray="4 2" />}
-                  {ventasLinePath && <path d={ventasLinePath} fill="none" stroke="url(#lineVentasGrad)" strokeWidth="2.5" strokeLinecap="round" />}
-                  {utilidadLinePath && <path d={utilidadLinePath} fill="none" stroke="url(#lineUtilidadGrad)" strokeWidth="2" strokeLinecap="round" />}
+                  {costoLinePath && <path d={costoLinePath} fill="none" stroke="var(--text-muted)" strokeWidth="1.8" strokeLinecap="round" strokeDasharray="4 3" opacity="0.8" />}
+                  {ventasLinePath && <path d={ventasLinePath} fill="none" stroke="var(--color-accent)" strokeWidth="2.5" strokeLinecap="round" />}
+                  {utilidadLinePath && <path d={utilidadLinePath} fill="none" stroke="var(--color-accent)" strokeWidth="1.8" strokeLinecap="round" strokeDasharray="2 2" opacity="0.9" />}
 
                   {/* Nodos Interactivos */}
                   {historicalStats.map((stat, idx) => {
@@ -786,7 +780,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                           cx={xPos}
                           cy={getY(stat.ventas)}
                           r={isHovered ? 5.5 : 3.5}
-                          fill="#10b981"
+                          fill="var(--color-accent)"
                           stroke="var(--bg-surface)"
                           strokeWidth="2"
                         />
@@ -796,17 +790,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                           cx={xPos}
                           cy={getY(stat.costoTotal)}
                           r={isHovered ? 4.5 : 3}
-                          fill="#f43f5e"
+                          fill="var(--text-muted)"
                           stroke="var(--bg-surface)"
                           strokeWidth="1.5"
                         />
 
-                        {/* Utilidad Circle (Punto azul interactivo) */}
+                        {/* Utilidad Circle */}
                         <circle
                           cx={xPos}
                           cy={getY(Math.max(0, stat.utilidad))}
                           r={isHovered ? 4.5 : 3}
-                          fill="#0ea5e9"
+                          fill="var(--color-accent)"
                           stroke="var(--bg-surface)"
                           strokeWidth="1.5"
                         />
@@ -828,15 +822,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                     <div style={{ fontWeight: 700, borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.2rem', marginBottom: '0.3rem', color: 'var(--text-primary)' }}>
                       {historicalStats[hoveredMonthIndex].label}
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.85rem', color: '#10b981', marginBottom: '0.15rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.85rem', color: 'var(--color-accent)', marginBottom: '0.15rem' }}>
                       <span style={{ color: 'var(--text-secondary)' }}>Ventas:</span>
                       <strong>{formatCurrency(historicalStats[hoveredMonthIndex].ventas)}</strong>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.85rem', color: '#f43f5e', marginBottom: '0.15rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.15rem' }}>
                       <span style={{ color: 'var(--text-secondary)' }}>Costos:</span>
                       <strong>{formatCurrency(historicalStats[hoveredMonthIndex].costoTotal)}</strong>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.85rem', color: '#0ea5e9' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.85rem', color: 'var(--color-accent)' }}>
                       <span style={{ color: 'var(--text-secondary)' }}>Utilidad Neta:</span>
                       <strong>
                         {formatCurrency(historicalStats[hoveredMonthIndex].utilidad)} ({historicalStats[hoveredMonthIndex].margen.toFixed(0)}%)
@@ -877,7 +871,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
             <div>
               <h2 style={{ fontSize: '1.05rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, color: 'var(--text-primary)' }}>
-                <BarChart3 size={18} style={{ color: '#0ea5e9' }} />
+                <BarChart3 size={18} style={{ color: 'var(--color-accent)' }} />
                 Puente de Utilidad (Waterfall)
               </h2>
               <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', margin: '0.15rem 0 0 0' }}>
@@ -887,8 +881,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
 
             <div style={{
               padding: '0.25rem 0.55rem',
-              backgroundColor: netOperatingProfit >= 0 ? 'rgba(16, 185, 129, 0.12)' : 'var(--color-danger-bg)',
-              border: `1px solid ${netOperatingProfit >= 0 ? 'rgba(16, 185, 129, 0.3)' : 'var(--color-danger)'}`,
+              backgroundColor: netOperatingProfit >= 0 ? 'var(--color-accent-subtle)' : 'var(--color-danger-bg)',
+              border: `1px solid ${netOperatingProfit >= 0 ? 'var(--color-accent-subtle-border)' : 'var(--color-danger-border)'}`,
               borderRadius: 'var(--radius-sm)',
               fontSize: '0.75rem',
               display: 'flex',
@@ -896,7 +890,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
               gap: '0.35rem'
             }}>
               <span style={{ color: 'var(--text-muted)' }}>Neto:</span>
-              <strong style={{ color: netOperatingProfit >= 0 ? '#10b981' : 'var(--color-danger-text)' }}>
+              <strong style={{ color: netOperatingProfit >= 0 ? 'var(--color-accent-text)' : 'var(--color-danger-text)' }}>
                 {formatCurrency(netOperatingProfit)} ({netProfitMargin.toFixed(0)}%)
               </strong>
             </div>
@@ -951,10 +945,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                           height: `${heightPct}%`,
                           backgroundColor: step.color,
                           borderRadius: '4px',
-                          boxShadow: isHovered ? `0 4px 12px ${step.color}66` : 'none',
+                          boxShadow: isHovered ? '0 4px 12px var(--color-accent-glow)' : 'none',
                           transform: isHovered ? 'scaleY(1.03)' : 'none',
                           transition: 'all 0.18s ease',
-                          opacity: hoveredWaterfallStep !== null && !isHovered ? 0.6 : 1
+                          opacity: hoveredWaterfallStep !== null && !isHovered ? 0.45 : (step.opacity || 1)
                         }}
                       />
                     </div>
@@ -1009,7 +1003,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         <div className="card" style={{ padding: '0.85rem 1rem', display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem' }}>
             <h3 style={{ fontSize: '0.95rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.45rem', margin: 0, color: 'var(--text-primary)' }}>
-              <CreditCard size={16} style={{ color: 'var(--color-info)' }} />
+              <CreditCard size={16} style={{ color: 'var(--color-accent)' }} />
               Semáforo de Cobranza CxC
             </h3>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -1074,7 +1068,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         <div className="card" style={{ padding: '0.85rem 1rem', display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem' }}>
             <h3 style={{ fontSize: '0.95rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.45rem', margin: 0, color: 'var(--text-primary)' }}>
-              <Boxes size={16} style={{ color: 'var(--color-warning)' }} />
+              <Boxes size={16} style={{ color: 'var(--color-accent)' }} />
               Reabastecimiento de Stock
             </h3>
             <span style={{ fontSize: '0.75rem', color: lowStockProducts.length > 0 ? 'var(--color-warning-text)' : 'var(--color-success-text)', fontWeight: 600 }}>
@@ -1179,7 +1173,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', padding: '0.2rem 0' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
                   <span style={{ color: 'var(--text-muted)' }}>(+) Cobros esperados (CxC):</span>
-                  <strong style={{ color: 'var(--color-success)' }}>{formatCurrency(pendingReceivables)}</strong>
+                  <strong style={{ color: 'var(--color-accent-text)' }}>{formatCurrency(pendingReceivables)}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
                   <span style={{ color: 'var(--text-muted)' }}>(-) Pagos proveedores (CxP):</span>
@@ -1191,16 +1185,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                 </div>
                 <div style={{
                   padding: '0.35rem 0.55rem',
-                  backgroundColor: netCashflowPosition >= 0 ? 'rgba(16, 185, 129, 0.1)' : 'var(--color-danger-bg)',
+                  backgroundColor: netCashflowPosition >= 0 ? 'var(--color-accent-subtle)' : 'var(--color-danger-bg)',
                   borderRadius: 'var(--radius-sm)',
-                  border: `1px solid ${netCashflowPosition >= 0 ? 'rgba(16, 185, 129, 0.25)' : 'var(--color-danger)'}`,
+                  border: `1px solid ${netCashflowPosition >= 0 ? 'var(--color-accent-subtle-border)' : 'var(--color-danger-border)'}`,
                   display: 'flex',
                   justifyContent: 'space-between',
                   fontSize: '0.8125rem',
                   alignItems: 'center'
                 }}>
                   <span style={{ fontWeight: 600 }}>Posición Neta Proyectada:</span>
-                  <strong style={{ color: netCashflowPosition >= 0 ? 'var(--color-success-text)' : 'var(--color-danger-text)' }}>
+                  <strong style={{ color: netCashflowPosition >= 0 ? 'var(--color-accent-text)' : 'var(--color-danger-text)' }}>
                     {formatCurrency(netCashflowPosition)}
                   </strong>
                 </div>
