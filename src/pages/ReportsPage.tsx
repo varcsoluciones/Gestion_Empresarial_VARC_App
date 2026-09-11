@@ -3,7 +3,6 @@ import { useERP } from '../context/ERPContext';
 import { formatCurrency, formatDateTime, getMonthKey } from '../utils/formatters';
 import {
   BarChart3,
-  FileSpreadsheet,
   TrendingUp,
   Printer,
   Scale,
@@ -17,9 +16,7 @@ import {
   ArrowDownRight,
   PieChart,
   Search,
-  Filter,
-  Lock,
-  Sparkles
+  Filter
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { ExcelExportButton } from '../components/common/ExcelExportButton';
@@ -50,7 +47,9 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
   } = useERP();
 
   const [selectedMonth, setSelectedMonth] = useState(getMonthKey());
-  const [activeReport, setActiveReport] = useState<'pnl' | 'balance' | 'sales' | 'costs' | 'profitability'>(initialReport || 'pnl');
+  const [activeReport, setActiveReport] = useState<'pnl' | 'balance' | 'sales' | 'costs' | 'profitability'>(
+    initialReport === 'costs' ? 'profitability' : (initialReport || 'pnl')
+  );
 
   const availableMonths = useMemo(() => {
     const set = new Set<string>();
@@ -67,7 +66,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
 
   React.useEffect(() => {
     if (initialReport) {
-      setActiveReport(initialReport);
+      setActiveReport(initialReport === 'costs' ? 'profitability' : initialReport);
     }
   }, [initialReport]);
 
@@ -192,7 +191,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
 
       const variant = prod?.variantes?.find(v => v.id === item.varianteId);
       const variantSku = variant?.sku || (item.varianteId ? `VAR-${item.varianteId.slice(-4).toUpperCase()}` : '-');
-      const variantDesc = variant ? `${variant.color} / Talla ${variant.talla}` : '';
+      const variantDesc = variant ? [variant.talla, variant.color].filter(Boolean).join(' / ') : '';
 
       const lineGross = item.cantidad * item.precioUnitario;
       const lineDiscountPct = item.descuento || 0;
@@ -343,6 +342,8 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
     ingresoTotal: number;
     margenMonto: number;
     margenPorcentaje: number;
+    stockDisponible: number;
+    valuacionStockReal: number;
   }
 
   const skuProfitabilityList: SkuProfitabilityRow[] = useMemo(() => {
@@ -358,8 +359,10 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
         p.variantes.forEach(v => {
           const skuCode = v.sku || `${p.codigo}-${v.talla}-${v.color}`;
           const variantPrice = p.precioVenta + (v.precioExtra || 0);
-          const varDesc = `${v.color} / Talla ${v.talla}`;
-          const fullName = `${p.nombre} (${varDesc})`;
+          const varDesc = [v.talla, v.color].filter(Boolean).join(' / ');
+          const fullName = varDesc ? `${p.nombre} (${varDesc})` : p.nombre;
+          const stockDisp = v.stockActual;
+          const valStock = stockDisp * costs.costoReal;
 
           // Find matching invoice items in this month
           const matchingItems = monthInvoices.flatMap(inv => inv.items).filter(it => {
@@ -396,12 +399,16 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
             costoTotalVenta: Number(costoTotalVta.toFixed(2)),
             ingresoTotal: Number(ingreso.toFixed(2)),
             margenMonto: Number(margenM.toFixed(2)),
-            margenPorcentaje: margenPct
+            margenPorcentaje: margenPct,
+            stockDisponible: stockDisp,
+            valuacionStockReal: Number(valStock.toFixed(2))
           });
         });
       } else {
         const skuCode = p.codigo;
         const fullName = p.nombre;
+        const stockDisp = isPastMonth ? getProductStockAndCostAtMonth(p.id, selectedMonth).stock : p.stockActual;
+        const valStock = stockDisp * costs.costoReal;
 
         const matchingItems = monthInvoices.flatMap(inv => inv.items).filter(it => {
           if (it.productoId === p.id) {
@@ -437,7 +444,9 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
           costoTotalVenta: Number(costoTotalVta.toFixed(2)),
           ingresoTotal: Number(ingreso.toFixed(2)),
           margenMonto: Number(margenM.toFixed(2)),
-          margenPorcentaje: margenPct
+          margenPorcentaje: margenPct,
+          stockDisponible: stockDisp,
+          valuacionStockReal: Number(valStock.toFixed(2))
         });
       }
     });
@@ -468,14 +477,16 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
             costoTotalVenta: Number(costoTotalVta.toFixed(2)),
             ingresoTotal: Number(ingreso.toFixed(2)),
             margenMonto: Number(margenM.toFixed(2)),
-            margenPorcentaje: ingreso > 0 ? Number(((margenM / ingreso) * 100).toFixed(1)) : 0
+            margenPorcentaje: ingreso > 0 ? Number(((margenM / ingreso) * 100).toFixed(1)) : 0,
+            stockDisponible: 0,
+            valuacionStockReal: 0
           });
         }
       });
     });
 
     return list;
-  }, [products, categories, monthInvoices, selectedMonth, getProductRealCost]);
+  }, [products, categories, monthInvoices, selectedMonth, getProductRealCost, isPastMonth, getProductStockAndCostAtMonth]);
 
   // Filtering for Profitability Analysis
   const filteredSkuProfitability = useMemo(() => {
@@ -509,6 +520,8 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
     const totalIngreso = sortedSkuProfitability.reduce((s, i) => s + i.ingresoTotal, 0);
     const totalMargenMonto = totalIngreso - totalCostoVenta;
     const totalMargenPct = totalIngreso > 0 ? ((totalMargenMonto / totalIngreso) * 100).toFixed(1) : '0';
+    const totalStockFiltrado = sortedSkuProfitability.reduce((s, i) => s + i.stockDisponible, 0);
+    const totalValuacionRealFiltrada = sortedSkuProfitability.reduce((s, i) => s + i.valuacionStockReal, 0);
 
     return {
       totalVendidas,
@@ -516,6 +529,8 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
       totalIngreso,
       totalMargenMonto,
       totalMargenPct,
+      totalStockFiltrado,
+      totalValuacionRealFiltrada,
       countItems: sortedSkuProfitability.length
     };
   }, [sortedSkuProfitability]);
@@ -534,7 +549,9 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
     { key: 'costoTotalVenta', label: 'Costo Total de Venta', formatter: (v) => formatCurrency(v) },
     { key: 'ingresoTotal', label: 'Ingreso Total Facturado', formatter: (v) => formatCurrency(v) },
     { key: 'margenMonto', label: 'Margen Final ($)', formatter: (v) => formatCurrency(v) },
-    { key: 'margenPorcentaje', label: 'Margen Final (%)', formatter: (v) => `${v}%` }
+    { key: 'margenPorcentaje', label: 'Margen Final (%)', formatter: (v) => `${v}%` },
+    { key: 'stockDisponible', label: 'Stock Disponible' },
+    { key: 'valuacionStockReal', label: 'Valuación Stock a Costo Real', formatter: (v) => formatCurrency(v) }
   ];
 
   const handlePrintReport = () => {
@@ -594,19 +611,11 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
         </button>
         <button
           type="button"
-          className={`tab-btn ${activeReport === 'costs' ? 'active' : ''}`}
-          onClick={() => setActiveReport('costs')}
-        >
-          <FileSpreadsheet size={16} />
-          Comparativa de Costos
-        </button>
-        <button
-          type="button"
           className={`tab-btn ${activeReport === 'profitability' ? 'active' : ''}`}
           onClick={() => setActiveReport('profitability')}
         >
           <PieChart size={16} />
-          Análisis de Rentabilidad
+          Costos y Rentabilidad
         </button>
       </div>
 
@@ -1258,172 +1267,11 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
         </div>
       )}
 
-      {/* Report 4: Cost Comparison with Available Stock and Real Inventory Valuation */}
-      {activeReport === 'costs' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          
-          {/* Real Inventory Balance KPI Cards */}
-          <div className="grid-4">
-            <div className="stat-card">
-              <div className="stat-header">
-                <span>Stock Físico Disponible</span>
-                <div className="stat-icon" style={{ backgroundColor: 'var(--color-info-bg)', color: 'var(--color-info)' }}>
-                  <Boxes size={18} />
-                </div>
-              </div>
-              <div className="stat-value">{totalStockUnits} pzas</div>
-              <div className="stat-footer">
-                <span style={{ color: 'var(--text-muted)' }}>{products.length} productos en catálogo</span>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-header">
-                <span>Valuación Directa (Compra)</span>
-                <div className="stat-icon" style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)' }}>
-                  <DollarSign size={18} />
-                </div>
-              </div>
-              <div className="stat-value">{formatCurrency(totalValuationCompra)}</div>
-              <div className="stat-footer">
-                <span style={{ color: 'var(--text-muted)' }}>Costo base de adquisición</span>
-              </div>
-            </div>
-
-            <div className="stat-card" style={{ borderColor: 'var(--color-accent)', boxShadow: '0 4px 12px var(--color-accent-glow)' }}>
-              <div className="stat-header">
-                <span style={{ color: 'var(--color-accent)', fontWeight: 700 }}>Valuación Real (Balance)</span>
-                <div className="stat-icon" style={{ backgroundColor: 'var(--color-accent)', color: 'white' }}>
-                  <Layers size={18} />
-                </div>
-              </div>
-              <div className="stat-value" style={{ color: 'var(--color-accent)' }}>{formatCurrency(totalValuationReal)}</div>
-              <div className="stat-footer">
-                <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Stock × Costo Real Total</span>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-header">
-                <span>Absorción en Inventario</span>
-                <div className="stat-icon" style={{ backgroundColor: 'var(--color-warning-bg)', color: 'var(--color-warning)' }}>
-                  <TrendingUp size={18} />
-                </div>
-              </div>
-              <div className="stat-value" style={{ color: 'var(--color-warning-text)' }}>
-                +{formatCurrency(totalValuationReal - totalValuationCompra)}
-              </div>
-              <div className="stat-footer">
-                <span style={{ color: 'var(--text-muted)' }}>Gastos operativos absorbidos</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
-                  <h2 className="card-title" style={{ margin: 0 }}>Matriz de Costo Directo vs Costo Real Absorbido & Valuación de Stock</h2>
-                  {isPastMonth ? (
-                    <span className="badge badge-neutral" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700, fontSize: '0.75rem', padding: '0.25rem 0.6rem', border: '1px solid var(--border-default)' }}>
-                      <Lock size={12} /> Periodo Cerrado (Histórico Inmutable)
-                    </span>
-                  ) : (
-                    <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700, fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}>
-                      <Sparkles size={12} /> Periodo en Curso (Cálculo en Vivo)
-                    </span>
-                  )}
-                </div>
-                <p className="card-subtitle">
-                  Regla Activa: <strong>{prorrateo.criterio === 'costo_material' ? `Distribución proporcional por Material Directo (+${prorrateo.tasaAbsorcionPorcentaje}% sobre costo de compra)` : prorrateo.criterio === 'valor_venta' ? `Distribución por Precio de Venta (+${prorrateo.tasaAbsorcionPorcentaje}% sobre PVP)` : `División lineal (${formatCurrency(prorrateo.costoOperativoProrrateadoPorUnidad)}/unidad)`}</strong>
-                  {isPastMonth && ' — Cifras históricas inmutables con las que cerró el periodo seleccionado.'}
-                </p>
-              </div>
-              <ExcelExportButton filename={`Comparativa_Costos_Valuacion_${selectedMonth}`} />
-            </div>
-
-            <div className="table-container" style={{ border: 'none', boxShadow: 'none' }}>
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Código</th>
-                    <th>Producto</th>
-                    <th style={{ textAlign: 'right' }}>Precio Venta</th>
-                    <th style={{ textAlign: 'right' }}>1. Costo Compra</th>
-                    <th style={{ textAlign: 'center' }}>% Absorción</th>
-                    <th style={{ textAlign: 'right' }}>2. Gasto Operativo</th>
-                    <th style={{ textAlign: 'right' }}>3. Deprec. Activos</th>
-                    <th style={{ textAlign: 'right', fontWeight: 800 }}>4. Costo Real Total</th>
-                    <th style={{ textAlign: 'center' }}>Margen Real %</th>
-                    <th style={{ textAlign: 'center', backgroundColor: 'var(--bg-subtle)' }}>
-                      {isPastMonth ? 'Vol. Stock al Cierre' : 'Vol. Stock Disponible'}
-                    </th>
-                    <th style={{ textAlign: 'right', backgroundColor: 'var(--bg-subtle)', fontWeight: 800 }}>
-                      {isPastMonth ? 'Inventario Valuado al Cierre' : 'Inventario Valuado a Costo Real'}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {products.map(p => {
-                    const costs = getProductRealCost(p.id, selectedMonth);
-                    const closedData = isPastMonth ? getProductStockAndCostAtMonth(p.id, selectedMonth) : { stock: p.stockActual, costoPromedio: p.costoPromedio };
-                    const stockUnits = closedData.stock;
-                    const realMargin = p.precioVenta > 0 ? (((p.precioVenta - costs.costoReal) / p.precioVenta) * 100).toFixed(1) : 0;
-                    const stockValuationReal = stockUnits * costs.costoReal;
-
-                    return (
-                      <tr key={p.id}>
-                        <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{p.codigo}</td>
-                        <td style={{ fontWeight: 600 }}>{p.nombre}</td>
-                        <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatCurrency(p.precioVenta)}</td>
-                        <td style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>{formatCurrency(costs.costoCompra)}</td>
-                        <td style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                          {costs.criterio === 'costo_material' ? `+${costs.tasaAbsorcionPorcentaje}%` : costs.criterio === 'valor_venta' ? `+${costs.tasaAbsorcionPorcentaje}% PVP` : 'Fijo'}
-                        </td>
-                        <td style={{ textAlign: 'right', color: 'var(--color-warning-text)' }}>+{formatCurrency(costs.gastoOperativoUnitario)}</td>
-                        <td style={{ textAlign: 'right', color: '#3b82f6' }}>+{formatCurrency(costs.gastoDepreciacionUnitario)}</td>
-                        <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--color-accent)' }}>{formatCurrency(costs.costoReal)}</td>
-                        <td style={{ textAlign: 'center' }}>
-                          <span className={`badge ${Number(realMargin) >= 30 ? 'badge-success' : Number(realMargin) > 0 ? 'badge-warning' : 'badge-danger'}`}>
-                            {realMargin}%
-                          </span>
-                        </td>
-                        <td style={{ textAlign: 'center', backgroundColor: 'var(--bg-subtle)', fontWeight: 700 }}>
-                          <span style={{ color: stockUnits <= p.stockMinimo ? 'var(--color-danger)' : 'inherit' }}>
-                            {stockUnits} {p.unidadMedida || 'pzas'}
-                          </span>
-                        </td>
-                        <td style={{ textAlign: 'right', backgroundColor: 'var(--bg-subtle)', fontWeight: 800, color: 'var(--color-accent)', fontSize: '0.95rem' }}>
-                          {formatCurrency(stockValuationReal)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr style={{ borderTop: '2px solid var(--border-default)', backgroundColor: 'var(--bg-subtle)' }}>
-                    <td colSpan={9} style={{ padding: '0.85rem 1rem', fontWeight: 800, textAlign: 'right' }}>
-                      {isPastMonth ? 'TOTAL VALUACIÓN DE INVENTARIO AL CIERRE DEL PERIODO:' : 'TOTAL VALUACIÓN DE INVENTARIO REAL EN BALANCE:'}
-                    </td>
-                    <td style={{ padding: '0.85rem', textAlign: 'center', fontWeight: 800 }}>
-                      {totalStockUnits} pzas
-                    </td>
-                    <td style={{ padding: '0.85rem', textAlign: 'right', fontWeight: 900, color: 'var(--color-accent)', fontSize: '1.05rem' }}>
-                      {formatCurrency(totalValuationReal)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Report 5: SKU-Level Profitability Analysis (Análisis de Rentabilidad por SKU) */}
+      {/* Report 4: Unified Cost & Profitability Analysis (Costos y Rentabilidad Unificado) */}
       {activeReport === 'profitability' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
-          {/* Profitability KPI Summary Cards */}
+          {/* Row 1: Commercial & Margin KPIs */}
           <div className="grid-4">
             <div className="stat-card">
               <div className="stat-header">
@@ -1498,21 +1346,78 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
             </div>
           </div>
 
-          {/* Table Container Card */}
+          {/* Row 2: Real Inventory Balance & Absorption KPIs */}
+          <div className="grid-4">
+            <div className="stat-card">
+              <div className="stat-header">
+                <span>Stock Físico Disponible</span>
+                <div className="stat-icon" style={{ backgroundColor: 'var(--color-info-bg)', color: 'var(--color-info)' }}>
+                  <Boxes size={18} />
+                </div>
+              </div>
+              <div className="stat-value">{totalStockUnits} pzas</div>
+              <div className="stat-footer">
+                <span style={{ color: 'var(--text-muted)' }}>{products.length} productos en catálogo</span>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-header">
+                <span>Valuación Directa (Compra)</span>
+                <div className="stat-icon" style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)' }}>
+                  <DollarSign size={18} />
+                </div>
+              </div>
+              <div className="stat-value">{formatCurrency(totalValuationCompra)}</div>
+              <div className="stat-footer">
+                <span style={{ color: 'var(--text-muted)' }}>Costo base de adquisición</span>
+              </div>
+            </div>
+
+            <div className="stat-card" style={{ borderColor: 'var(--color-accent)', boxShadow: '0 4px 12px var(--color-accent-glow)' }}>
+              <div className="stat-header">
+                <span style={{ color: 'var(--color-accent)', fontWeight: 700 }}>Valuación Real (Balance)</span>
+                <div className="stat-icon" style={{ backgroundColor: 'var(--color-accent)', color: 'white' }}>
+                  <Layers size={18} />
+                </div>
+              </div>
+              <div className="stat-value" style={{ color: 'var(--color-accent)' }}>{formatCurrency(totalValuationReal)}</div>
+              <div className="stat-footer">
+                <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Stock × Costo Real Total</span>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-header">
+                <span>Absorción en Inventario</span>
+                <div className="stat-icon" style={{ backgroundColor: 'var(--color-warning-bg)', color: 'var(--color-warning)' }}>
+                  <TrendingUp size={18} />
+                </div>
+              </div>
+              <div className="stat-value" style={{ color: 'var(--color-warning-text)' }}>
+                +{formatCurrency(totalValuationReal - totalValuationCompra)}
+              </div>
+              <div className="stat-footer">
+                <span style={{ color: 'var(--text-muted)' }}>Gastos operativos absorbidos</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Unified Table Card */}
           <div className="card">
             <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
               <div>
-                <h2 className="card-title">Resumen de Análisis de Rentabilidad Detallado por SKU</h2>
+                <h2 className="card-title">Resumen de Análisis Integral de Costos, Rentabilidad & Existencias por SKU</h2>
                 <p className="card-subtitle">
-                  Desglose financiero por producto y variante: Costo compra, absorción de gasto operativo, depreciación, ingreso total y margen final neto.
+                  Desglose financiero consolidado: costo de compra, absorción de gastos operativos y depreciación, ingresos, márgenes netos y existencias valuadas a costo real.
                 </p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                 <ExcelExportButton
                   data={sortedSkuProfitability}
                   columns={profitabilityExcelColumns}
-                  filename={`Analisis_Rentabilidad_SKU_${selectedMonth}`}
-                  title="Exportar análisis de rentabilidad a Excel"
+                  filename={`Analisis_Costos_Rentabilidad_${selectedMonth}`}
+                  title="Exportar análisis integral a Excel"
                 />
               </div>
             </div>
@@ -1667,12 +1572,32 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
                     >
                       Margen Final (%)
                     </SortableTh>
+                    <SortableTh
+                      sortKey="stockDisponible"
+                      currentSortKey={profSortKey}
+                      currentSortDirection={profSortDirection}
+                      onSort={requestProfSort}
+                      isNumeric={true}
+                      align="center"
+                    >
+                      Stock Disp.
+                    </SortableTh>
+                    <SortableTh
+                      sortKey="valuacionStockReal"
+                      currentSortKey={profSortKey}
+                      currentSortDirection={profSortDirection}
+                      onSort={requestProfSort}
+                      isNumeric={true}
+                      align="right"
+                    >
+                      Valuación Real Stock
+                    </SortableTh>
                   </tr>
                 </thead>
                 <tbody>
                   {sortedSkuProfitability.length === 0 ? (
                     <tr>
-                      <td colSpan={12} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
+                      <td colSpan={14} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
                         No se encontraron productos o variantes con los filtros seleccionados para este periodo.
                       </td>
                     </tr>
@@ -1732,6 +1657,12 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
                               {item.margenPorcentaje > 0 ? `+${item.margenPorcentaje}%` : `${item.margenPorcentaje}%`}
                             </Badge>
                           </td>
+                          <td style={{ textAlign: 'center', fontWeight: 700, backgroundColor: 'var(--bg-subtle)' }}>
+                            {item.stockDisponible} pzas
+                          </td>
+                          <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--color-accent)', backgroundColor: 'var(--bg-subtle)', fontSize: '0.95rem' }}>
+                            {formatCurrency(item.valuacionStockReal)}
+                          </td>
                         </tr>
                       );
                     })
@@ -1762,6 +1693,12 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
                         <Badge variant={Number(profitabilitySummary.totalMargenPct) >= 0 ? 'success' : 'danger'}>
                           {profitabilitySummary.totalMargenPct}%
                         </Badge>
+                      </td>
+                      <td style={{ padding: '0.85rem 0.5rem', textAlign: 'center', fontWeight: 800, backgroundColor: 'var(--bg-subtle)' }}>
+                        {profitabilitySummary.totalStockFiltrado} pzas
+                      </td>
+                      <td style={{ padding: '0.85rem 0.5rem', textAlign: 'right', fontWeight: 900, color: 'var(--color-accent)', backgroundColor: 'var(--bg-subtle)', fontSize: '1rem' }}>
+                        {formatCurrency(profitabilitySummary.totalValuacionRealFiltrada)}
                       </td>
                     </tr>
                   </tfoot>

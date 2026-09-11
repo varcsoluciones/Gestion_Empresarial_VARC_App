@@ -90,12 +90,11 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setPrecioVenta('');
       setStockMinimo(5);
       setDescripcion('');
-      setUbicacion('');
       setTieneVariantes(false);
       setActivo(true);
       setVariantes([
-        { talla: 'M', color: 'Negro', sku: `${nextSKU}-1`, ubicacion: '', stockActual: 0 },
-        { talla: 'L', color: 'Negro', sku: `${nextSKU}-2`, ubicacion: '', stockActual: 0 }
+        { talla: 'Opción 1', color: 'Estándar', sku: `${nextSKU}-1`, ubicacion: '', stockActual: 0 },
+        { talla: 'Opción 2', color: 'Estándar', sku: `${nextSKU}-2`, ubicacion: '', stockActual: 0 }
       ]);
     }
   }, [isOpen, productToEdit, products, categories]);
@@ -192,7 +191,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           id: productToEdit.variantes?.[i]?.id || `var-${productToEdit.id}-${i + 1}`,
           productoId: productToEdit.id,
           sku: `${finalCode}-${i + 1}`,
-          talla: v.talla.trim() || `Talla ${i + 1}`,
+          talla: v.talla.trim() || `Opción ${i + 1}`,
           color: v.color.trim() || 'Estándar',
           ubicacion: v.ubicacion?.trim() || finalUbicacion || undefined,
           stockActual: productToEdit.variantes?.[i]?.stockActual || 0
@@ -216,7 +215,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           id: `var-${Date.now()}-${i + 1}`,
           productoId: '',
           sku: `${finalCode}-${i + 1}`,
-          talla: v.talla.trim() || `Talla ${i + 1}`,
+          talla: v.talla.trim() || `Opción ${i + 1}`,
           color: v.color.trim() || 'Estándar',
           ubicacion: v.ubicacion?.trim() || finalUbicacion || undefined,
           stockActual: 0
@@ -439,7 +438,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
             <div>
               <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Manejo de Variantes</div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                Actívalo si este producto tiene diferentes presentaciones (tallas, colores, dimensiones)
+                Actívalo si este producto tiene diferentes presentaciones (variantes, especificaciones, dimensiones)
               </div>
             </div>
             <input
@@ -493,8 +492,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 }}
               >
                 <div>ID / SKU Variante</div>
-                <div>Variable 1 (Talla / Medida)</div>
-                <div>Variable 2 (Color / Tipo)</div>
+                <div>Variante 1</div>
+                <div>Variante 2</div>
                 <div>Ubicación Específica</div>
                 <div style={{ textAlign: 'center' }}>Acción</div>
               </div>
@@ -521,7 +520,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       <input
                         type="text"
                         className="form-control"
-                        placeholder="Ej. S, M, L, 32, 500ml"
+                        placeholder="Ej. Medida, Tipo, S, M, L..."
                         value={v.talla}
                         onChange={(e) => {
                           const val = e.target.value;
@@ -531,7 +530,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       <input
                         type="text"
                         className="form-control"
-                        placeholder="Ej. Negro, Blanco, Azul, Mate"
+                        placeholder="Ej. Color, Acabado, Material..."
                         value={v.color}
                         onChange={(e) => {
                           const val = e.target.value;

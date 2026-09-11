@@ -130,7 +130,8 @@ export const PurchasesPage: React.FC = () => {
       const variant = prod.variantes.find(v => v.id === selectedVarForLine) || prod.variantes[0];
       if (variant) {
         varId = variant.id;
-        desc = `${prod.nombre} (${variant.color} / Talla ${variant.talla})`;
+        const varLabel = [variant.talla, variant.color].filter(Boolean).join(' / ');
+        desc = varLabel ? `${prod.nombre} (${varLabel})` : prod.nombre;
       }
     }
 
@@ -800,11 +801,11 @@ export const PurchasesPage: React.FC = () => {
 
               {selectedProdObj && selectedProdObj.tieneVariantes && selectedProdObj.variantes ? (
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Variante (Color / Talla) *</label>
+                  <label className="form-label">Variante *</label>
                   <ComboboxInline
                     options={selectedProdObj.variantes.map(v => ({
                       id: v.id,
-                      label: `${v.talla ? `Talla: ${v.talla}` : ''} ${v.color ? `Color: ${v.color}` : ''}`.trim() || v.sku,
+                      label: [v.talla, v.color].filter(Boolean).join(' / ') || v.sku,
                       sublabel: `Stock: ${v.stockActual} | SKU: ${v.sku}`
                     }))}
                     value={selectedVarForLine}

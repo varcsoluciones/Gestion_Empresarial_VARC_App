@@ -490,24 +490,26 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
           />
         </div>
 
-        {activeTab !== 'categories' && (
-          <div style={{ minWidth: '180px' }}>
-            <ComboboxInline
-              options={[
-                { id: 'active', label: 'Solo Activos' },
-                { id: 'archived', label: 'Solo Archivados' },
-                { id: 'all', label: 'Todos los Registros' }
-              ]}
-              value={statusFilter}
-              onChange={(val) => setStatusFilter(val as any)}
-              placeholder="Filtrar estado..."
-              hideSearch={true}
-              buttonStyle={{ minWidth: '180px' }}
-            />
-          </div>
-        )}
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap' }}>
+          {activeTab !== 'categories' && (
+            <div style={{ minWidth: '180px' }}>
+              <ComboboxInline
+                options={[
+                  { id: 'active', label: 'Solo Activos' },
+                  { id: 'archived', label: 'Solo Archivados' },
+                  { id: 'all', label: 'Todos los Registros' }
+                ]}
+                value={statusFilter}
+                onChange={(val) => setStatusFilter(val as any)}
+                placeholder="Filtrar estado..."
+                hideSearch={true}
+                buttonStyle={{ minWidth: '180px' }}
+              />
+            </div>
+          )}
 
-        <ExcelExportButton filename={`Catalogo_Maestro_${activeTab.toUpperCase()}`} />
+          <ExcelExportButton filename={`Catalogo_Maestro_${activeTab.toUpperCase()}`} />
+        </div>
       </div>
 
       {/* Tab: Products & Variants */}
@@ -719,7 +721,7 @@ export const MasterDataPage: React.FC<MasterDataPageProps> = ({ initialTab }) =>
                                 >
                                   <div>
                                     <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>
-                                      {v.color} / Talla {v.talla}
+                                      {v.talla || ''}{v.talla && v.color ? ' / ' : ''}{v.color || ''}
                                     </div>
                                     <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
                                       {v.sku}

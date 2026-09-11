@@ -582,7 +582,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                         <div style={{ fontWeight: 600 }}>{prod?.nombre || 'Producto'}</div>
                         {variant ? (
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                            Talla: {variant.talla} | Color: {variant.color}
+                            Variante: {[variant.talla, variant.color].filter(Boolean).join(' / ')}
                           </div>
                         ) : null}
                       </td>
@@ -884,8 +884,8 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                                   <thead>
                                     <tr style={{ backgroundColor: 'var(--bg-subtle)', borderBottom: '1px solid var(--border-default)' }}>
                                       <th style={{ padding: '0.5rem 0.85rem', width: '20%' }}>SKU / Código Variante</th>
-                                      <th style={{ padding: '0.5rem 0.85rem', width: '13%' }}>Color</th>
-                                      <th style={{ padding: '0.5rem 0.85rem', width: '12%' }}>Talla</th>
+                                      <th style={{ padding: '0.5rem 0.85rem', width: '13%' }}>Variante 1</th>
+                                      <th style={{ padding: '0.5rem 0.85rem', width: '12%' }}>Variante 2</th>
                                       <th style={{ padding: '0.5rem 0.85rem', width: '15%' }}>Ubicación</th>
                                       <th style={{ padding: '0.5rem 0.85rem', textAlign: 'center', width: '12%' }}>Existencias (Stock)</th>
                                       <th style={{ padding: '0.5rem 0.85rem', textAlign: 'right', width: '14%' }}>Costo Promedio</th>
@@ -902,16 +902,16 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                                       return (
                                         <tr key={v.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                                           <td style={{ padding: '0.55rem 0.85rem', fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                                            {v.sku || `${p.codigo}-${v.color}-${v.talla}`}
+                                            {v.sku || `${p.codigo}-${v.talla}-${v.color}`}
+                                          </td>
+                                          <td style={{ padding: '0.55rem 0.85rem', fontWeight: 600 }}>
+                                            {v.talla || '—'}
                                           </td>
                                           <td style={{ padding: '0.55rem 0.85rem' }}>
                                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 500 }}>
                                               <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-accent)', display: 'inline-block' }} />
-                                              {v.color || 'Único'}
+                                              {v.color || '—'}
                                             </span>
-                                          </td>
-                                          <td style={{ padding: '0.55rem 0.85rem', fontWeight: 600 }}>
-                                            {v.talla || 'Única'}
                                           </td>
                                           <td style={{ padding: '0.55rem 0.85rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                                             {varUbicacion ? (
@@ -951,7 +951,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                                                   e.stopPropagation();
                                                   handleOpenAdjustment(p.id, v.id, false);
                                                 }}
-                                                title={`Ajustar o cargar existencias para ${v.color} - ${v.talla}`}
+                                                title={`Ajustar o cargar existencias para ${[v.talla, v.color].filter(Boolean).join(' / ')}`}
                                               >
                                                 Ajustar/Cargar
                                               </button>
@@ -1068,7 +1068,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
               <ComboboxInline
                 options={selectedAdjProdObj.variantes.map(v => ({
                   id: v.id,
-                  label: `${v.talla ? `Talla: ${v.talla}` : ''} ${v.color ? `Color: ${v.color}` : ''}`.trim() || v.sku,
+                  label: [v.talla, v.color].filter(Boolean).join(' / ') || v.sku,
                   sublabel: `Stock actual: ${v.stockActual} | SKU: ${v.sku}`
                 }))}
                 value={adjVarId}
