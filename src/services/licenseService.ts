@@ -1,4 +1,4 @@
-export const APP_ID = 'erp';
+export const APP_ID = 'gestor_modular';
 
 const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://jofeflzvsmaogjpoxabc.supabase.co').replace(/\/+$/, '');
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_2x893sLjRl3AMXAWg69vEg_flAOq4Bd';
@@ -98,7 +98,8 @@ export function getStoredLicense(): StoredLicenseSession | null {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as StoredLicenseSession;
-    if (parsed && typeof parsed.email === 'string' && parsed.app === APP_ID) {
+    if (parsed && typeof parsed.email === 'string' && (parsed.app === APP_ID || parsed.app === 'erp')) {
+      parsed.app = APP_ID;
       return parsed;
     }
     return null;
