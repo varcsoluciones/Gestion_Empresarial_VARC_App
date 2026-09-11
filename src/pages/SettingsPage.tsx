@@ -400,7 +400,6 @@ export const SettingsPage: React.FC = () => {
                 <input
                   type="text"
                   className="form-control"
-                  style={{ maxWidth: '280px' }}
                   value={formData.identificacionFiscal}
                   onChange={(e) => setFormData({ ...formData, identificacionFiscal: e.target.value.toUpperCase() })}
                   required
@@ -464,13 +463,13 @@ export const SettingsPage: React.FC = () => {
               <div className="form-group">
                 <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <Percent size={15} style={{ color: 'var(--color-accent)' }} />
-                  {t.settings.defaultTax}
+                  {t.settings.defaultTax} (%)
                 </label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <input
                     type="number"
                     className="form-control"
-                    style={{ width: '110px', textAlign: 'center', fontWeight: 600 }}
+                    style={{ width: '120px', fontWeight: 600 }}
                     value={formData.tasaImpuestoDefecto}
                     onChange={(e) => setFormData({ ...formData, tasaImpuestoDefecto: Number(e.target.value) })}
                     min={0}
@@ -487,23 +486,18 @@ export const SettingsPage: React.FC = () => {
               <div className="form-group">
                 <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <DollarSign size={15} style={{ color: 'var(--color-accent)' }} />
-                  Capital Aportado Inicial
+                  Capital Aportado Inicial ({formData.monedaSimbolo || '$'})
                 </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-secondary)', minWidth: '24px' }}>
-                    {formData.monedaSimbolo || '$'}
-                  </span>
-                  <input
-                    type="number"
-                    className="form-control"
-                    style={{ maxWidth: '180px', fontWeight: 600 }}
-                    value={formData.capitalAportado !== undefined ? formData.capitalAportado : ''}
-                    onChange={(e) => setFormData({ ...formData, capitalAportado: e.target.value === '' ? 0 : Number(e.target.value) })}
-                    placeholder="0.00"
-                    min={0}
-                    step="0.01"
-                  />
-                </div>
+                <input
+                  type="number"
+                  className="form-control"
+                  style={{ maxWidth: '220px', fontWeight: 600 }}
+                  value={formData.capitalAportado !== undefined ? formData.capitalAportado : ''}
+                  onChange={(e) => setFormData({ ...formData, capitalAportado: e.target.value === '' ? 0 : Number(e.target.value) })}
+                  placeholder="0.00"
+                  min={0}
+                  step="0.01"
+                />
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block', textAlign: 'left' }}>
                   Fondo o capital social aportado.
                 </span>
@@ -860,7 +854,7 @@ export const SettingsPage: React.FC = () => {
                   <input
                     type="number"
                     className="form-control"
-                    style={{ width: '100px', textAlign: 'center', fontWeight: 600 }}
+                    style={{ width: '120px', fontWeight: 600 }}
                     value={formData.diasMargenFuturo}
                     onChange={(e) => setFormData({ ...formData, diasMargenFuturo: Math.max(0, parseInt(e.target.value) || 0) })}
                     min={0}
@@ -1283,14 +1277,14 @@ export const SettingsPage: React.FC = () => {
         {/* System Version & Information Footer */}
         <div style={{
           marginTop: '0.5rem',
-          padding: '1.5rem',
+          padding: '1.25rem 1.5rem',
           borderRadius: 'var(--radius-lg)',
           backgroundColor: 'var(--bg-subtle)',
           border: '1px solid var(--border-default)',
-          textAlign: 'center',
+          textAlign: 'left',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           gap: '0.35rem'
         }}>
           <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
