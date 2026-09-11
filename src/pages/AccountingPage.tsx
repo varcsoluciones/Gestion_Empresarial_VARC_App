@@ -97,6 +97,7 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
   // Prorrateo is strictly informative using the company default established in settings:
   const activeCriterio = settings.criterioProrrateoDefecto || 'costo_material';
   const [isProrrateoExpanded, setIsProrrateoExpanded] = useState(false);
+  const [isCostReconciliationExpanded, setIsCostReconciliationExpanded] = useState(false);
 
   // New Expense Modal State
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
@@ -1384,7 +1385,7 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
                   </table>
                 </div>
 
-                {/* Audit & Balance Equation Verification Card (Matching Prorrateo Format) */}
+                {/* Audit & Balance Equation Verification Card (Matching Prorrateo Format & Collapsible) */}
                 <div style={{
                   padding: '1.25rem 1.5rem',
                   borderTop: '1px solid var(--border-default)'
@@ -1394,8 +1395,11 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
                       padding: '1rem 1.25rem',
                       backgroundColor: 'var(--bg-surface)',
                       borderRadius: 'var(--radius-md)',
-                      border: '1px solid var(--border-default)'
+                      border: '1px solid var(--border-default)',
+                      cursor: 'pointer',
+                      transition: 'all var(--transition-fast)'
                     }}
+                    onClick={() => setIsCostReconciliationExpanded(!isCostReconciliationExpanded)}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
@@ -1425,50 +1429,67 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
                           </p>
                         </div>
                       </div>
-                    </div>
 
-                    <div style={{
-                      marginTop: '1rem',
-                      paddingTop: '1rem',
-                      borderTop: '1px solid var(--border-default)',
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-                      gap: '1rem',
-                      backgroundColor: 'var(--bg-subtle)',
-                      padding: '1rem',
-                      borderRadius: 'var(--radius-md)',
-                      fontSize: '0.85rem'
-                    }}>
-                      <div>
-                        <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.775rem' }}>Ecuación Contable del Flujo</span>
-                        <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem', fontFamily: 'var(--font-mono)' }}>
-                          {costAnalysisResult.initStock} + {costAnalysisResult.comprasQty} {costAnalysisResult.ajustesQty >= 0 ? `+ ${costAnalysisResult.ajustesQty}` : `- ${Math.abs(costAnalysisResult.ajustesQty)}`} - {costAnalysisResult.ventasQty} = {costAnalysisResult.finalStock} {costAnalysisResult.product.unidadMedida || 'pzas'}
-                        </span>
-                        <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '2px' }}>
-                          Inicial + Compras + Ajustes - Ventas = Final
-                        </span>
-                      </div>
-
-                      <div>
-                        <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.775rem' }}>Estado de Conciliación</span>
-                        <span style={{ fontWeight: 700, color: 'var(--color-success)', fontSize: '0.95rem' }}>
-                          ✓ Cuadre Físico Exacto
-                        </span>
-                        <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '2px' }}>
-                          Unidades físicas reconciliadas con el Kardex cronológico
-                        </span>
-                      </div>
-
-                      <div>
-                        <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.775rem' }}>Regla de Costeo y Absorción</span>
-                        <span style={{ fontWeight: 700, color: 'var(--color-accent)', fontSize: '0.95rem' }}>
-                          {activeCriterio === 'costo_material' ? `Material Directo (+${prorrateo.tasaAbsorcionPorcentaje}%)` : activeCriterio === 'valor_venta' ? `Precio de Venta (+${prorrateo.tasaAbsorcionPorcentaje}%)` : `Lineal (${formatCurrency(prorrateo.costoOperativoProrrateadoPorUnidad)}/pza)`}
-                        </span>
-                        <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '2px' }}>
-                          Tasa de absorción contable institucional aplicada
-                        </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsCostReconciliationExpanded(!isCostReconciliationExpanded);
+                          }}
+                        >
+                          <span>{isCostReconciliationExpanded ? 'Ocultar Detalle' : 'Ver Detalle'}</span>
+                          {isCostReconciliationExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                        </button>
                       </div>
                     </div>
+
+                    {isCostReconciliationExpanded && (
+                      <div style={{
+                        marginTop: '1rem',
+                        paddingTop: '1rem',
+                        borderTop: '1px solid var(--border-default)',
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                        gap: '1rem',
+                        backgroundColor: 'var(--bg-subtle)',
+                        padding: '1rem',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '0.85rem'
+                      }}>
+                        <div>
+                          <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.775rem' }}>Ecuación Contable del Flujo</span>
+                          <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem', fontFamily: 'var(--font-mono)' }}>
+                            {costAnalysisResult.initStock} + {costAnalysisResult.comprasQty} {costAnalysisResult.ajustesQty >= 0 ? `+ ${costAnalysisResult.ajustesQty}` : `- ${Math.abs(costAnalysisResult.ajustesQty)}`} - {costAnalysisResult.ventasQty} = {costAnalysisResult.finalStock} {costAnalysisResult.product.unidadMedida || 'pzas'}
+                          </span>
+                          <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '2px' }}>
+                            Inicial + Compras + Ajustes - Ventas = Final
+                          </span>
+                        </div>
+
+                        <div>
+                          <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.775rem' }}>Estado de Conciliación</span>
+                          <span style={{ fontWeight: 700, color: 'var(--color-success)', fontSize: '0.95rem' }}>
+                            ✓ Cuadre Físico Exacto
+                          </span>
+                          <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '2px' }}>
+                            Unidades físicas reconciliadas con el Kardex cronológico
+                          </span>
+                        </div>
+
+                        <div>
+                          <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.775rem' }}>Regla de Costeo y Absorción</span>
+                          <span style={{ fontWeight: 700, color: 'var(--color-accent)', fontSize: '0.95rem' }}>
+                            {activeCriterio === 'costo_material' ? `Material Directo (+${prorrateo.tasaAbsorcionPorcentaje}%)` : activeCriterio === 'valor_venta' ? `Precio de Venta (+${prorrateo.tasaAbsorcionPorcentaje}%)` : `Lineal (${formatCurrency(prorrateo.costoOperativoProrrateadoPorUnidad)}/pza)`}
+                          </span>
+                          <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '2px' }}>
+                            Tasa de absorción contable institucional aplicada
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
