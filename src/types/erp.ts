@@ -208,6 +208,19 @@ export interface InvoiceDetail {
   precioUnitario: number;
   descuento: number;
   subtotal: number;
+  costoUnitarioHistorico?: number; // Costo de compra unitario registrado al momento de la venta
+}
+
+export interface CostAnalysisStage {
+  etapaId: 'inicial' | 'compras' | 'ajustes' | 'ventas' | 'final';
+  concepto: string;
+  cantidad: number;
+  costoCompraUnitario: number;
+  costoCompraTotal: number;
+  gastoOperativoUnitario: number;
+  gastoDepreciacionUnitario: number;
+  costoRealUnitario: number;
+  valuacionTotalReal: number;
 }
 
 export interface ClientPayment {

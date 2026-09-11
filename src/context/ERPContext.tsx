@@ -108,6 +108,7 @@ export interface ERPContextType {
   // Cálculos de Prorrateo & KPIs
   getProrrateoMensual: (mesKey?: string, overrideCriterio?: ProrrateoCriterion) => MonthlyProrrateo;
   getProductRealCost: (productoId: string, mesKey?: string, overrideCriterio?: ProrrateoCriterion) => ProductRealCostResult;
+  getProductStockAndCostAtMonth: (productoId: string, mesKey?: string) => { stock: number; costoPromedio: number };
 
   // Gestión de Datos & Respaldos
   getFullERPData: () => FullERPData;
@@ -701,6 +702,68 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return { reconciledProducts, reconciledMovements, hasChanges };
   };
 
+  const getProductStockAndCostAtMonth = (productId: string, mesKey = getMonthKey()): { stock: number; costoPromedio: number } => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return { stock: 0, costoPromedio: 0 };
+
+    const currentMonth = getMonthKey();
+    if (mesKey >= currentMonth) {
+      return { stock: Math.max(0, product.stockActual), costoPromedio: product.costoPromedio || 0 };
+    }
+
+    // Para meses pasados cerrados: reconstrucción acumulada hasta el último día del mes
+    const proMovements = inventoryMovements
+      .filter(m => m.productoId === productId && (m.fecha.slice(0, 7) <= mesKey))
+      .sort((a, b) => {
+        const tA = parseDateSafe(a.fecha)?.getTime() || 0;
+        const tB = parseDateSafe(b.fecha)?.getTime() || 0;
+        if (tA !== tB) return tA - tB;
+        return inventoryMovements.indexOf(a) - inventoryMovements.indexOf(b);
+      });
+
+    if (proMovements.length === 0) {
+      return { stock: 0, costoPromedio: product.costoPromedio || 0 };
+    }
+
+    let runningStock = 0;
+    let runningCost = 0;
+
+    for (const m of proMovements) {
+      const qty = Number(m.cantidad) || 0;
+      const cost = Number(m.costoUnitario) || 0;
+
+      if (m.tipo === 'ENTRADA_COMPRA' || m.tipo === 'INVENTARIO_INICIAL') {
+        const posQty = Math.abs(qty);
+        if (runningStock === 0 && cost > 0) {
+          runningCost = cost;
+        } else {
+          runningCost = calculateWeightedAverageCost(runningStock, runningCost, posQty, cost);
+        }
+        runningStock += posQty;
+      } else if (m.tipo === 'SALIDA_VENTA') {
+        const outQty = Math.abs(qty);
+        runningStock = Math.max(0, runningStock - outQty);
+      } else if (m.tipo === 'AJUSTE_MANUAL') {
+        runningStock = Math.max(0, runningStock + qty);
+      } else if (m.tipo === 'ANULACION_COMPRA') {
+        const cancQty = Math.abs(qty);
+        const currentVal = Math.max(0, runningStock * runningCost);
+        const cancelledVal = cancQty * cost;
+        const remainingVal = Math.max(0, currentVal - cancelledVal);
+        runningStock = Math.max(0, runningStock - cancQty);
+        runningCost = runningStock > 0 ? Number((remainingVal / runningStock).toFixed(2)) : (runningStock === 0 ? 0 : runningCost);
+      } else if (m.tipo === 'ANULACION_VENTA') {
+        const reenterQty = Math.abs(qty);
+        runningStock += reenterQty;
+      }
+    }
+
+    return {
+      stock: Math.max(0, runningStock),
+      costoPromedio: runningCost > 0 ? runningCost : (product.costoPromedio || 0)
+    };
+  };
+
   // Self-healing & Retroactive Kardex Reconciliation on startup:
   // Reconciles all products' stockActual, variant stocks, weighted average cost AND all movements' stockResultante
   useEffect(() => {
@@ -1021,8 +1084,17 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const emissionDate = data.fechaEmision || getTodayLocalDateString();
     const isDirectEmit = data.estado === 'emitida';
 
+    const itemsWithHistoricalCost = (data.items || []).map(item => {
+      const prod = products.find(p => p.id === item.productoId);
+      return {
+        ...item,
+        costoUnitarioHistorico: item.costoUnitarioHistorico ?? prod?.costoPromedio ?? 0
+      };
+    });
+
     const newInvoice: Invoice = {
       ...data,
+      items: itemsWithHistoricalCost,
       id: num,
       numeroFactura: num,
       fechaEmision: emissionDate,
@@ -1049,8 +1121,18 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const emissionDate = invoice.fechaEmision || getTodayLocalDateString();
     applyInvoiceStockDeduction(invoice, emissionDate);
 
+    const itemsWithHistoricalCost = invoice.items.map(item => {
+      if (item.costoUnitarioHistorico && item.costoUnitarioHistorico > 0) return item;
+      const prod = products.find(p => p.id === item.productoId);
+      return {
+        ...item,
+        costoUnitarioHistorico: prod?.costoPromedio ?? 0
+      };
+    });
+
     setInvoices(prev => prev.map(inv => inv.id === invoiceId ? {
       ...inv,
+      items: itemsWithHistoricalCost,
       estado: inv.saldoPendiente <= 0 ? 'pagada' : 'emitida',
       emitidaFecha: emissionDate
     } : inv));
@@ -1451,19 +1533,44 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // Costo de ventas directo del periodo (COGS)
     const costoVentasPeriodo = validInvoices.reduce((sum, inv) => {
       return sum + inv.items.reduce((iSum, item) => {
-        const prod = products.find(p => p.id === item.productoId);
-        const cost = prod?.costoPromedio || (item.precioUnitario > 0 ? item.precioUnitario * 0.5 : 0);
-        return iSum + (item.cantidad * cost);
+        let itemCost = item.costoUnitarioHistorico;
+        if (!itemCost) {
+          const move = inventoryMovements.find(m => m.referenciaDoc === inv.numeroFactura && m.productoId === item.productoId && m.tipo === 'SALIDA_VENTA');
+          if (move && move.costoUnitario > 0) {
+            itemCost = move.costoUnitario;
+          }
+        }
+        if (!itemCost) {
+          const prod = products.find(p => p.id === item.productoId);
+          itemCost = prod?.costoPromedio || (item.precioUnitario > 0 ? item.precioUnitario * 0.5 : 0);
+        }
+        return iSum + (item.cantidad * itemCost);
       }, 0);
     }, 0);
 
     // Total facturado del periodo
     const valorVentasPeriodo = validInvoices.reduce((sum, inv) => sum + inv.total, 0);
 
-    // Unidades e inventario final disponible
-    const unidadesEnInventario = products.reduce((sum, p) => sum + Math.max(0, p.stockActual), 0);
-    const valorInventarioCostoTotal = products.reduce((sum, p) => sum + (Math.max(0, p.stockActual) * p.costoPromedio), 0);
-    const valorInventarioVentaTotal = products.reduce((sum, p) => sum + (Math.max(0, p.stockActual) * p.precioVenta), 0);
+    // Unidades e inventario final disponible (Vivo para mes actual, o reconstruido para meses cerrados)
+    const currentMonth = getMonthKey();
+    const isPast = mesKey < currentMonth;
+
+    let unidadesEnInventario = 0;
+    let valorInventarioCostoTotal = 0;
+    let valorInventarioVentaTotal = 0;
+
+    if (isPast) {
+      products.forEach(p => {
+        const hist = getProductStockAndCostAtMonth(p.id, mesKey);
+        unidadesEnInventario += hist.stock;
+        valorInventarioCostoTotal += (hist.stock * hist.costoPromedio);
+        valorInventarioVentaTotal += (hist.stock * p.precioVenta);
+      });
+    } else {
+      unidadesEnInventario = products.reduce((sum, p) => sum + Math.max(0, p.stockActual), 0);
+      valorInventarioCostoTotal = products.reduce((sum, p) => sum + (Math.max(0, p.stockActual) * p.costoPromedio), 0);
+      valorInventarioVentaTotal = products.reduce((sum, p) => sum + (Math.max(0, p.stockActual) * p.precioVenta), 0);
+    }
 
     // Volumen Total de Operación del periodo (Lo Vendido + Lo disponible en inventario)
     const totalUnidadesPeriodo = unidadesVendidasPeriodo + unidadesEnInventario;
@@ -1513,7 +1620,10 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const getProductRealCost = (productoId: string, mesKey = getMonthKey(), overrideCriterio?: ProrrateoCriterion): ProductRealCostResult => {
     const product = products.find(p => p.id === productoId);
-    const costoCompra = product?.costoPromedio || 0;
+    const currentMonth = getMonthKey();
+    const isPast = mesKey < currentMonth;
+    const historical = isPast ? getProductStockAndCostAtMonth(productoId, mesKey) : null;
+    const costoCompra = historical ? historical.costoPromedio : (product?.costoPromedio || 0);
     const precioVenta = product?.precioVenta || 0;
     const prorrateo = getProrrateoMensual(mesKey, overrideCriterio);
 
@@ -1707,6 +1817,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         updateFixedAsset,
         getProrrateoMensual,
         getProductRealCost,
+        getProductStockAndCostAtMonth,
         getFullERPData,
         restoreERPData,
         resetAllERPData,

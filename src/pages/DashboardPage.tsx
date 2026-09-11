@@ -91,6 +91,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
     products,
     clients,
     expenses,
+    inventoryMovements,
     getProrrateoMensual
   } = useERP();
 
@@ -130,8 +131,18 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
   // Cost of Goods Sold (COGS)
   const totalCostOfGoodsSold = monthInvoices.reduce((sum, inv) => {
     return sum + inv.items.reduce((iSum, item) => {
-      const prod = products.find(p => p.id === item.productoId);
-      return iSum + (item.cantidad * (prod?.costoPromedio || 0));
+      let itemCost = item.costoUnitarioHistorico;
+      if (!itemCost) {
+        const move = inventoryMovements.find(m => m.referenciaDoc === inv.numeroFactura && m.productoId === item.productoId && m.tipo === 'SALIDA_VENTA');
+        if (move && move.costoUnitario > 0) {
+          itemCost = move.costoUnitario;
+        }
+      }
+      if (!itemCost) {
+        const prod = products.find(p => p.id === item.productoId);
+        itemCost = prod?.costoPromedio || 0;
+      }
+      return iSum + (item.cantidad * itemCost);
     }, 0);
   }, 0);
 
@@ -196,8 +207,18 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
 
       const cogs = mInvoices.reduce((sum, inv) => {
         return sum + inv.items.reduce((iSum, item) => {
-          const prod = products.find(p => p.id === item.productoId);
-          return iSum + (item.cantidad * (prod?.costoPromedio || 0));
+          let itemCost = item.costoUnitarioHistorico;
+          if (!itemCost) {
+            const move = inventoryMovements.find(m => m.referenciaDoc === inv.numeroFactura && m.productoId === item.productoId && m.tipo === 'SALIDA_VENTA');
+            if (move && move.costoUnitario > 0) {
+              itemCost = move.costoUnitario;
+            }
+          }
+          if (!itemCost) {
+            const prod = products.find(p => p.id === item.productoId);
+            itemCost = prod?.costoPromedio || 0;
+          }
+          return iSum + (item.cantidad * itemCost);
         }, 0);
       }, 0);
 

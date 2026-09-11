@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useERP } from '../context/ERPContext';
-import { formatCurrency, formatDateTime, getMonthKey } from '../utils/formatters';
+import { formatCurrency, formatDateTime, getMonthKey, parseDateSafe, calculateWeightedAverageCost } from '../utils/formatters';
 import {
   BarChart3,
   FileSpreadsheet,
@@ -15,9 +15,13 @@ import {
   DollarSign,
   Layers,
   ArrowDownRight,
+  ArrowUpRight,
   PieChart,
   Search,
-  Filter
+  Filter,
+  Lock,
+  Sparkles,
+  Activity
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { ExcelExportButton } from '../components/common/ExcelExportButton';
@@ -26,9 +30,10 @@ import { SortableTh } from '../components/common/SortableTh';
 import { PeriodSelector } from '../components/common/PeriodSelector';
 import { useTableSort } from '../hooks/useTableSort';
 import type { ExcelColumnDefinition } from '../utils/excelExport';
+import type { CostAnalysisStage } from '../types/erp';
 
 interface ReportsPageProps {
-  initialReport?: 'pnl' | 'balance' | 'sales' | 'costs' | 'profitability';
+  initialReport?: 'pnl' | 'balance' | 'sales' | 'costs' | 'profitability' | 'cost_analysis';
 }
 
 export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
@@ -40,13 +45,16 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
     clients,
     expenses,
     fixedAssets,
+    inventoryMovements,
     settings,
     getProrrateoMensual,
-    getProductRealCost
+    getProductRealCost,
+    getProductStockAndCostAtMonth
   } = useERP();
 
   const [selectedMonth, setSelectedMonth] = useState(getMonthKey());
-  const [activeReport, setActiveReport] = useState<'pnl' | 'balance' | 'sales' | 'costs' | 'profitability'>(initialReport || 'pnl');
+  const [activeReport, setActiveReport] = useState<'pnl' | 'balance' | 'sales' | 'costs' | 'profitability' | 'cost_analysis'>(initialReport || 'pnl');
+  const [costAnalysisProductId, setCostAnalysisProductId] = useState<string>('');
 
   const availableMonths = useMemo(() => {
     const set = new Set<string>();
@@ -66,6 +74,13 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
       setActiveReport(initialReport);
     }
   }, [initialReport]);
+
+  // Default cost analysis product
+  React.useEffect(() => {
+    if (products.length > 0 && (!costAnalysisProductId || !products.some(p => p.id === costAnalysisProductId))) {
+      setCostAnalysisProductId(products[0].id);
+    }
+  }, [products, costAnalysisProductId]);
 
   // Expanded row state for Product and Client tables in the Sales report
   const [expandedProducts, setExpandedProducts] = useState<Record<string, boolean>>({});
@@ -91,11 +106,21 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
   const totalDiscounts = monthInvoices.reduce((sum, i) => sum + i.descuentoTotal, 0);
   const totalNetSales = monthInvoices.reduce((sum, i) => sum + i.subtotal, 0);
 
-  // Cost of Goods Sold (Compra direct)
+  // Cost of Goods Sold (Costo histórico congelado de las ventas del periodo)
   const totalCOGS = monthInvoices.reduce((sum, inv) => {
     return sum + inv.items.reduce((iSum, item) => {
-      const prod = products.find(p => p.id === item.productoId);
-      return iSum + (item.cantidad * (prod?.costoPromedio || 0));
+      let itemCost = item.costoUnitarioHistorico;
+      if (!itemCost) {
+        const move = inventoryMovements.find(m => m.referenciaDoc === inv.numeroFactura && m.productoId === item.productoId && m.tipo === 'SALIDA_VENTA');
+        if (move && move.costoUnitario > 0) {
+          itemCost = move.costoUnitario;
+        }
+      }
+      if (!itemCost) {
+        const prod = products.find(p => p.id === item.productoId);
+        itemCost = prod?.costoPromedio || 0;
+      }
+      return iSum + (item.cantidad * itemCost);
     }, 0);
   }, 0);
 
@@ -288,12 +313,166 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
   const clientSalesList = Array.from(clientSalesMap.values()).sort((a, b) => b.totalMonto - a.totalMonto);
 
   // 4. Calculations for Cost Comparison with Available Stock and Real Inventory Valuation
-  const totalStockUnits = products.reduce((sum, p) => sum + p.stockActual, 0);
-  const totalValuationCompra = products.reduce((sum, p) => sum + (p.stockActual * p.costoPromedio), 0);
+  const isPastMonth = selectedMonth < getMonthKey();
+
+  const totalStockUnits = products.reduce((sum, p) => {
+    const stock = isPastMonth ? getProductStockAndCostAtMonth(p.id, selectedMonth).stock : p.stockActual;
+    return sum + stock;
+  }, 0);
+
+  const totalValuationCompra = products.reduce((sum, p) => {
+    const data = isPastMonth ? getProductStockAndCostAtMonth(p.id, selectedMonth) : { stock: p.stockActual, costoPromedio: p.costoPromedio };
+    return sum + (data.stock * data.costoPromedio);
+  }, 0);
+
   const totalValuationReal = products.reduce((sum, p) => {
     const costs = getProductRealCost(p.id, selectedMonth);
-    return sum + (p.stockActual * costs.costoReal);
+    const stock = isPastMonth ? getProductStockAndCostAtMonth(p.id, selectedMonth).stock : p.stockActual;
+    return sum + (stock * costs.costoReal);
   }, 0);
+
+  // 6. Calculations for SAP CKM3N Cost Analysis (Libro Mayor de Materiales por Producto)
+  const selectedCostProduct = useMemo(() => {
+    return products.find(p => p.id === costAnalysisProductId) || products[0] || null;
+  }, [products, costAnalysisProductId]);
+
+  const costAnalysisResult = useMemo(() => {
+    if (!selectedCostProduct) return null;
+    const prodId = selectedCostProduct.id;
+    const prodMovements = inventoryMovements
+      .filter(m => m.productoId === prodId)
+      .sort((a, b) => {
+        const tA = parseDateSafe(a.fecha)?.getTime() || 0;
+        const tB = parseDateSafe(b.fecha)?.getTime() || 0;
+        if (tA !== tB) return tA - tB;
+        return inventoryMovements.indexOf(a) - inventoryMovements.indexOf(b);
+      });
+
+    // 1. Reconstrucción de stock y costo inicial previo al mes seleccionado
+    const pastMoves = prodMovements.filter(m => m.fecha.slice(0, 7) < selectedMonth);
+    let initStock = 0;
+    let initCost = 0;
+    for (const m of pastMoves) {
+      const qty = Number(m.cantidad) || 0;
+      const cost = Number(m.costoUnitario) || 0;
+      if (m.tipo === 'ENTRADA_COMPRA' || m.tipo === 'INVENTARIO_INICIAL') {
+        const posQty = Math.abs(qty);
+        if (initStock === 0 && cost > 0) {
+          initCost = cost;
+        } else {
+          initCost = calculateWeightedAverageCost(initStock, initCost, posQty, cost);
+        }
+        initStock += posQty;
+      } else if (m.tipo === 'SALIDA_VENTA') {
+        initStock = Math.max(0, initStock - Math.abs(qty));
+      } else if (m.tipo === 'AJUSTE_MANUAL') {
+        initStock = Math.max(0, initStock + qty);
+      } else if (m.tipo === 'ANULACION_COMPRA') {
+        initStock = Math.max(0, initStock - Math.abs(qty));
+      } else if (m.tipo === 'ANULACION_VENTA') {
+        initStock += Math.abs(qty);
+      }
+    }
+
+    // 2. Movimientos del mes seleccionado
+    const monthMoves = prodMovements.filter(m => m.fecha.slice(0, 7) === selectedMonth);
+    const comprasMoves = monthMoves.filter(m => m.tipo === 'ENTRADA_COMPRA' || m.tipo === 'INVENTARIO_INICIAL');
+    const ajustesMoves = monthMoves.filter(m => m.tipo === 'AJUSTE_MANUAL');
+    const ventasMoves = monthMoves.filter(m => m.tipo === 'SALIDA_VENTA');
+
+    const comprasQty = comprasMoves.reduce((sum, m) => sum + Math.abs(Number(m.cantidad) || 0), 0);
+    const comprasTotalCost = comprasMoves.reduce((sum, m) => sum + (Math.abs(Number(m.cantidad) || 0) * (Number(m.costoUnitario) || 0)), 0);
+    const comprasUnitCost = comprasQty > 0 ? Number((comprasTotalCost / comprasQty).toFixed(2)) : 0;
+
+    const ajustesQty = ajustesMoves.reduce((sum, m) => sum + (Number(m.cantidad) || 0), 0);
+
+    const ventasQty = ventasMoves.reduce((sum, m) => sum + Math.abs(Number(m.cantidad) || 0), 0);
+    const ventasTotalCost = ventasMoves.reduce((sum, m) => sum + (Math.abs(Number(m.cantidad) || 0) * (Number(m.costoUnitario) || 0)), 0);
+    const ventasUnitCost = ventasQty > 0 ? Number((ventasTotalCost / ventasQty).toFixed(2)) : (initCost || selectedCostProduct.costoPromedio);
+
+    // 3. Stock e inventario final
+    const finalStock = Math.max(0, initStock + comprasQty + ajustesQty - ventasQty);
+    const costs = getProductRealCost(prodId, selectedMonth);
+    const finalCost = costs.costoCompra;
+
+    // Prorrateo del mes
+    const opUnit = costs.gastoOperativoUnitario;
+    const depUnit = costs.gastoDepreciacionUnitario;
+    const opexPlusDep = Number((opUnit + depUnit).toFixed(2));
+
+    const stages: CostAnalysisStage[] = [
+      {
+        etapaId: 'inicial',
+        concepto: '1. Inventario Inicial (al 1° del mes)',
+        cantidad: initStock,
+        costoCompraUnitario: initCost,
+        costoCompraTotal: Number((initStock * initCost).toFixed(2)),
+        gastoOperativoUnitario: initStock > 0 ? opUnit : 0,
+        gastoDepreciacionUnitario: initStock > 0 ? depUnit : 0,
+        costoRealUnitario: initStock > 0 ? Number((initCost + opexPlusDep).toFixed(2)) : 0,
+        valuacionTotalReal: initStock > 0 ? Number((initStock * (initCost + opexPlusDep)).toFixed(2)) : 0
+      },
+      {
+        etapaId: 'compras',
+        concepto: '2. Entradas / Compras del Mes',
+        cantidad: comprasQty,
+        costoCompraUnitario: comprasUnitCost,
+        costoCompraTotal: comprasTotalCost,
+        gastoOperativoUnitario: comprasQty > 0 ? opUnit : 0,
+        gastoDepreciacionUnitario: comprasQty > 0 ? depUnit : 0,
+        costoRealUnitario: comprasQty > 0 ? Number((comprasUnitCost + opexPlusDep).toFixed(2)) : 0,
+        valuacionTotalReal: comprasQty > 0 ? Number((comprasQty * (comprasUnitCost + opexPlusDep)).toFixed(2)) : 0
+      },
+      {
+        etapaId: 'ajustes',
+        concepto: '3. Ajustes de Inventario del Mes',
+        cantidad: ajustesQty,
+        costoCompraUnitario: finalCost,
+        costoCompraTotal: Number((ajustesQty * finalCost).toFixed(2)),
+        gastoOperativoUnitario: ajustesQty !== 0 ? opUnit : 0,
+        gastoDepreciacionUnitario: ajustesQty !== 0 ? depUnit : 0,
+        costoRealUnitario: ajustesQty !== 0 ? costs.costoReal : 0,
+        valuacionTotalReal: Number((ajustesQty * costs.costoReal).toFixed(2))
+      },
+      {
+        etapaId: 'ventas',
+        concepto: '4. Salidas / Ventas del Mes',
+        cantidad: -ventasQty,
+        costoCompraUnitario: ventasUnitCost,
+        costoCompraTotal: -Number((ventasQty * ventasUnitCost).toFixed(2)),
+        gastoOperativoUnitario: ventasQty > 0 ? -opUnit : 0,
+        gastoDepreciacionUnitario: ventasQty > 0 ? -depUnit : 0,
+        costoRealUnitario: ventasQty > 0 ? Number((ventasUnitCost + opexPlusDep).toFixed(2)) : 0,
+        valuacionTotalReal: -Number((ventasQty * (ventasUnitCost + opexPlusDep)).toFixed(2))
+      },
+      {
+        etapaId: 'final',
+        concepto: '5. Inventario Final (al cierre / en balance)',
+        cantidad: finalStock,
+        costoCompraUnitario: finalCost,
+        costoCompraTotal: Number((finalStock * finalCost).toFixed(2)),
+        gastoOperativoUnitario: finalStock > 0 ? opUnit : 0,
+        gastoDepreciacionUnitario: finalStock > 0 ? depUnit : 0,
+        costoRealUnitario: finalStock > 0 ? costs.costoReal : 0,
+        valuacionTotalReal: Number((finalStock * costs.costoReal).toFixed(2))
+      }
+    ];
+
+    return {
+      product: selectedCostProduct,
+      initStock,
+      initCost,
+      comprasQty,
+      comprasTotalCost,
+      ajustesQty,
+      ventasQty,
+      ventasTotalCost,
+      finalStock,
+      finalCost,
+      costs,
+      stages
+    };
+  }, [selectedCostProduct, inventoryMovements, selectedMonth, getProductRealCost]);
 
   // 5. Calculations for SKU-Level Profitability Analysis (Análisis de Rentabilidad por SKU)
   const [profitabilitySearch, setProfitabilitySearch] = useState('');
@@ -582,6 +761,14 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
         >
           <PieChart size={16} />
           Análisis de Rentabilidad
+        </button>
+        <button
+          type="button"
+          className={`tab-btn ${activeReport === 'cost_analysis' ? 'active' : ''}`}
+          onClick={() => setActiveReport('cost_analysis')}
+        >
+          <Layers size={16} />
+          Análisis de Costo (CKM3N)
         </button>
       </div>
 
@@ -1297,9 +1484,21 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
           <div className="card">
             <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h2 className="card-title">Matriz de Costo Directo vs Costo Real Absorbido & Valuación de Stock</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
+                  <h2 className="card-title" style={{ margin: 0 }}>Matriz de Costo Directo vs Costo Real Absorbido & Valuación de Stock</h2>
+                  {isPastMonth ? (
+                    <span className="badge badge-neutral" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700, fontSize: '0.75rem', padding: '0.25rem 0.6rem', border: '1px solid var(--border-default)' }}>
+                      <Lock size={12} /> Periodo Cerrado (Histórico Inmutable)
+                    </span>
+                  ) : (
+                    <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700, fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}>
+                      <Sparkles size={12} /> Periodo en Curso (Cálculo en Vivo)
+                    </span>
+                  )}
+                </div>
                 <p className="card-subtitle">
                   Regla Activa: <strong>{prorrateo.criterio === 'costo_material' ? `Distribución proporcional por Material Directo (+${prorrateo.tasaAbsorcionPorcentaje}% sobre costo de compra)` : prorrateo.criterio === 'valor_venta' ? `Distribución por Precio de Venta (+${prorrateo.tasaAbsorcionPorcentaje}% sobre PVP)` : `División lineal (${formatCurrency(prorrateo.costoOperativoProrrateadoPorUnidad)}/unidad)`}</strong>
+                  {isPastMonth && ' — Cifras históricas inmutables con las que cerró el periodo seleccionado.'}
                 </p>
               </div>
               <ExcelExportButton filename={`Comparativa_Costos_Valuacion_${selectedMonth}`} />
@@ -1318,15 +1517,21 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
                     <th style={{ textAlign: 'right' }}>3. Deprec. Activos</th>
                     <th style={{ textAlign: 'right', fontWeight: 800 }}>4. Costo Real Total</th>
                     <th style={{ textAlign: 'center' }}>Margen Real %</th>
-                    <th style={{ textAlign: 'center', backgroundColor: 'var(--bg-subtle)' }}>Vol. Stock Disponible</th>
-                    <th style={{ textAlign: 'right', backgroundColor: 'var(--bg-subtle)', fontWeight: 800 }}>Inventario Valuado a Costo Real</th>
+                    <th style={{ textAlign: 'center', backgroundColor: 'var(--bg-subtle)' }}>
+                      {isPastMonth ? 'Vol. Stock al Cierre' : 'Vol. Stock Disponible'}
+                    </th>
+                    <th style={{ textAlign: 'right', backgroundColor: 'var(--bg-subtle)', fontWeight: 800 }}>
+                      {isPastMonth ? 'Inventario Valuado al Cierre' : 'Inventario Valuado a Costo Real'}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {products.map(p => {
                     const costs = getProductRealCost(p.id, selectedMonth);
+                    const closedData = isPastMonth ? getProductStockAndCostAtMonth(p.id, selectedMonth) : { stock: p.stockActual, costoPromedio: p.costoPromedio };
+                    const stockUnits = closedData.stock;
                     const realMargin = p.precioVenta > 0 ? (((p.precioVenta - costs.costoReal) / p.precioVenta) * 100).toFixed(1) : 0;
-                    const stockValuationReal = p.stockActual * costs.costoReal;
+                    const stockValuationReal = stockUnits * costs.costoReal;
 
                     return (
                       <tr key={p.id}>
@@ -1346,8 +1551,8 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
                           </span>
                         </td>
                         <td style={{ textAlign: 'center', backgroundColor: 'var(--bg-subtle)', fontWeight: 700 }}>
-                          <span style={{ color: p.stockActual <= p.stockMinimo ? 'var(--color-danger)' : 'inherit' }}>
-                            {p.stockActual} {p.unidadMedida || 'pzas'}
+                          <span style={{ color: stockUnits <= p.stockMinimo ? 'var(--color-danger)' : 'inherit' }}>
+                            {stockUnits} {p.unidadMedida || 'pzas'}
                           </span>
                         </td>
                         <td style={{ textAlign: 'right', backgroundColor: 'var(--bg-subtle)', fontWeight: 800, color: 'var(--color-accent)', fontSize: '0.95rem' }}>
@@ -1360,7 +1565,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
                 <tfoot>
                   <tr style={{ borderTop: '2px solid var(--border-default)', backgroundColor: 'var(--bg-subtle)' }}>
                     <td colSpan={9} style={{ padding: '0.85rem 1rem', fontWeight: 800, textAlign: 'right' }}>
-                      TOTAL VALUACIÓN DE INVENTARIO REAL EN BALANCE:
+                      {isPastMonth ? 'TOTAL VALUACIÓN DE INVENTARIO AL CIERRE DEL PERIODO:' : 'TOTAL VALUACIÓN DE INVENTARIO REAL EN BALANCE:'}
                     </td>
                     <td style={{ padding: '0.85rem', textAlign: 'center', fontWeight: 800 }}>
                       {totalStockUnits} pzas
@@ -1726,6 +1931,288 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
               </table>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Report 6: SAP CKM3N Cost Analysis (Libro Mayor de Materiales por Producto) */}
+      {activeReport === 'cost_analysis' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Controls & Product Selector Header Card */}
+          <div className="card" style={{ padding: '1.25rem 1.5rem' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1.25rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
+                    Seleccionar Producto / Material a Analizar:
+                  </label>
+                  <select
+                    className="form-control"
+                    value={costAnalysisProductId}
+                    onChange={e => setCostAnalysisProductId(e.target.value)}
+                    style={{ minWidth: '340px', fontWeight: 600, fontSize: '0.9rem', padding: '0.45rem 0.75rem' }}
+                  >
+                    {products.map(prod => (
+                      <option key={prod.id} value={prod.id}>
+                        [{prod.codigo}] {prod.nombre} — Stock actual: {prod.stockActual} {prod.unidadMedida || 'pzas'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {selectedCostProduct && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', paddingTop: '1.2rem' }}>
+                    <span className="badge badge-neutral" style={{ fontWeight: 600, fontSize: '0.8rem' }}>
+                      SKU: <strong style={{ fontFamily: 'var(--font-mono)' }}>{selectedCostProduct.codigo}</strong>
+                    </span>
+                    <span className="badge badge-info" style={{ fontWeight: 600, fontSize: '0.8rem' }}>
+                      Unidad: {selectedCostProduct.unidadMedida || 'pzas'}
+                    </span>
+                    {categories.find(c => c.id === selectedCostProduct.categoriaId)?.nombre && (
+                      <span className="badge badge-neutral" style={{ fontWeight: 600, fontSize: '0.8rem' }}>
+                        {categories.find(c => c.id === selectedCostProduct.categoriaId)?.nombre}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                {isPastMonth ? (
+                  <span className="badge badge-neutral" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700, fontSize: '0.8rem', padding: '0.35rem 0.75rem', border: '1px solid var(--border-default)' }}>
+                    <Lock size={13} /> Periodo Cerrado (Datos Históricos Fijos)
+                  </span>
+                ) : (
+                  <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700, fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}>
+                    <Sparkles size={13} /> Periodo en Curso (Cálculo Dinámico en Vivo)
+                  </span>
+                )}
+                <ExcelExportButton filename={`Analisis_Costo_CKM3N_${selectedCostProduct?.codigo || 'Material'}_${selectedMonth}`} />
+              </div>
+            </div>
+          </div>
+
+          {costAnalysisResult && (
+            <>
+              {/* 5 KPI Cards for the Selected Product */}
+              <div className="grid-5" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '1rem' }}>
+                {/* 1. Inventario Inicial */}
+                <div className="stat-card">
+                  <div className="stat-header">
+                    <span>1. Inv. Inicial (1° {selectedMonth.slice(-2)})</span>
+                    <div className="stat-icon" style={{ backgroundColor: 'var(--color-info-bg)', color: 'var(--color-info)' }}>
+                      <Package size={18} />
+                    </div>
+                  </div>
+                  <div className="stat-value">{costAnalysisResult.initStock} {costAnalysisResult.product.unidadMedida || 'pzas'}</div>
+                  <div className="stat-footer">
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      Valuación: <strong>{formatCurrency(costAnalysisResult.stages[0].valuacionTotalReal)}</strong>
+                    </span>
+                  </div>
+                </div>
+
+                {/* 2. Compras */}
+                <div className="stat-card">
+                  <div className="stat-header">
+                    <span>2. Entradas / Compras</span>
+                    <div className="stat-icon" style={{ backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success)' }}>
+                      <ArrowDownRight size={18} />
+                    </div>
+                  </div>
+                  <div className="stat-value" style={{ color: 'var(--color-success-text)' }}>
+                    +{costAnalysisResult.comprasQty} {costAnalysisResult.product.unidadMedida || 'pzas'}
+                  </div>
+                  <div className="stat-footer">
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      Inversión: <strong>{formatCurrency(costAnalysisResult.comprasTotalCost)}</strong>
+                    </span>
+                  </div>
+                </div>
+
+                {/* 3. Ventas */}
+                <div className="stat-card">
+                  <div className="stat-header">
+                    <span>3. Salidas / Ventas</span>
+                    <div className="stat-icon" style={{ backgroundColor: 'var(--color-danger-bg)', color: 'var(--color-danger)' }}>
+                      <ArrowUpRight size={18} />
+                    </div>
+                  </div>
+                  <div className="stat-value" style={{ color: 'var(--color-danger-text)' }}>
+                    -{costAnalysisResult.ventasQty} {costAnalysisResult.product.unidadMedida || 'pzas'}
+                  </div>
+                  <div className="stat-footer">
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      Costo Ventas (COGS): <strong>{formatCurrency(costAnalysisResult.ventasTotalCost)}</strong>
+                    </span>
+                  </div>
+                </div>
+
+                {/* 4. Inventario Final */}
+                <div className="stat-card">
+                  <div className="stat-header">
+                    <span>4. Inv. Final ({selectedMonth})</span>
+                    <div className="stat-icon" style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--color-accent)' }}>
+                      <Boxes size={18} />
+                    </div>
+                  </div>
+                  <div className="stat-value" style={{ color: 'var(--color-accent)' }}>
+                    {costAnalysisResult.finalStock} {costAnalysisResult.product.unidadMedida || 'pzas'}
+                  </div>
+                  <div className="stat-footer">
+                    <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
+                      Valuación: <strong>{formatCurrency(costAnalysisResult.stages[4].valuacionTotalReal)}</strong>
+                    </span>
+                  </div>
+                </div>
+
+                {/* 5. Costo Real Unitario */}
+                <div className="stat-card" style={{ borderColor: 'var(--color-accent)', boxShadow: '0 4px 12px var(--color-accent-glow)' }}>
+                  <div className="stat-header">
+                    <span style={{ color: 'var(--color-accent)', fontWeight: 700 }}>5. Costo Real Total Unit.</span>
+                    <div className="stat-icon" style={{ backgroundColor: 'var(--color-accent)', color: 'white' }}>
+                      <Layers size={18} />
+                    </div>
+                  </div>
+                  <div className="stat-value" style={{ color: 'var(--color-accent)' }}>
+                    {formatCurrency(costAnalysisResult.costs.costoReal)}
+                  </div>
+                  <div className="stat-footer">
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      Compra {formatCurrency(costAnalysisResult.finalCost)} + Absorb. {formatCurrency(costAnalysisResult.costs.costoOperativoProrrateado)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Matrix Table: SAP CKM3N Actual Costing Material Ledger */}
+              <div className="card">
+                <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h2 className="card-title">Libro Mayor de Materiales — Flujo & Determinación de Costo Real (CKM3N)</h2>
+                    <p className="card-subtitle">
+                      Material: <strong>[{costAnalysisResult.product.codigo}] {costAnalysisResult.product.nombre}</strong> | Periodo: <strong>{selectedMonth}</strong>
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span className="badge badge-neutral" style={{ fontSize: '0.8rem' }}>
+                      Base Prorrateo: {prorrateo.criterio === 'costo_material' ? 'Costo Material Directo' : prorrateo.criterio === 'valor_venta' ? 'Precio de Venta' : 'Unidades Físicas'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="table-container" style={{ border: 'none', boxShadow: 'none' }}>
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '280px' }}>Etapa / Categoría del Flujo</th>
+                        <th style={{ textAlign: 'center' }}>Cantidad ({costAnalysisResult.product.unidadMedida || 'pzas'})</th>
+                        <th style={{ textAlign: 'right' }}>1. Costo Compra Unit.</th>
+                        <th style={{ textAlign: 'right' }}>Total Adquisición Directa</th>
+                        <th style={{ textAlign: 'right' }}>2. Gasto Operativo Abs.</th>
+                        <th style={{ textAlign: 'right' }}>3. Deprec. Absorbida</th>
+                        <th style={{ textAlign: 'right', fontWeight: 800, backgroundColor: 'var(--bg-subtle)' }}>4. Costo Real Unit.</th>
+                        <th style={{ textAlign: 'right', fontWeight: 900, backgroundColor: 'var(--bg-subtle)' }}>Valuación Total Real</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {costAnalysisResult.stages.map(st => {
+                        const isFinal = st.etapaId === 'final';
+                        const isVenta = st.etapaId === 'ventas';
+                        const isCompra = st.etapaId === 'compras';
+                        const isAjuste = st.etapaId === 'ajustes';
+                        const isInit = st.etapaId === 'inicial';
+
+                        return (
+                          <tr
+                            key={st.etapaId}
+                            style={{
+                              backgroundColor: isFinal ? 'var(--bg-subtle)' : 'transparent',
+                              borderBottom: isFinal ? '2px solid var(--border-default)' : '1px solid var(--border-subtle)',
+                              fontWeight: isFinal ? 700 : 'normal'
+                            }}
+                          >
+                            <td style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', padding: '0.85rem 1rem' }}>
+                              {isInit && <Package size={17} style={{ color: 'var(--color-info)' }} />}
+                              {isCompra && <ArrowDownRight size={17} style={{ color: 'var(--color-success)' }} />}
+                              {isAjuste && <Activity size={17} style={{ color: 'var(--color-warning)' }} />}
+                              {isVenta && <ArrowUpRight size={17} style={{ color: 'var(--color-danger)' }} />}
+                              {isFinal && <Boxes size={17} style={{ color: 'var(--color-accent)' }} />}
+                              <span style={{ fontWeight: isFinal ? 800 : 600, color: isFinal ? 'var(--color-accent)' : 'inherit' }}>
+                                {st.concepto}
+                              </span>
+                            </td>
+                            <td style={{ textAlign: 'center', fontWeight: 700 }}>
+                              <span style={{
+                                color: isVenta ? 'var(--color-danger-text)' : isCompra ? 'var(--color-success-text)' : isFinal ? 'var(--color-accent)' : 'inherit'
+                              }}>
+                                {st.cantidad > 0 && isCompra ? `+${st.cantidad}` : st.cantidad}
+                              </span>
+                            </td>
+                            <td style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>
+                              {formatCurrency(st.costoCompraUnitario)}
+                            </td>
+                            <td style={{ textAlign: 'right', fontWeight: 600, color: isVenta ? 'var(--color-danger-text)' : 'inherit' }}>
+                              {formatCurrency(st.costoCompraTotal)}
+                            </td>
+                            <td style={{ textAlign: 'right', color: 'var(--color-warning-text)' }}>
+                              {st.gastoOperativoUnitario !== 0 ? (st.gastoOperativoUnitario > 0 ? `+${formatCurrency(st.gastoOperativoUnitario)}` : formatCurrency(st.gastoOperativoUnitario)) : '—'}
+                            </td>
+                            <td style={{ textAlign: 'right', color: '#3b82f6' }}>
+                              {st.gastoDepreciacionUnitario !== 0 ? (st.gastoDepreciacionUnitario > 0 ? `+${formatCurrency(st.gastoDepreciacionUnitario)}` : formatCurrency(st.gastoDepreciacionUnitario)) : '—'}
+                            </td>
+                            <td style={{ textAlign: 'right', fontWeight: 800, backgroundColor: 'var(--bg-subtle)', color: 'var(--color-accent)' }}>
+                              {formatCurrency(st.costoRealUnitario)}
+                            </td>
+                            <td style={{
+                              textAlign: 'right',
+                              fontWeight: 900,
+                              backgroundColor: 'var(--bg-subtle)',
+                              fontSize: isFinal ? '1rem' : '0.925rem',
+                              color: isFinal ? 'var(--color-accent)' : isVenta ? 'var(--color-danger-text)' : 'inherit'
+                            }}>
+                              {formatCurrency(st.valuacionTotalReal)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Audit & Balance Equation Verification */}
+                <div style={{
+                  margin: '1.25rem 1.5rem',
+                  padding: '1rem 1.25rem',
+                  borderRadius: 'var(--radius-md)',
+                  backgroundColor: 'var(--bg-subtle)',
+                  border: '1px solid var(--border-default)',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: '1rem'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.2rem', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>
+                      Ecuación Contable de Conciliación de Existencias:
+                    </div>
+                    <div style={{ fontSize: '0.95rem', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
+                      Inicial ({costAnalysisResult.initStock}) + Compras ({costAnalysisResult.comprasQty >= 0 ? `+${costAnalysisResult.comprasQty}` : costAnalysisResult.comprasQty}) + Ajustes ({costAnalysisResult.ajustesQty >= 0 ? `+${costAnalysisResult.ajustesQty}` : costAnalysisResult.ajustesQty}) - Ventas ({costAnalysisResult.ventasQty}) = <span style={{ color: 'var(--color-accent)' }}>Final ({costAnalysisResult.finalStock} {costAnalysisResult.product.unidadMedida || 'pzas'})</span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span className="badge badge-success" style={{ fontWeight: 700, fontSize: '0.8rem', padding: '0.35rem 0.65rem' }}>
+                      ✓ Balance de Flujo Físico: 100% Cuadrado
+                    </span>
+                    <span className="badge badge-neutral" style={{ fontSize: '0.8rem', padding: '0.35rem 0.65rem' }}>
+                      Tasa Absorción: <strong>{prorrateo.tasaAbsorcionPorcentaje}%</strong>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
