@@ -91,6 +91,7 @@ export interface ProductVariant {
   color: string;
   stockActual: number;
   precioExtra?: number;
+  ubicacion?: string;
 }
 
 export interface Product {
@@ -106,6 +107,7 @@ export interface Product {
   stockActual: number; // Suma de variantes o stock directo
   tieneVariantes: boolean;
   variantes?: ProductVariant[];
+  ubicacion?: string;
   creadoEn: string;
   descripcion?: string;
   activo?: boolean;
@@ -235,6 +237,8 @@ export interface Invoice {
   total: number;
   saldoPendiente: number;
   pagos: ClientPayment[];
+  tipoTransporte?: 'sin_transporte' | 'dentro_gam' | 'fuera_gam';
+  costoTransporte?: number;
   notas?: string;
   anuladoMotivo?: string;
   anuladoFecha?: string;

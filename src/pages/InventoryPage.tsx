@@ -185,6 +185,11 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
         return variant?.sku || prod?.codigo || '';
       },
       producto: (m) => products.find(p => p.id === m.productoId)?.nombre || '',
+      ubicacion: (m) => {
+        const prod = products.find(p => p.id === m.productoId);
+        const variant = prod?.variantes?.find(v => v.id === m.varianteId);
+        return variant?.ubicacion || prod?.ubicacion || '';
+      },
       costoTotal: (m) => m.cantidad * m.costoUnitario,
     }
   });
@@ -221,6 +226,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
     defaultIsNumeric: false,
     customGetters: {
       categoria: (p) => categories.find(c => c.id === p.categoriaId)?.nombre || '',
+      ubicacion: (p) => p.ubicacion || (p.variantes?.[0]?.ubicacion ? p.variantes[0].ubicacion : ''),
       valorInventario: (p) => p.stockActual * p.costoPromedio,
       estadoStock: (p) => (p.stockActual <= p.stockMinimo ? 'Bajo' : 'Normal')
     }
@@ -495,6 +501,15 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                   Producto / Descripción
                 </SortableTh>
                 <SortableTh
+                  sortKey="ubicacion"
+                  currentSortKey={kardexSortKey}
+                  currentSortDirection={kardexSortDirection}
+                  onSort={requestKardexSort}
+                  isNumeric={false}
+                >
+                  Ubicación
+                </SortableTh>
+                <SortableTh
                   sortKey="cantidad"
                   currentSortKey={kardexSortKey}
                   currentSortDirection={kardexSortDirection}
@@ -538,7 +553,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
             <tbody>
               {sortedMovements.length === 0 ? (
                 <tr>
-                  <td colSpan={9} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
+                  <td colSpan={10} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
                     No hay movimientos registrados con los filtros seleccionados.
                   </td>
                 </tr>
@@ -549,6 +564,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                   const skuCode = variant?.sku || prod?.codigo || '—';
                   const isPositive = m.cantidad > 0;
                   const totalMovementCost = m.cantidad * m.costoUnitario;
+                  const itemUbicacion = variant?.ubicacion || prod?.ubicacion || '—';
 
                   return (
                     <tr key={m.id}>
@@ -569,6 +585,15 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                             Talla: {variant.talla} | Color: {variant.color}
                           </div>
                         ) : null}
+                      </td>
+                      <td style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+                        {itemUbicacion !== '—' ? (
+                          <span className="badge badge-neutral" style={{ fontWeight: 600, fontSize: '0.75rem' }}>
+                            📍 {itemUbicacion}
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)' }}>—</span>
+                        )}
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         <span style={{
@@ -664,6 +689,15 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                   Categoría
                 </SortableTh>
                 <SortableTh
+                  sortKey="ubicacion"
+                  currentSortKey={stockSortKey}
+                  currentSortDirection={stockSortDirection}
+                  onSort={requestStockSort}
+                  isNumeric={false}
+                >
+                  Ubicación
+                </SortableTh>
+                <SortableTh
                   sortKey="stockActual"
                   currentSortKey={stockSortKey}
                   currentSortDirection={stockSortDirection}
@@ -719,7 +753,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
             <tbody>
               {sortedStockProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={10} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
+                  <td colSpan={11} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
                     No se encontraron productos con los criterios seleccionados.
                   </td>
                 </tr>
@@ -730,6 +764,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                   const value = p.stockActual * p.costoPromedio;
                   const hasVariants = Boolean(p.tieneVariantes && p.variantes && p.variantes.length > 0);
                   const isExpanded = expandedProductIds.has(p.id);
+                  const displayUbicacion = p.ubicacion || (p.variantes?.[0]?.ubicacion ? p.variantes[0].ubicacion : '');
 
                   return (
                     <React.Fragment key={p.id}>
@@ -772,6 +807,15 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                           <div style={{ fontWeight: 600 }}>{p.nombre}</div>
                         </td>
                         <td>{cat?.nombre || 'General'}</td>
+                        <td style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+                          {displayUbicacion ? (
+                            <span className="badge badge-neutral" style={{ fontWeight: 600, fontSize: '0.75rem' }}>
+                              📍 {displayUbicacion}
+                            </span>
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)' }}>—</span>
+                          )}
+                        </td>
                         <td style={{ textAlign: 'center', fontWeight: 700 }}>
                           {p.stockActual} {p.unidadMedida}
                         </td>
@@ -806,7 +850,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                       {/* Expandable Variants Breakdown Subtable */}
                       {isExpanded && hasVariants && p.variantes && (
                         <tr style={{ backgroundColor: 'var(--bg-subtle)' }}>
-                          <td colSpan={10} style={{ padding: '0.75rem 1.25rem 1.25rem 2.5rem', borderBottom: '1px solid var(--border-default)' }}>
+                          <td colSpan={11} style={{ padding: '0.75rem 1.25rem 1.25rem 2.5rem', borderBottom: '1px solid var(--border-default)' }}>
                             <div style={{
                               backgroundColor: 'var(--bg-surface)',
                               border: '1px solid var(--border-default)',
@@ -839,10 +883,11 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                                 <table className="table" style={{ margin: 0, fontSize: '0.825rem' }}>
                                   <thead>
                                     <tr style={{ backgroundColor: 'var(--bg-subtle)', borderBottom: '1px solid var(--border-default)' }}>
-                                      <th style={{ padding: '0.5rem 0.85rem', width: '22%' }}>SKU / Código Variante</th>
-                                      <th style={{ padding: '0.5rem 0.85rem', width: '16%' }}>Color</th>
-                                      <th style={{ padding: '0.5rem 0.85rem', width: '14%' }}>Talla</th>
-                                      <th style={{ padding: '0.5rem 0.85rem', textAlign: 'center', width: '14%' }}>Existencias (Stock)</th>
+                                      <th style={{ padding: '0.5rem 0.85rem', width: '20%' }}>SKU / Código Variante</th>
+                                      <th style={{ padding: '0.5rem 0.85rem', width: '13%' }}>Color</th>
+                                      <th style={{ padding: '0.5rem 0.85rem', width: '12%' }}>Talla</th>
+                                      <th style={{ padding: '0.5rem 0.85rem', width: '15%' }}>Ubicación</th>
+                                      <th style={{ padding: '0.5rem 0.85rem', textAlign: 'center', width: '12%' }}>Existencias (Stock)</th>
                                       <th style={{ padding: '0.5rem 0.85rem', textAlign: 'right', width: '14%' }}>Costo Promedio</th>
                                       <th style={{ padding: '0.5rem 0.85rem', textAlign: 'right', width: '14%' }}>Valor Inventario</th>
                                       <th style={{ padding: '0.5rem 0.85rem', textAlign: 'right', width: '10%' }}>Acción</th>
@@ -852,6 +897,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                                     {p.variantes.map(v => {
                                       const varValue = v.stockActual * p.costoPromedio;
                                       const isVarLow = v.stockActual <= 3;
+                                      const varUbicacion = v.ubicacion || p.ubicacion;
 
                                       return (
                                         <tr key={v.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
@@ -866,6 +912,15 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                                           </td>
                                           <td style={{ padding: '0.55rem 0.85rem', fontWeight: 600 }}>
                                             {v.talla || 'Única'}
+                                          </td>
+                                          <td style={{ padding: '0.55rem 0.85rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                            {varUbicacion ? (
+                                              <span className="badge badge-neutral" style={{ fontWeight: 600, fontSize: '0.725rem' }}>
+                                                📍 {varUbicacion}
+                                              </span>
+                                            ) : (
+                                              <span style={{ color: 'var(--text-muted)' }}>—</span>
+                                            )}
                                           </td>
                                           <td style={{ padding: '0.55rem 0.85rem', textAlign: 'center' }}>
                                             <span style={{

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useERP } from '../context/ERPContext';
 import type { Invoice, Quote, PaymentMethod, PaymentTerm } from '../types/erp';
 import { formatCurrency, formatDate, formatDateTime, generateDocNumber, getNextDocNumber, formatMonthLabel, getTodayLocalDateString, getFutureLocalDateString, buildLocalDateISO } from '../utils/formatters';
@@ -17,7 +17,9 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronUp,
-  Eye
+  Eye,
+  Truck,
+  Pencil
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
@@ -50,6 +52,8 @@ interface ConfirmIssueData {
   subtotal: number;
   tasaImpuesto?: number;
   impuestos: number;
+  costoTransporte?: number;
+  tipoTransporte?: string;
   total: number;
   deficitItems?: DeficitItem[];
   onConfirm: () => void;
@@ -122,6 +126,9 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
   const [formTipoPago, setFormTipoPago] = useState<PaymentTerm>('contado');
   const [formTasaImpuesto, setFormTasaImpuesto] = useState<number>(settings.tasaImpuestoDefecto ?? 16);
   const [formNotas, setFormNotas] = useState('');
+  const [formTipoTransporte, setFormTipoTransporte] = useState<'sin_transporte' | 'dentro_gam' | 'fuera_gam'>('sin_transporte');
+  const [formCostoTransporte, setFormCostoTransporte] = useState<number>(0);
+  const transportCostInputRef = useRef<HTMLInputElement>(null);
   const [formItems, setFormItems] = useState<{
     productoId: string;
     varianteId?: string;
@@ -131,6 +138,17 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
     descuento: number;
     subtotal: number;
   }[]>([]);
+
+  const handleSelectTipoTransporte = (tipo: 'sin_transporte' | 'dentro_gam' | 'fuera_gam') => {
+    setFormTipoTransporte(tipo);
+    if (tipo === 'sin_transporte') {
+      setFormCostoTransporte(0);
+    } else if (tipo === 'dentro_gam') {
+      setFormCostoTransporte(3000);
+    } else if (tipo === 'fuera_gam') {
+      setFormCostoTransporte(5000);
+    }
+  };
 
   // Line item builder inputs
   const [selectedProdForLine, setSelectedProdForLine] = useState('');
@@ -169,6 +187,8 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
     setFormFechaVencimiento(due);
     setFormTasaImpuesto(settings.tasaImpuestoDefecto ?? 16);
     setFormNotas('');
+    setFormTipoTransporte('sin_transporte');
+    setFormCostoTransporte(0);
     setFormItems([]);
     setSelectedProdForLine('');
     setSelectedVarForLine('');
@@ -268,7 +288,8 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
 
   const formSubtotal = formItems.reduce((sum, item) => sum + item.subtotal, 0);
   const formImpuestos = Number((formSubtotal * ((formTasaImpuesto || 0) / 100)).toFixed(2));
-  const formTotal = formSubtotal + formImpuestos;
+  const formTransporte = Number(formCostoTransporte) || 0;
+  const formTotal = Number((formSubtotal + formImpuestos + formTransporte).toFixed(2));
 
   const handleSaveDraftInvoice = () => {
     if (isSubmitting || !formClienteId || formItems.length === 0) return;
@@ -291,6 +312,8 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
         descuentoTotal: 0,
         tasaImpuesto: formTasaImpuesto,
         impuestos: formImpuestos,
+        tipoTransporte: formTipoTransporte,
+        costoTransporte: formTransporte,
         total: formTotal,
         notas: formNotas
       });
@@ -322,6 +345,8 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
       subtotal: formSubtotal,
       tasaImpuesto: formTasaImpuesto,
       impuestos: formImpuestos,
+      costoTransporte: formTransporte,
+      tipoTransporte: formTipoTransporte,
       total: formTotal,
       deficitItems: deficits,
       onConfirm: () => {
@@ -343,6 +368,8 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
             descuentoTotal: 0,
             tasaImpuesto: formTasaImpuesto,
             impuestos: formImpuestos,
+            tipoTransporte: formTipoTransporte,
+            costoTransporte: formTransporte,
             total: formTotal,
             notas: formNotas
           });
@@ -1226,6 +1253,96 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
             </div>
           </div>
 
+          {/* Row Transporte / Envíos */}
+          <div className="form-row" style={{ alignItems: 'flex-end', backgroundColor: 'var(--bg-subtle)', padding: '0.85rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)' }}>
+            <div className="form-group" style={{ flex: 1.6, marginBottom: 0 }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}>
+                <Truck size={15} style={{ color: 'var(--color-accent)' }} />
+                Transporte / Flete
+              </label>
+              <ComboboxInline
+                options={[
+                  { id: 'sin_transporte', label: 'Sin transporte', sublabel: '₡0' },
+                  { id: 'dentro_gam', label: 'Transporte dentro del GAM', sublabel: '₡3,000' },
+                  { id: 'fuera_gam', label: 'Transporte fuera del GAM', sublabel: '₡5,000' },
+                ]}
+                value={formTipoTransporte}
+                onChange={(val) => handleSelectTipoTransporte(val as 'sin_transporte' | 'dentro_gam' | 'fuera_gam')}
+                placeholder="Seleccionar transporte..."
+                hideSearch={true}
+                buttonStyle={{ width: '100%' }}
+              />
+            </div>
+
+            <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontWeight: 600 }}>
+                <span>Costo Transporte</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    transportCostInputRef.current?.focus();
+                    transportCostInputRef.current?.select();
+                  }}
+                  title="Modificar monto de transporte"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--color-accent)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    fontSize: '0.75rem',
+                    padding: 0
+                  }}
+                >
+                  <Pencil size={12} /> Modificar
+                </button>
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <input
+                    ref={transportCostInputRef}
+                    type="number"
+                    min={0}
+                    step={100}
+                    className="form-control"
+                    value={formCostoTransporte}
+                    onChange={(e) => setFormCostoTransporte(e.target.value === '' ? 0 : Number(e.target.value))}
+                    placeholder="0"
+                    style={{
+                      fontWeight: 700,
+                      color: formCostoTransporte > 0 ? 'var(--color-accent)' : 'var(--text-primary)',
+                      paddingRight: '1.75rem'
+                    }}
+                  />
+                  <span style={{ position: 'absolute', right: '0.65rem', top: '50%', transform: 'translateY(-50%)', fontSize: '0.8rem', color: 'var(--text-muted)', pointerEvents: 'none' }}>
+                    ₡
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  style={{
+                    padding: '0.45rem 0.65rem',
+                    height: '38px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.3rem',
+                    color: 'var(--color-accent)'
+                  }}
+                  onClick={() => {
+                    transportCostInputRef.current?.focus();
+                    transportCostInputRef.current?.select();
+                  }}
+                  title="Modificar monto de transporte"
+                >
+                  <Pencil size={13} />
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Line item builder */}
           <div className="item-builder-card">
             <div className="item-builder-header">
@@ -1456,6 +1573,15 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
                 </span>
                 <span>{formatCurrency(formImpuestos)}</span>
               </div>
+              {formCostoTransporte > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', marginBottom: '0.35rem', color: 'var(--text-primary)' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Truck size={13} style={{ color: 'var(--color-accent)' }} />
+                    Transporte ({formTipoTransporte === 'dentro_gam' ? 'Dentro GAM' : formTipoTransporte === 'fuera_gam' ? 'Fuera GAM' : 'Flete'}):
+                  </span>
+                  <span style={{ fontWeight: 600 }}>{formatCurrency(formCostoTransporte)}</span>
+                </div>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', fontWeight: 800, borderTop: '1px solid var(--border-default)', paddingTop: '0.5rem', color: 'var(--color-accent)' }}>
                 <span>Total Factura:</span>
                 <span>{formatCurrency(formTotal)}</span>
@@ -2035,6 +2161,15 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
                     <span style={{ color: 'var(--text-muted)' }}>IVA ({confirmIssueData.tasaImpuesto ?? settings.tasaImpuestoDefecto}%):</span>
                     <span style={{ fontWeight: 600 }}>{formatCurrency(confirmIssueData.impuestos)}</span>
                   </div>
+                  {confirmIssueData.costoTransporte !== undefined && confirmIssueData.costoTransporte > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Truck size={13} style={{ color: 'var(--color-accent)' }} />
+                        Transporte:
+                      </span>
+                      <span style={{ fontWeight: 600 }}>{formatCurrency(confirmIssueData.costoTransporte)}</span>
+                    </div>
+                  )}
                 </div>
                 <div style={{
                   borderTop: '2px solid var(--border-default)',

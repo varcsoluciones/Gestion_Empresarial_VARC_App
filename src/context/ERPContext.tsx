@@ -298,6 +298,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (data.tieneVariantes && data.variantes && data.variantes.length > 0) {
       variants = data.variantes.map((v, i) => ({
         ...v,
+        ubicacion: v.ubicacion || data.ubicacion,
         id: `var-${prodId}-${i + 1}`,
         productoId: prodId
       }));
@@ -320,6 +321,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       stockActual: totalStock,
       tieneVariantes: data.tieneVariantes,
       variantes: variants,
+      ubicacion: data.ubicacion,
       descripcion: data.descripcion,
       activo: data.activo !== undefined ? data.activo : true,
       creadoEn: new Date().toISOString()

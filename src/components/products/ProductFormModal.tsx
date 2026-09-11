@@ -47,8 +47,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [precioVenta, setPrecioVenta] = useState<number | ''>('');
   const [stockMinimo, setStockMinimo] = useState<number | ''>(5);
   const [descripcion, setDescripcion] = useState('');
+  const [ubicacion, setUbicacion] = useState('');
   const [tieneVariantes, setTieneVariantes] = useState(false);
-  const [variantes, setVariantes] = useState<{ talla: string; color: string; sku: string; stockActual: number | '' }[]>([]);
+  const [variantes, setVariantes] = useState<{ talla: string; color: string; sku: string; ubicacion?: string; stockActual: number | '' }[]>([]);
   const [activo, setActivo] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -68,12 +69,14 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setPrecioVenta(productToEdit.precioVenta);
       setStockMinimo(productToEdit.stockMinimo || 5);
       setDescripcion(productToEdit.descripcion || '');
+      setUbicacion(productToEdit.ubicacion || '');
       setTieneVariantes(productToEdit.tieneVariantes);
       setActivo(productToEdit.activo !== false);
       setVariantes(productToEdit.variantes ? productToEdit.variantes.map(v => ({
         talla: v.talla,
         color: v.color,
         sku: v.sku,
+        ubicacion: v.ubicacion || '',
         stockActual: v.stockActual
       })) : []);
     } else {
@@ -87,11 +90,12 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setPrecioVenta('');
       setStockMinimo(5);
       setDescripcion('');
+      setUbicacion('');
       setTieneVariantes(false);
       setActivo(true);
       setVariantes([
-        { talla: 'M', color: 'Negro', sku: `${nextSKU}-1`, stockActual: 0 },
-        { talla: 'L', color: 'Negro', sku: `${nextSKU}-2`, stockActual: 0 }
+        { talla: 'M', color: 'Negro', sku: `${nextSKU}-1`, ubicacion: '', stockActual: 0 },
+        { talla: 'L', color: 'Negro', sku: `${nextSKU}-2`, ubicacion: '', stockActual: 0 }
       ]);
     }
   }, [isOpen, productToEdit, products, categories]);
@@ -145,7 +149,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     const variantSKU = `${codigo.trim() || 'SKU0001'}-${nextIdx}`;
     setVariantes(prev => [
       ...prev,
-      { talla: '', color: '', sku: variantSKU, stockActual: 0 }
+      { talla: '', color: '', sku: variantSKU, ubicacion: ubicacion.trim() || '', stockActual: 0 }
     ]);
   };
 
@@ -167,6 +171,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     const finalCode = codigo.trim() ? codigo.trim().toUpperCase() : getNextProductSKU(products);
     const finalCatId = categoriaId || categories[0]?.id || 'cat-1';
     const finalSubcatId = subcategoriaId.trim() ? subcategoriaId.trim() : undefined;
+    const finalUbicacion = ubicacion.trim() || (tieneVariantes && variantes[0]?.ubicacion?.trim() ? variantes[0].ubicacion.trim() : undefined);
 
     setIsSubmitting(true);
 
@@ -182,12 +187,14 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         tieneVariantes: tieneVariantes,
         activo: activo,
         descripcion: descripcion.trim() || undefined,
+        ubicacion: finalUbicacion,
         variantes: tieneVariantes ? variantes.map((v, i) => ({
           id: productToEdit.variantes?.[i]?.id || `var-${productToEdit.id}-${i + 1}`,
           productoId: productToEdit.id,
           sku: `${finalCode}-${i + 1}`,
           talla: v.talla.trim() || `Talla ${i + 1}`,
           color: v.color.trim() || 'Estándar',
+          ubicacion: v.ubicacion?.trim() || finalUbicacion || undefined,
           stockActual: productToEdit.variantes?.[i]?.stockActual || 0
         })) : undefined
       });
@@ -204,12 +211,14 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         tieneVariantes: tieneVariantes,
         activo: activo,
         descripcion: descripcion.trim() || undefined,
+        ubicacion: finalUbicacion,
         variantes: tieneVariantes ? variantes.map((v, i) => ({
           id: `var-${Date.now()}-${i + 1}`,
           productoId: '',
           sku: `${finalCode}-${i + 1}`,
           talla: v.talla.trim() || `Talla ${i + 1}`,
           color: v.color.trim() || 'Estándar',
+          ubicacion: v.ubicacion?.trim() || finalUbicacion || undefined,
           stockActual: 0
         })) : undefined
       });
@@ -389,6 +398,19 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           </div>
         </div>
 
+        <div className="form-row">
+          <div className="form-group" style={{ flex: 1 }}>
+            <label className="form-label">Ubicación en Almacén / Bodega</label>
+            <input
+              type="text"
+              className="form-control"
+              value={ubicacion}
+              onChange={(e) => setUbicacion(e.target.value)}
+              placeholder="Ej. Estante A-3, Pasillo 2, Bodega Central..."
+            />
+          </div>
+        </div>
+
         <div className="form-group">
           <label className="form-label">Descripción / Notas del Producto</label>
           <textarea
@@ -442,7 +464,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     Matriz de Atributos de Variantes
                   </div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    Define las combinaciones. El stock se alimentará mediante Carga Inicial o Compras.
+                    Define combinaciones y ubicaciones de almacenamiento por variante.
                   </div>
                 </div>
                 <button type="button" className="btn btn-secondary btn-sm" onClick={handleAddVariantRow}>
@@ -455,7 +477,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '1.4fr 1.5fr 1.5fr 40px',
+                  gridTemplateColumns: '1.2fr 1.2fr 1.2fr 1.4fr 36px',
                   gap: '0.5rem',
                   padding: '0.45rem 0.6rem',
                   backgroundColor: 'var(--bg-surface)',
@@ -473,6 +495,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 <div>ID / SKU Variante</div>
                 <div>Variable 1 (Talla / Medida)</div>
                 <div>Variable 2 (Color / Tipo)</div>
+                <div>Ubicación Específica</div>
                 <div style={{ textAlign: 'center' }}>Acción</div>
               </div>
 
@@ -480,7 +503,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 {variantes.map((v, idx) => {
                   const variantSKU = `${codigo.trim() || 'SKU0001'}-${idx + 1}`;
                   return (
-                    <div key={idx} className="variant-line-builder" style={{ gridTemplateColumns: '1.4fr 1.5fr 1.5fr 40px' }}>
+                    <div key={idx} className="variant-line-builder" style={{ gridTemplateColumns: '1.2fr 1.2fr 1.2fr 1.4fr 36px' }}>
                       <input
                         type="text"
                         className="form-control"
@@ -513,6 +536,16 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         onChange={(e) => {
                           const val = e.target.value;
                           setVariantes(prev => prev.map((item, i) => i === idx ? { ...item, color: val } : item));
+                        }}
+                      />
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder={ubicacion || "Ej. Estante A-1, B-2..."}
+                        value={v.ubicacion || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setVariantes(prev => prev.map((item, i) => i === idx ? { ...item, ubicacion: val } : item));
                         }}
                       />
                       <button

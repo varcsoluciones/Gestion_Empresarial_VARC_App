@@ -247,6 +247,12 @@ export const DocumentPrintView: React.FC<DocumentPrintViewProps> = ({
                 <span>IVA ({settings.tasaImpuestoDefecto}%):</span>
                 <span>{formatCurrency(doc.impuestos)}</span>
               </div>
+              {((doc as any).costoTransporte ?? 0) > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '0.25rem 0', color: '#475569' }}>
+                  <span>Transporte:</span>
+                  <span>{formatCurrency((doc as any).costoTransporte)}</span>
+                </div>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.15rem', fontWeight: 800, padding: '0.6rem 0 0.25rem', borderTop: '2px solid #cbd5e1', marginTop: '0.5rem', color: '#0f172a' }}>
                 <span>Total Factura:</span>
                 <span style={{ color: '#4338ca' }}>{formatCurrency(doc.total)}</span>
