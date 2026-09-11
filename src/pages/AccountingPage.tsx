@@ -32,6 +32,8 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   Lock,
+  History,
+  RotateCcw,
   Activity
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
@@ -64,6 +66,7 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
     getClosedPeriod,
     closePeriod,
     reopenPeriod,
+    getPeriodAuditHistory,
     hasUnclosedPreviousPeriod,
     validateOperationDate
   } = useERP();
@@ -78,12 +81,14 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
   const isCurrentMonthClosed = isPeriodClosed(selectedMonth);
   const currentClosedPeriod = getClosedPeriod(selectedMonth);
   const unclosedInfo = hasUnclosedPreviousPeriod(selectedMonth);
+  const periodAuditHistory = getPeriodAuditHistory(selectedMonth);
 
   // Modals for Period Closing & Reopening
   const [isClosePeriodModalOpen, setIsClosePeriodModalOpen] = useState(false);
   const [closePeriodNotes, setClosePeriodNotes] = useState('');
   const [isReopenModalOpen, setIsReopenModalOpen] = useState(false);
   const [reopenReason, setReopenReason] = useState('');
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isReminderDismissed, setIsReminderDismissed] = useState(false);
 
   // Date restriction modal
@@ -537,6 +542,26 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
               Cerrar Periodo
             </button>
           )}
+
+          {/* Historial de Cierres / Reaperturas Button */}
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => setIsHistoryModalOpen(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              fontWeight: 600,
+              backgroundColor: 'var(--bg-surface)',
+              borderColor: 'var(--border-default)',
+              color: 'var(--text-primary)'
+            }}
+            title={`Ver historial de cierres y reaperturas del periodo ${selectedMonth}`}
+          >
+            <History size={15} style={{ color: 'var(--text-secondary)' }} />
+            <span>Historial</span>
+          </button>
 
           {activeTab === 'expenses' && (
             <button type="button" className="btn btn-primary btn-sm" onClick={() => setIsExpenseModalOpen(true)}>
@@ -2226,6 +2251,119 @@ export const AccountingPage: React.FC<AccountingPageProps> = ({ initialTab }) =>
               </div>
             )}
           </div>
+        </div>
+      </Modal>
+
+      {/* Period Audit History Modal */}
+      <Modal
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+        title={`Historial de Cierres de Periodo: ${selectedMonth}`}
+        subtitle="Registro cronológico de cierres y reaperturas contables del mes"
+        size="lg"
+        footer={
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setIsHistoryModalOpen(false)}
+          >
+            Cerrar
+          </button>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {/* Status info bar */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '0.75rem 1rem',
+              backgroundColor: 'var(--bg-subtle)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--border-default)',
+              flexWrap: 'wrap',
+              gap: '0.5rem'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Estado Actual del Periodo:</span>
+              {isCurrentMonthClosed ? (
+                <Badge variant="success">
+                  <Lock size={12} style={{ marginRight: '0.25rem' }} /> Cerrado e Inmutable
+                </Badge>
+              ) : (
+                <Badge variant="neutral">Abierto / En Operación</Badge>
+              )}
+            </div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              {periodAuditHistory.length} {periodAuditHistory.length === 1 ? 'registro en el historial' : 'registros en el historial'}
+            </div>
+          </div>
+
+          {periodAuditHistory.length === 0 ? (
+            <div
+              style={{
+                padding: '2.5rem 1.5rem',
+                textAlign: 'center',
+                backgroundColor: 'var(--bg-subtle)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px dashed var(--border-default)',
+                color: 'var(--text-muted)'
+              }}
+            >
+              <History size={36} style={{ opacity: 0.4, marginBottom: '0.5rem', display: 'inline-block' }} />
+              <p style={{ margin: 0, fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
+                Sin registros en el historial para {selectedMonth}
+              </p>
+              <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.825rem', color: 'var(--text-secondary)' }}>
+                Este periodo no presenta cierres ni reaperturas registradas. Al cerrar o reabrir el mes, cada acción se registrará automáticamente en esta tabla.
+              </p>
+            </div>
+          ) : (
+            <div className="table-container" style={{ overflowX: 'auto' }}>
+              <table className="table" style={{ fontSize: '0.825rem', width: '100%' }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: '14%' }}>Mes</th>
+                    <th style={{ width: '18%' }}>Acción</th>
+                    <th style={{ width: '22%' }}>Fecha</th>
+                    <th style={{ width: '20%' }}>Usuario</th>
+                    <th>Motivo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {periodAuditHistory.map((item, idx) => (
+                    <tr key={idx}>
+                      <td style={{ fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
+                        {selectedMonth}
+                      </td>
+                      <td>
+                        {item.accion === 'cierre' ? (
+                          <Badge variant="success">
+                            <Lock size={12} style={{ marginRight: '0.25rem' }} /> Cerrado
+                          </Badge>
+                        ) : (
+                          <Badge variant="warning">
+                            <RotateCcw size={12} style={{ marginRight: '0.25rem' }} /> Reabierto
+                          </Badge>
+                        )}
+                      </td>
+                      <td style={{ color: 'var(--text-secondary)' }}>
+                        {formatDateTime(item.fecha)}
+                      </td>
+                      <td style={{ fontWeight: 600 }}>
+                        {item.usuario || 'Usuario Administrador'}
+                      </td>
+                      <td style={{ color: item.motivo ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                        {item.motivo || '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </Modal>
     </div>

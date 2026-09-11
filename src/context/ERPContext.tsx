@@ -20,6 +20,7 @@ import type {
   MonthlyProrrateo,
   ProductRealCostResult,
   ClosedPeriod,
+  ClosedPeriodAudit,
   ProductPeriodSnapshot,
   DateRestrictionMode
 } from '../types/erp';
@@ -119,6 +120,7 @@ export interface ERPContextType {
   getClosedPeriod: (monthKey: string) => ClosedPeriod | undefined;
   closePeriod: (monthKey: string, cerradoPor?: string, notas?: string) => ClosedPeriod;
   reopenPeriod: (monthKey: string, reabiertoPor?: string, motivo?: string) => void;
+  getPeriodAuditHistory: (monthKey: string) => ClosedPeriodAudit[];
   hasUnclosedPreviousPeriod: (targetMonth?: string) => { hasUnclosed: boolean; unclosedMonth?: string };
   validateOperationDate: (fechaStr: string) => {
     allowed: boolean;
@@ -1844,15 +1846,47 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const totalEquity = totalAssets - totalLiabilities;
     const accumulatedRetainedEarnings = totalEquity - initialCapital;
 
-    // Historial previo si existiera
+    // Historial previo si existiera (de closedPeriods o de period_audit)
     const existing = closedPeriods.find(cp => cp.mes === monthKey);
-    const historial = existing ? [...existing.historial] : [];
-    historial.push({
+    let previousAudit: ClosedPeriodAudit[] = [];
+    if (existing && existing.historial && existing.historial.length > 0) {
+      previousAudit = [...existing.historial];
+    } else {
+      try {
+        const rawAudit = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'period_audit') || '[]');
+        previousAudit = rawAudit
+          .filter((a: any) => a.mes === monthKey)
+          .map((a: any) => ({
+            accion: a.accion,
+            fecha: a.fecha,
+            usuario: a.usuario,
+            motivo: a.motivo
+          }));
+      } catch (e) {}
+    }
+
+    const currentAuditItem: ClosedPeriodAudit = {
       accion: 'cierre',
       fecha: new Date().toISOString(),
       usuario: cerradoPor,
       motivo: notas || 'Cierre formal de periodo contable'
-    });
+    };
+
+    const historial = [...previousAudit, currentAuditItem];
+
+    try {
+      const auditLog = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'period_audit') || '[]');
+      auditLog.push({
+        mes: monthKey,
+        accion: 'cierre',
+        fecha: currentAuditItem.fecha,
+        usuario: cerradoPor,
+        motivo: notas || 'Cierre formal de periodo contable'
+      });
+      localStorage.setItem(STORAGE_PREFIX + 'period_audit', JSON.stringify(auditLog));
+    } catch (e) {
+      console.error('Error saving period audit log on close:', e);
+    }
 
     const newClosedPeriod: ClosedPeriod = {
       mes: monthKey,
@@ -1905,6 +1939,20 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       try {
         const auditLog = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'period_audit') || '[]');
+        if (target.historial) {
+          target.historial.forEach(h => {
+            const exists = auditLog.some((a: any) => a.mes === monthKey && a.fecha === h.fecha && a.accion === h.accion);
+            if (!exists) {
+              auditLog.push({
+                mes: monthKey,
+                accion: h.accion,
+                fecha: h.fecha,
+                usuario: h.usuario,
+                motivo: h.motivo
+              });
+            }
+          });
+        }
         auditLog.push({
           mes: monthKey,
           accion: 'reapertura',
@@ -1919,6 +1967,34 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       return prev.filter(cp => cp.mes !== monthKey);
     });
+  };
+
+  const getPeriodAuditHistory = (monthKey: string): ClosedPeriodAudit[] => {
+    const cp = closedPeriods.find(p => p.mes === monthKey);
+    const cpHistorial: ClosedPeriodAudit[] = cp?.historial || [];
+
+    let auditLog: ClosedPeriodAudit[] = [];
+    try {
+      const raw = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'period_audit') || '[]');
+      auditLog = raw
+        .filter((a: any) => a.mes === monthKey)
+        .map((a: any) => ({
+          accion: a.accion,
+          fecha: a.fecha,
+          usuario: a.usuario,
+          motivo: a.motivo
+        }));
+    } catch (e) {}
+
+    const map = new Map<string, ClosedPeriodAudit>();
+    [...cpHistorial, ...auditLog].forEach(item => {
+      const key = `${item.accion}_${item.fecha}_${item.usuario}`;
+      map.set(key, item);
+    });
+
+    return Array.from(map.values()).sort(
+      (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+    );
   };
 
   const hasUnclosedPreviousPeriod = (targetMonth = getMonthKey()): { hasUnclosed: boolean; unclosedMonth?: string } => {
@@ -2194,6 +2270,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         getClosedPeriod,
         closePeriod,
         reopenPeriod,
+        getPeriodAuditHistory,
         hasUnclosedPreviousPeriod,
         validateOperationDate,
         getFullERPData,
