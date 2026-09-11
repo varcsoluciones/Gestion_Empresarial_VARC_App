@@ -485,9 +485,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
   }, [totalGrossSales, totalSalesSubtotal, totalCostOfGoodsSold, opexExpenses, assetDepreciation]);
 
   return (
-    <div className="dashboard-page-container">
+    <div className="page-content dashboard-page-container">
       {/* 1. Header de Mando */}
-      <div className="page-header" style={{ marginBottom: 0, paddingBottom: 0 }}>
+      <div className="page-header">
         <div>
           <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Sparkles size={22} style={{ color: 'var(--color-accent)' }} />
