@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useERP } from '../context/ERPContext';
 import type { Invoice, Quote, PaymentMethod, PaymentTerm } from '../types/erp';
 import { formatCurrency, formatDate, formatDateTime, generateDocNumber, getNextDocNumber, formatMonthLabel, getTodayLocalDateString, getFutureLocalDateString, buildLocalDateISO } from '../utils/formatters';
@@ -18,8 +18,7 @@ import {
   ChevronDown,
   ChevronUp,
   Eye,
-  Truck,
-  Pencil
+  Truck
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
@@ -128,7 +127,6 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
   const [formNotas, setFormNotas] = useState('');
   const [formTipoTransporte, setFormTipoTransporte] = useState<'sin_transporte' | 'dentro_gam' | 'fuera_gam'>('sin_transporte');
   const [formCostoTransporte, setFormCostoTransporte] = useState<number>(0);
-  const transportCostInputRef = useRef<HTMLInputElement>(null);
   const [formItems, setFormItems] = useState<{
     productoId: string;
     varianteId?: string;
@@ -1253,96 +1251,6 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
             </div>
           </div>
 
-          {/* Row Transporte / Envíos */}
-          <div className="form-row" style={{ alignItems: 'flex-end', backgroundColor: 'var(--bg-subtle)', padding: '0.85rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)' }}>
-            <div className="form-group" style={{ flex: 1.6, marginBottom: 0 }}>
-              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}>
-                <Truck size={15} style={{ color: 'var(--color-accent)' }} />
-                Transporte / Flete
-              </label>
-              <ComboboxInline
-                options={[
-                  { id: 'sin_transporte', label: 'Sin transporte', sublabel: '₡0' },
-                  { id: 'dentro_gam', label: 'Transporte dentro del GAM', sublabel: '₡3,000' },
-                  { id: 'fuera_gam', label: 'Transporte fuera del GAM', sublabel: '₡5,000' },
-                ]}
-                value={formTipoTransporte}
-                onChange={(val) => handleSelectTipoTransporte(val as 'sin_transporte' | 'dentro_gam' | 'fuera_gam')}
-                placeholder="Seleccionar transporte..."
-                hideSearch={true}
-                buttonStyle={{ width: '100%' }}
-              />
-            </div>
-
-            <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-              <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontWeight: 600 }}>
-                <span>Costo Transporte</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    transportCostInputRef.current?.focus();
-                    transportCostInputRef.current?.select();
-                  }}
-                  title="Modificar monto de transporte"
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    color: 'var(--color-accent)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '3px',
-                    fontSize: '0.75rem',
-                    padding: 0
-                  }}
-                >
-                  <Pencil size={12} /> Modificar
-                </button>
-              </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <div style={{ position: 'relative', flex: 1 }}>
-                  <input
-                    ref={transportCostInputRef}
-                    type="number"
-                    min={0}
-                    step={100}
-                    className="form-control"
-                    value={formCostoTransporte}
-                    onChange={(e) => setFormCostoTransporte(e.target.value === '' ? 0 : Number(e.target.value))}
-                    placeholder="0"
-                    style={{
-                      fontWeight: 700,
-                      color: formCostoTransporte > 0 ? 'var(--color-accent)' : 'var(--text-primary)',
-                      paddingRight: '1.75rem'
-                    }}
-                  />
-                  <span style={{ position: 'absolute', right: '0.65rem', top: '50%', transform: 'translateY(-50%)', fontSize: '0.8rem', color: 'var(--text-muted)', pointerEvents: 'none' }}>
-                    ₡
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-sm"
-                  style={{
-                    padding: '0.45rem 0.65rem',
-                    height: '38px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.3rem',
-                    color: 'var(--color-accent)'
-                  }}
-                  onClick={() => {
-                    transportCostInputRef.current?.focus();
-                    transportCostInputRef.current?.select();
-                  }}
-                  title="Modificar monto de transporte"
-                >
-                  <Pencil size={13} />
-                </button>
-              </div>
-            </div>
-          </div>
-
           {/* Line item builder */}
           <div className="item-builder-card">
             <div className="item-builder-header">
@@ -1485,6 +1393,44 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
             )}
           </div>
 
+          {/* Row Transporte (Debajo de la selección de producto) */}
+          <div className="form-row">
+            <div className="form-group" style={{ flex: 1.5 }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Truck size={15} style={{ color: 'var(--color-accent)' }} />
+                Transporte
+              </label>
+              <ComboboxInline
+                options={[
+                  { id: 'sin_transporte', label: 'Sin transporte' },
+                  { id: 'dentro_gam', label: 'Transporte dentro del GAM' },
+                  { id: 'fuera_gam', label: 'Transporte fuera del GAM' },
+                ]}
+                value={formTipoTransporte}
+                onChange={(val) => handleSelectTipoTransporte(val as 'sin_transporte' | 'dentro_gam' | 'fuera_gam')}
+                placeholder="Seleccionar transporte..."
+                hideSearch={true}
+                buttonStyle={{ width: '100%', textAlign: 'left' }}
+              />
+            </div>
+
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label">
+                Costo de Transporte ({settings.monedaSimbolo || '₡'})
+              </label>
+              <input
+                type="number"
+                min={0}
+                step={100}
+                className="form-control"
+                value={formCostoTransporte}
+                onChange={(e) => setFormCostoTransporte(e.target.value === '' ? 0 : Number(e.target.value))}
+                placeholder="0"
+                style={{ textAlign: 'left' }}
+              />
+            </div>
+          </div>
+
           {/* Items Table */}
           <div className="table-container" style={{ maxHeight: '240px', overflowY: 'auto' }}>
             <table className="table">
@@ -1577,7 +1523,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', marginBottom: '0.35rem', color: 'var(--text-primary)' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <Truck size={13} style={{ color: 'var(--color-accent)' }} />
-                    Transporte ({formTipoTransporte === 'dentro_gam' ? 'Dentro GAM' : formTipoTransporte === 'fuera_gam' ? 'Fuera GAM' : 'Flete'}):
+                    Transporte:
                   </span>
                   <span style={{ fontWeight: 600 }}>{formatCurrency(formCostoTransporte)}</span>
                 </div>

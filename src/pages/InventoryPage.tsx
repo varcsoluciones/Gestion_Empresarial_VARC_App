@@ -589,7 +589,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                       <td style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
                         {itemUbicacion !== '—' ? (
                           <span className="badge badge-neutral" style={{ fontWeight: 600, fontSize: '0.75rem' }}>
-                            📍 {itemUbicacion}
+                            {itemUbicacion}
                           </span>
                         ) : (
                           <span style={{ color: 'var(--text-muted)' }}>—</span>
@@ -810,7 +810,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                         <td style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
                           {displayUbicacion ? (
                             <span className="badge badge-neutral" style={{ fontWeight: 600, fontSize: '0.75rem' }}>
-                              📍 {displayUbicacion}
+                              {displayUbicacion}
                             </span>
                           ) : (
                             <span style={{ color: 'var(--text-muted)' }}>—</span>
@@ -916,7 +916,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ initialView }) => 
                                           <td style={{ padding: '0.55rem 0.85rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                                             {varUbicacion ? (
                                               <span className="badge badge-neutral" style={{ fontWeight: 600, fontSize: '0.725rem' }}>
-                                                📍 {varUbicacion}
+                                                {varUbicacion}
                                               </span>
                                             ) : (
                                               <span style={{ color: 'var(--text-muted)' }}>—</span>
