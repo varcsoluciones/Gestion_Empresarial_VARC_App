@@ -76,15 +76,15 @@ export const LicenseActivationModal: React.FC = () => {
           <div
             style={{
               display: 'inline-flex',
-              padding: '0.75rem',
+              padding: '0.65rem',
               borderRadius: '16px',
-              backgroundColor: 'rgba(99, 102, 241, 0.15)',
-              border: '1px solid rgba(99, 102, 241, 0.3)',
+              backgroundColor: '#000000',
+              border: '1px solid rgba(139, 92, 246, 0.35)',
               marginBottom: '1rem',
-              boxShadow: '0 8px 16px rgba(0, 0, 0, 0.2)'
+              boxShadow: '0 8px 24px rgba(124, 58, 237, 0.25)'
             }}
           >
-            <AppLogo size={38} color="#6366f1" />
+            <AppLogo size={44} />
           </div>
 
           <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>

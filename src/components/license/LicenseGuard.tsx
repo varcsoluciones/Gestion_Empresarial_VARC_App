@@ -32,15 +32,15 @@ export const LicenseGuard: React.FC<LicenseGuardProps> = ({ children }) => {
       >
         <div
           style={{
-            padding: '1.25rem',
+            padding: '0.85rem',
             borderRadius: '24px',
-            backgroundColor: 'rgba(99, 102, 241, 0.12)',
-            border: '1px solid rgba(99, 102, 241, 0.25)',
-            boxShadow: '0 0 40px rgba(99, 102, 241, 0.2)',
+            backgroundColor: '#000000',
+            border: '1px solid rgba(139, 92, 246, 0.35)',
+            boxShadow: '0 0 40px rgba(124, 58, 237, 0.25)',
             animation: 'pulse 2s infinite ease-in-out'
           }}
         >
-          <AppLogo size={52} color="#6366f1" />
+          <AppLogo size={56} />
         </div>
         <div style={{ textAlign: 'center' }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>

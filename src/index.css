@@ -503,21 +503,22 @@ body {
   height: 40px;
   min-width: 40px;
   min-height: 40px;
-  background-color: var(--color-accent);
-  border: none;
-  box-shadow: 0 2px 8px var(--color-accent-glow);
+  background-color: #060913;
+  border: 1px solid rgba(147, 51, 234, 0.35);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
-  color: #ffffff;
+  overflow: hidden;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
 }
 
 .brand-anchor-card:hover .brand-icon-wrapper {
   transform: scale(1.05);
-  box-shadow: 0 4px 12px var(--color-accent-glow);
+  box-shadow: 0 4px 14px rgba(147, 51, 234, 0.45);
+  border-color: rgba(147, 51, 234, 0.6);
 }
 
 .brand-info {

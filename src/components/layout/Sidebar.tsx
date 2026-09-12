@@ -114,7 +114,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {!isCollapsed ? (
             <div className="brand-anchor-card">
               <div className="brand-icon-wrapper">
-                <AppLogo size={26} color="#ffffff" />
+                <AppLogo size={30} />
               </div>
               <div className="brand-info">
                 <span className="brand-title">
@@ -128,7 +128,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           ) : (
             <div className="brand-anchor-card collapsed" title={`${APP_NAME} — ${APP_BRAND}`}>
               <div className="brand-icon-wrapper">
-                <AppLogo size={26} color="#ffffff" />
+                <AppLogo size={30} />
               </div>
             </div>
           )}
