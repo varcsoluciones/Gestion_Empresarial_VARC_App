@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { Invoice, Quote } from '../../types/erp';
 import { useERP } from '../../context/ERPContext';
-import { formatCurrency, formatDate, formatDateTime } from '../../utils/formatters';
+import { formatCurrency, formatDate, formatDateTime, getInvoiceDiscountTotal } from '../../utils/formatters';
 import { Printer, X } from 'lucide-react';
 import { Badge } from '../common/Badge';
 
@@ -246,16 +246,31 @@ export const DocumentPrintView: React.FC<DocumentPrintViewProps> = ({
             </div>
 
             <div className="print-card-box" style={{ backgroundColor: '#f8fafc', padding: '1rem 1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0', height: 'fit-content' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '0.25rem 0', color: '#475569' }}>
-                <span>Subtotal:</span>
-                <span>{formatCurrency(doc.subtotal)}</span>
-              </div>
-              {doc.descuentoTotal > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '0.25rem 0', color: '#059669' }}>
-                  <span>Descuentos:</span>
-                  <span>-{formatCurrency(doc.descuentoTotal)}</span>
-                </div>
-              )}
+              {(() => {
+                const docDiscount = getInvoiceDiscountTotal(doc as any);
+                const docGross = Number((doc.subtotal + docDiscount).toFixed(2));
+                return docDiscount > 0 ? (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '0.25rem 0', color: '#475569' }}>
+                      <span>Venta Bruta:</span>
+                      <span>{formatCurrency(docGross)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '0.25rem 0', color: '#dc2626', fontWeight: 600 }}>
+                      <span>(-) Descuento:</span>
+                      <span>-{formatCurrency(docDiscount)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '0.25rem 0', color: '#0f172a', fontWeight: 600 }}>
+                      <span>Subtotal Neto:</span>
+                      <span>{formatCurrency(doc.subtotal)}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '0.25rem 0', color: '#475569' }}>
+                    <span>Subtotal:</span>
+                    <span>{formatCurrency(doc.subtotal)}</span>
+                  </div>
+                );
+              })()}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '0.25rem 0', color: '#475569' }}>
                 <span>IVA ({settings.tasaImpuestoDefecto}%):</span>
                 <span>{formatCurrency(doc.impuestos)}</span>

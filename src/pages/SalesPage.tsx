@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useERP } from '../context/ERPContext';
 import type { Invoice, Quote, PaymentMethod, PaymentTerm } from '../types/erp';
-import { formatCurrency, formatDate, formatDateTime, generateDocNumber, getNextDocNumber, formatMonthLabel, getTodayLocalDateString, getFutureLocalDateString, buildLocalDateISO } from '../utils/formatters';
+import { formatCurrency, formatDate, formatDateTime, generateDocNumber, getNextDocNumber, formatMonthLabel, getTodayLocalDateString, getFutureLocalDateString, buildLocalDateISO, getInvoiceDiscountTotal } from '../utils/formatters';
 import {
   TrendingUp,
   Plus,
@@ -299,6 +299,17 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
     setFormItems(prev => prev.filter((_, i) => i !== index));
   };
 
+  const formGrossSubtotal = Number(
+    formItems.reduce((sum, item) => sum + (Number(item.cantidad || 0) * Number(item.precioUnitario || 0)), 0).toFixed(2)
+  );
+  const formDescuentoTotal = Number(
+    formItems.reduce((sum, item) => {
+      const qty = Number(item.cantidad) || 0;
+      const price = Number(item.precioUnitario) || 0;
+      const disc = Number(item.descuento) || 0;
+      return sum + (qty * price * (disc / 100));
+    }, 0).toFixed(2)
+  );
   const formSubtotal = formItems.reduce((sum, item) => sum + item.subtotal, 0);
   const formImpuestos = Number((formSubtotal * ((formTasaImpuesto || 0) / 100)).toFixed(2));
   const formTransporte = Number(formCostoTransporte) || 0;
@@ -322,7 +333,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
           facturaId: ''
         })),
         subtotal: formSubtotal,
-        descuentoTotal: 0,
+        descuentoTotal: formDescuentoTotal,
         tasaImpuesto: formTasaImpuesto,
         impuestos: formImpuestos,
         tipoTransporte: formTipoTransporte,
@@ -408,7 +419,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
               facturaId: ''
             })),
             subtotal: formSubtotal,
-            descuentoTotal: 0,
+            descuentoTotal: formDescuentoTotal,
             tasaImpuesto: formTasaImpuesto,
             impuestos: formImpuestos,
             tipoTransporte: formTipoTransporte,
@@ -531,7 +542,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
           id: `qitem-${Date.now()}-${idx + 1}`
         })),
         subtotal: formSubtotal,
-        descuentoTotal: 0,
+        descuentoTotal: formDescuentoTotal,
         tasaImpuesto: formTasaImpuesto,
         impuestos: formImpuestos,
         total: formTotal,
@@ -922,7 +933,12 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
                           </Badge>
                         </td>
                         <td style={{ textAlign: 'right', fontWeight: 700 }}>
-                          {formatCurrency(inv.total)}
+                          <div>{formatCurrency(inv.total)}</div>
+                          {getInvoiceDiscountTotal(inv) > 0 && (
+                            <div style={{ fontSize: '0.72rem', color: 'var(--color-danger-text)', fontWeight: 500 }}>
+                              -{formatCurrency(getInvoiceDiscountTotal(inv))} desc
+                            </div>
+                          )}
                         </td>
                         <td style={{ textAlign: 'right', fontWeight: 700, color: hasPendingBalance ? 'var(--color-danger-text)' : 'var(--color-success-text)' }}>
                           {inv.estado === 'anulada' ? '-' : formatCurrency(inv.saldoPendiente)}
@@ -1621,9 +1637,21 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
             </div>
 
             <div style={{ backgroundColor: 'var(--bg-subtle)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)' }}>
+              {formDescuentoTotal > 0 && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.35rem', color: 'var(--text-secondary)' }}>
+                    <span>Venta Bruta:</span>
+                    <span>{formatCurrency(formGrossSubtotal)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.35rem', color: 'var(--color-danger-text)', fontWeight: 600 }}>
+                    <span>(-) Descuento Aplicado:</span>
+                    <span>-{formatCurrency(formDescuentoTotal)}</span>
+                  </div>
+                </>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.35rem' }}>
-                <span>Subtotal:</span>
-                <span>{formatCurrency(formSubtotal)}</span>
+                <span>Subtotal Neto:</span>
+                <span style={{ fontWeight: formDescuentoTotal > 0 ? 600 : 400 }}>{formatCurrency(formSubtotal)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', marginBottom: '0.35rem' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -1916,9 +1944,21 @@ export const SalesPage: React.FC<SalesPageProps> = ({ initialTab }) => {
           {/* Totals */}
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <div style={{ width: '280px', backgroundColor: 'var(--bg-subtle)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)' }}>
+              {formDescuentoTotal > 0 && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.35rem', color: 'var(--text-secondary)' }}>
+                    <span>Venta Bruta:</span>
+                    <span>{formatCurrency(formGrossSubtotal)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.35rem', color: 'var(--color-danger-text)', fontWeight: 600 }}>
+                    <span>(-) Descuento Aplicado:</span>
+                    <span>-{formatCurrency(formDescuentoTotal)}</span>
+                  </div>
+                </>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.35rem' }}>
-                <span>Subtotal:</span>
-                <span>{formatCurrency(formSubtotal)}</span>
+                <span>Subtotal Neto:</span>
+                <span style={{ fontWeight: formDescuentoTotal > 0 ? 600 : 400 }}>{formatCurrency(formSubtotal)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', marginBottom: '0.35rem' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>

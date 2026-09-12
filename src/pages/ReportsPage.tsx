@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useERP } from '../context/ERPContext';
-import { formatCurrency, formatDateTime, getMonthKey } from '../utils/formatters';
+import { formatCurrency, formatDateTime, getMonthKey, getInvoiceDiscountTotal } from '../utils/formatters';
 import {
   BarChart3,
   TrendingUp,
@@ -99,11 +99,11 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ initialReport }) => {
     (i.fechaEmision.startsWith(selectedMonth))
   );
 
-  const dynamicGrossSales = monthInvoices.reduce((sum, i) => sum + (i.subtotal + i.descuentoTotal), 0);
-  const totalGrossSales = closedSnapshot ? closedSnapshot.pnlSnapshot.totalGrossSales : dynamicGrossSales;
-
-  const dynamicDiscounts = monthInvoices.reduce((sum, i) => sum + i.descuentoTotal, 0);
+  const dynamicDiscounts = monthInvoices.reduce((sum, i) => sum + getInvoiceDiscountTotal(i), 0);
   const totalDiscounts = closedSnapshot ? closedSnapshot.pnlSnapshot.totalDiscounts : dynamicDiscounts;
+
+  const dynamicGrossSales = monthInvoices.reduce((sum, i) => sum + (i.subtotal + getInvoiceDiscountTotal(i)), 0);
+  const totalGrossSales = closedSnapshot ? closedSnapshot.pnlSnapshot.totalGrossSales : dynamicGrossSales;
 
   const dynamicNetSales = monthInvoices.reduce((sum, i) => sum + i.subtotal, 0);
   const totalNetSales = closedSnapshot ? closedSnapshot.pnlSnapshot.totalNetSales : dynamicNetSales;

@@ -340,3 +340,41 @@ export function getNextEntityId(prefix: string, items: { id?: string; codigoCont
   return `${prefix.toUpperCase()}${nextNumber.toString().padStart(4, '0')}`;
 }
 
+/**
+ * Calcula el monto monetario total de descuentos de una factura o cotización.
+ * Si ya tiene descuentoTotal > 0 lo respeta. De lo contrario, lo calcula dinámicamente
+ * a partir de cada línea sumando el porcentaje de descuento o la diferencia respecto al bruto.
+ */
+export function getInvoiceDiscountTotal(inv?: {
+  descuentoTotal?: number;
+  items?: Array<{
+    cantidad?: number;
+    precioUnitario?: number;
+    descuento?: number;
+    subtotal?: number;
+  }>;
+}): number {
+  if (!inv) return 0;
+  if (typeof inv.descuentoTotal === 'number' && inv.descuentoTotal > 0) {
+    return Number(inv.descuentoTotal.toFixed(2));
+  }
+  if (!inv.items || !Array.isArray(inv.items) || inv.items.length === 0) {
+    return 0;
+  }
+  const computed = inv.items.reduce((sum, item) => {
+    const qty = Number(item.cantidad) || 0;
+    const price = Number(item.precioUnitario) || 0;
+    const discPct = Number(item.descuento) || 0;
+    if (discPct > 0) {
+      return sum + (qty * price * (discPct / 100));
+    }
+    const gross = qty * price;
+    const sub = Number(item.subtotal) || 0;
+    if (gross > sub && gross - sub > 0.001) {
+      return sum + (gross - sub);
+    }
+    return sum;
+  }, 0);
+  return Number(computed.toFixed(2));
+}
+

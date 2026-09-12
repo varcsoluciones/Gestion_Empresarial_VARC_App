@@ -37,7 +37,7 @@ import {
   initialOperatingExpenses,
   initialFixedAssets
 } from '../data/seedData';
-import { calculateWeightedAverageCost, generateDocNumber, getNextDocNumber, getMonthKey, getNextProductSKU, getNextEntityId, formatCurrency, setActiveCurrencySymbol, getTodayLocalDateString, getFutureLocalDateString, parseDateSafe } from '../utils/formatters';
+import { calculateWeightedAverageCost, generateDocNumber, getNextDocNumber, getMonthKey, getNextProductSKU, getNextEntityId, formatCurrency, setActiveCurrencySymbol, getTodayLocalDateString, getFutureLocalDateString, parseDateSafe, getInvoiceDiscountTotal } from '../utils/formatters';
 import {
   downloadJSONBackup,
   downloadExcelWorkbook,
@@ -193,12 +193,26 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const [quotes, setQuotes] = useState<Quote[]>(() => {
     const saved = localStorage.getItem(STORAGE_PREFIX + 'quotes');
-    return saved ? JSON.parse(saved) : initialQuotes;
+    const parsed: Quote[] = saved ? JSON.parse(saved) : initialQuotes;
+    return parsed.map(q => {
+      const disc = getInvoiceDiscountTotal(q as any);
+      if ((!q.descuentoTotal || q.descuentoTotal === 0) && disc > 0) {
+        return { ...q, descuentoTotal: disc };
+      }
+      return q;
+    });
   });
 
   const [invoices, setInvoices] = useState<Invoice[]>(() => {
     const saved = localStorage.getItem(STORAGE_PREFIX + 'invoices');
-    return saved ? JSON.parse(saved) : initialInvoices;
+    const parsed: Invoice[] = saved ? JSON.parse(saved) : initialInvoices;
+    return parsed.map(inv => {
+      const disc = getInvoiceDiscountTotal(inv);
+      if ((!inv.descuentoTotal || inv.descuentoTotal === 0) && disc > 0) {
+        return { ...inv, descuentoTotal: disc };
+      }
+      return inv;
+    });
   });
 
   const [inventoryMovements, setInventoryMovements] = useState<InventoryMovement[]>(() => {
@@ -1080,6 +1094,10 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const emissionDate = getTodayLocalDateString();
 
+    const calculatedDiscount = (quote.descuentoTotal && quote.descuentoTotal > 0)
+      ? quote.descuentoTotal
+      : getInvoiceDiscountTotal(quote as any);
+
     const newInvoice: Invoice = {
       id: numFactura,
       numeroFactura: numFactura,
@@ -1092,7 +1110,7 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       emitidaFecha: directIssue ? emissionDate : undefined,
       items: invoiceItems,
       subtotal: quote.subtotal,
-      descuentoTotal: quote.descuentoTotal,
+      descuentoTotal: calculatedDiscount,
       tasaImpuesto: settings.tasaImpuestoDefecto,
       impuestos: quote.impuestos,
       total: quote.total,
@@ -1125,12 +1143,17 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       };
     });
 
+    const calculatedDiscount = (data.descuentoTotal && data.descuentoTotal > 0)
+      ? data.descuentoTotal
+      : getInvoiceDiscountTotal({ items: itemsWithHistoricalCost });
+
     const newInvoice: Invoice = {
       ...data,
       items: itemsWithHistoricalCost,
       id: num,
       numeroFactura: num,
       fechaEmision: emissionDate,
+      descuentoTotal: calculatedDiscount,
       saldoPendiente: data.total,
       pagos: [],
       estado: isDirectEmit ? (data.total <= 0 ? 'pagada' : 'emitida') : 'borrador',
@@ -1732,8 +1755,8 @@ export const ERPProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       (i.fechaEmision && i.fechaEmision.startsWith(monthKey))
     );
 
-    const totalGrossSales = monthInvoices.reduce((sum, i) => sum + (i.subtotal + i.descuentoTotal), 0);
-    const totalDiscounts = monthInvoices.reduce((sum, i) => sum + i.descuentoTotal, 0);
+    const totalDiscounts = monthInvoices.reduce((sum, i) => sum + getInvoiceDiscountTotal(i), 0);
+    const totalGrossSales = monthInvoices.reduce((sum, i) => sum + (i.subtotal + getInvoiceDiscountTotal(i)), 0);
     const totalNetSales = monthInvoices.reduce((sum, i) => sum + i.subtotal, 0);
 
     const totalCOGS = monthInvoices.reduce((sum, inv) => {

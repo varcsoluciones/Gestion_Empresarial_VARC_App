@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useERP } from '../context/ERPContext';
-import { formatCurrency, formatCompactCurrency, getMonthKey, formatMonthLabel } from '../utils/formatters';
+import { formatCurrency, formatCompactCurrency, getMonthKey, formatMonthLabel, getInvoiceDiscountTotal } from '../utils/formatters';
 import {
   TrendingUp,
   ShoppingBag,
@@ -114,7 +114,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
 
   const totalSalesMonth = monthInvoices.reduce((sum, i) => sum + i.total, 0);
   const totalSalesSubtotal = monthInvoices.reduce((sum, i) => sum + i.subtotal, 0);
-  const totalDiscounts = monthInvoices.reduce((sum, i) => sum + i.descuentoTotal, 0);
+  const totalDiscounts = monthInvoices.reduce((sum, i) => sum + getInvoiceDiscountTotal(i), 0);
   const totalGrossSales = totalSalesSubtotal + totalDiscounts;
 
   const pendingReceivables = invoices
